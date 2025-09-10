@@ -1,0 +1,34 @@
+<div class="dashboard-container">
+  <header class="dashboard-header">
+    <h2>Dashboard</h2>
+    <button (click)="logout()" class="logout-button">Logout</button>
+  </header>
+  <div *ngIf="summary$ | async as summary; else loading">
+    <div class="summary-grid">
+      <div class="summary-card"><h3>Total Revenue</h3><p>{{ summary.totalRevenue | currency }}</p></div>
+      <div class="summary-card"><h3>Total Books Published</h3><p>{{ summary.totalBooksPublished }}</p></div>
+      <div class="summary-card"><h3>Total Sales Transactions</h3><p>{{ summary.totalSalesTransactions }}</p></div>
+      <div class="summary-card"><h3>Top Performing Book</h3><p>{{ summary.topPerformingBook }}</p></div>
+      <div class="summary-card"><h3>Top Performing Platform</h3><p>{{ summary.topPerformingPlatform }}</p></div>
+    </div>
+  </div>
+  <div *ngIf="yoy$ | async as yoy">
+    <div class="summary-card">
+      <h3>Year-Over-Year Growth</h3>
+      <p>Current Year Revenue: {{ yoy.currentYearRevenue | currency }}</p>
+      <p>Previous Year Revenue: {{ yoy.previousYearRevenue | currency }}</p>
+      <p>Growth: {{ yoy.growth | percent }}</p>
+    </div>
+  </div>
+  <div *ngIf="seasonal$ | async as seasonal">
+    <div class="summary-card">
+      <h3>Seasonal Performance</h3>
+      <ul>
+        <li *ngFor="let s of seasonal">Month {{ s.month }}: {{ s.totalRevenue | currency }}</li>
+      </ul>
+    </div>
+  </div>
+  <ng-template #loading>
+    <p>Loading...</p>
+  </ng-template>
+</div>
