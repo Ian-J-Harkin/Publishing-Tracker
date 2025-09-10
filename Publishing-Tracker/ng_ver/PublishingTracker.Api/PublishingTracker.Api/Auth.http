@@ -1,0 +1,21 @@
+@api_HostAddress = http://localhost:5226
+
+### Register a new user
+POST {{api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!",
+  "firstName": "Test",
+  "lastName": "User"
+}
+
+### Login with the new user
+POST {{api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Password123!"
+}
