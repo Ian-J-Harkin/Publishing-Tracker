@@ -32,3 +32,99 @@ yarn-error.log*
 *.csv
 
 .env
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+*.csv
+
+.env
+
+## Build output
+bin/
+obj/
+artifacts/
+bld/
+Debug/
+Release/
+x64/
+x86/
+ARM/
+ARM64/
+
+## User-specific files
+*.user
+*.suo
+*.sln.docstates
+*.vspscc
+*.vssscc
+*.dbmdl
+*.bak
+
+## IDE folders
+.vs/
+.idea/
+.vscode/
+
+## Logs and diagnostics
+*.log
+*.tlog
+TestResult.xml
+*.VisualState.xml
+*.coverage
+*.coveragexml
+CodeCoverage/
+
+## Compiled binaries and symbols
+*.dll
+*.exe
+*.pdb
+*.cache
+
+## NuGet packages
+*.nupkg
+*.snupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+
+## Secrets and config (optional)
+*.env
+appsettings.Development.json
+secrets.json
+*.key
+*.pem
+
+## Others
+_ReSharper*/
+*.sdf
+*.opensdf
+*.vsidx
