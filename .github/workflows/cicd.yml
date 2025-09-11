@@ -53,7 +53,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v4
       with:
         app-name: 'PublishingTrackerApi'
         package: '${{ github.workspace }}/api-publish'
@@ -73,7 +73,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v4
       with:
         app-name: 'PublishingTrackerUI'
         package: 'frontend-build'
