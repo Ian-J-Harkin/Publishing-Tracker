@@ -15,7 +15,8 @@ jobs:
       with:
         dotnet-version: '8.x'
     - name: Install dependencies
-      run: dotnet restore
+      run: dotnet restore Publishing-Tracker/src/Publishing-Tracker/PublishingTracker.Api/
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
