@@ -21,7 +21,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0..x'
+          dotnet-version: '9.0.x'
 
       - name: Build with dotnet
         run: dotnet build --configuration Release
@@ -54,3 +54,4 @@ jobs:
           package: .
 
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_141893FB9F7A4F82BBDE8D5675040BDC }}
+
