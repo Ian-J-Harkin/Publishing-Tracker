@@ -22,7 +22,9 @@ jobs:
     - name: Test
       run: dotnet test Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --no-restore --verbosity normal
     - name: Publish
-      run: dotnet publish -c Release -o '${{ github.workspace }}/api-publish'
+      run: dotnet publish -c Release -o '${{ github.workspace }}/api-publish' 
+      working-directory: ./src/PublishingTrackerApi
+
 
   build-frontend:
     runs-on: ubuntu-latest
