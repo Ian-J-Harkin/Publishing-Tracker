@@ -9,13 +9,14 @@ jobs:
   build-and-test-api:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
     - name: Install dependencies
-      run: dotnet restore
+      run: dotnet restore Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln
+
     - name: Build
       run: dotnet build --configuration Release --no-restore
     - name: Test
@@ -26,19 +27,21 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Use Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '20.x'
     - name: Install dependencies
       run: npm install
-      working-directory: src/publishing-tracker-ui
+      working-directory: Publishing-Tracker/src/publishing-tracker-ui
+
     - name: Build
       run: npm run build
-      working-directory: src/publishing-tracker-ui
+      working-directory: Publishing-Tracker/src/publishing-tracker-ui
+
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
         name: frontend-build
         path: src/publishing-tracker-ui/dist
@@ -53,7 +56,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v4
       with:
         app-name: 'PublishingTrackerApi'
         package: '${{ github.workspace }}/api-publish'
@@ -64,7 +67,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: frontend-build
         path: frontend-build
@@ -73,7 +76,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
+      uses: azure/webapps-deploy@v4
       with:
         app-name: 'PublishingTrackerUI'
         package: 'frontend-build'
