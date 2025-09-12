@@ -19,8 +19,6 @@ jobs:
     - name: Build API
       run: dotnet build PublishingTracker.Api.csproj --configuration Release
       working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api
-    - name: Build
-      run: dotnet build Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --configuration Release --no-restore
     - name: Test
       run: dotnet test Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --no-restore --verbosity normal
     - name: List workspace contents
