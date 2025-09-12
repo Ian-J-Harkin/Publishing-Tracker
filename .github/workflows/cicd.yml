@@ -16,7 +16,9 @@ jobs:
         dotnet-version: '9.0.x'
     - name: Install dependencies
       run: dotnet restore Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln
-
+    - name: Build API
+      run: dotnet build --configuration Release
+      working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api
     - name: Build
       run: dotnet build Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --configuration Release --no-restore
     - name: Test
