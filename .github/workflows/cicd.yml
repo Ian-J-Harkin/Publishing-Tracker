@@ -21,12 +21,13 @@ jobs:
       run: dotnet build Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --configuration Release --no-restore
     - name: Test
       run: dotnet test Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --no-restore --verbosity normal
+    - name: List workspace contents
+      run: ls -R ${{ github.workspace }}
     - name: Publish API
       run: dotnet publish PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
       working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api
 
-    - name: List workspace contents
-      run: ls -R ${{ github.workspace }}
+
 
 
   build-frontend:
