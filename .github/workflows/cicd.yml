@@ -25,7 +25,6 @@ jobs:
       run: ls -R ${{github.workspace}}
     - name: Publish API     
       run: dotnet publish src/PublishingTracker.Api/PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
-T
 
 
   build-frontend:
