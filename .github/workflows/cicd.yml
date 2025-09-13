@@ -24,8 +24,9 @@ jobs:
     - name: List project files
       run: find . -name "*.csproj"
     - name: Publish API 
-      run: dotnet publish ./Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api/PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
-      
+      run: dotnet publish PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
+      working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api 
+  
   build-frontend:
     runs-on: ubuntu-latest
     steps:
