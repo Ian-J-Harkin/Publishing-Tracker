@@ -25,8 +25,11 @@ builder.Services.AddCors(options =>
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));        
 }
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+Console.WriteLine($"[DEBUG] Connection string: {connectionString}");
 
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -56,7 +59,7 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment() || !app.Environment.IsEnvironment("Testing"))
+if ( !app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
