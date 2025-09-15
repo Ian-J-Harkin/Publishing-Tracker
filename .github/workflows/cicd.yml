@@ -101,7 +101,7 @@ jobs:
       uses: azure/appservice-settings@v1
       with:
         app-name: PublishingTrackerApi
-        resource-group-name: PublishingTrackerRG
+        resource-group-name: PublishingTrackerApi
         connection-strings-json: |
           [
             {
