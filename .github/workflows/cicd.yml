@@ -85,7 +85,7 @@ jobs:
           [
             {
               "name": "DefaultConnection",
-              "value": "Server=tcp:publishingtracker.database.windows.net,1433;Initial Catalog=PublishingTracker;Persist Security Info=False;User ID=ijharkin@hotmail.com;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Authentication="Active Directory Integrated";";",
+              "value": "Server=tcp:publishingtracker.database.windows.net,1433;Initial Catalog=PublishingTracker;Persist Security Info=False;User ID=ijharkin@hotmail.com;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Authentication=\\\"Active Directory Integrated\\\";",
               "type": "SQLServer",
               "slotSetting": false
             }
