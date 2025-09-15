@@ -10,6 +10,10 @@ using PublishingTracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+//debug conn string firstly
+ var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine($"🔍 Connection string starts with: {conn?.Substring(0, 40)}...");
+
 // Add services to the container.
 builder.Services.AddCors(options =>
 {
