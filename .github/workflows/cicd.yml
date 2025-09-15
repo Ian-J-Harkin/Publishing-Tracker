@@ -85,7 +85,7 @@ jobs:
           [
             {
               "name": "DefaultConnection",
-              "value": "${{ secrets.AZURE_SQL_CONNECTION_STRING }}",
+              "value": "Server=tcp:publishingtracker.database.windows.net,1433;Initial Catalog=PublishingTracker;Persist Security Info=False;User ID={your_username};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Authentication="Active Directory Integrated";",
               "type": "SQLServer",
               "slotSetting": false
             }
