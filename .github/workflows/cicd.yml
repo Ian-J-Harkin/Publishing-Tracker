@@ -80,8 +80,7 @@ jobs:
     - name: Set connection string
       uses: azure/appservice-settings@v1
       with:
-        app-name: PublishingTrackerApi
-        resource-group-name: PublishingTrackerApi
+        app-name: PublishingTrackerApi        
         connection-strings-json: |
           [
             {
