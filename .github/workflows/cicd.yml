@@ -76,6 +76,21 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set connection string
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: PublishingTrackerApi
+        resource-group-name: PublishingTrackerApi
+        connection-strings-json: |
+          [
+            {
+              "name": "DefaultConnection",
+              "value": "${{ secrets.AZURE_SQL_CONNECTION_STRING }}",
+              "type": "SQLServer",
+              "slotSetting": false
+            }
+          ]  
     - name: 'Deploy to Azure Web App'
       uses: azure/webapps-deploy@v2
       with:
@@ -97,26 +112,7 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Set connection string
-      uses: azure/appservice-settings@v1
-      with:
-        app-name: PublishingTrackerApi
-        resource-group-name: PublishingTrackerApi
-        connection-strings-json: |
-          [
-            {
-              "name": "DefaultConnection",
-              "value": "${{ secrets.AZURE_SQL_CONNECTION_STRING }}",
-              "type": "SQLServer",
-              "slotSetting": false
-            }
-          ]
-
-    - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'PublishingTrackerApi'
-        package: '${{ github.workspace }}/api-publish'        
+       
   
     - name: List contents of frontend-build
       run: ls -R frontend-build
