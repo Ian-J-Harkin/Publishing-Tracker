@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-test-api:
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_RUNNER_DEBUG: true
     steps:
     - uses: actions/checkout@v4
     - name: Setup .NET Core
@@ -16,14 +18,25 @@ jobs:
         dotnet-version: '9.0.x'
     - name: Install dependencies
       run: dotnet restore Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln
-
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+    - name: Build API
+      run: dotnet build PublishingTracker.Api.csproj --configuration Release
+      working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
-    - name: Publish
-      run: dotnet publish -c Release -o '${{ github.workspace }}/api-publish'
+      run: dotnet test Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --no-restore --verbosity normal
+    - name: List project files
+      run: find . -name "*.csproj"
+    - name: Publish API 
+      run: dotnet publish PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
+      working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api 
+    
+    - name: Upload API publish artifact
+      uses: actions/upload-artifact@v4
+      with:
+       name: api-publish
+       path: ${{ github.workspace }}/api-publish
 
+
+  
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +48,9 @@ jobs:
     - name: Install dependencies
       run: npm install
       working-directory: Publishing-Tracker/src/publishing-tracker-ui
+      
+    - name: List frontend output folder
+      run: ls -la Publishing-Tracker/src/publishing-tracker-ui
 
     - name: Build
       run: npm run build
@@ -44,19 +60,24 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: frontend-build
-        path: src/publishing-tracker-ui/dist
+        path: Publishing-Tracker/src/publishing-tracker-ui/dist
 
   deploy-api:
     runs-on: ubuntu-latest
     needs: build-and-test-api
-    if: github.event_name == 'workflow_dispatch'
+  
     steps:
+    - name: Download API publish artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: api-publish
+        path: api-publish
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v4
+      uses: azure/webapps-deploy@v2
       with:
         app-name: 'PublishingTrackerApi'
         package: '${{ github.workspace }}/api-publish'
@@ -64,7 +85,7 @@ jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
     needs: build-frontend
-    if: github.event_name == 'workflow_dispatch'
+   
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -75,8 +96,11 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+  
+    - name: List contents of frontend-build
+      run: ls -R frontend-build
     - name: 'Deploy to Azure Web App'
-      uses: azure/webapps-deploy@v4
+      uses: azure/webapps-deploy@v2
       with:
-        app-name: 'PublishingTrackerUI'
+        app-name: 'PublishingTrackerUI2'
         package: 'frontend-build'
