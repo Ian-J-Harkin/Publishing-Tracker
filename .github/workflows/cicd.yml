@@ -96,8 +96,11 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+  
+    - name: List contents of frontend-build
+      run: ls -R frontend-build
     - name: 'Deploy to Azure Web App'
       uses: azure/webapps-deploy@v2
       with:
         app-name: 'PublishingTrackerUI2'
-        package: 'frontend-build/dist'
+        package: 'frontend-build'
