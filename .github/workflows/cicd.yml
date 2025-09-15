@@ -96,6 +96,15 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 'Deploy to Azure Web App'
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'PublishingTrackerApi'
+        package: '${{ github.workspace }}/api-publish'
+        connection-strings: |
+          DefaultConnection=${{ secrets.AZURE_SQL_CONNECTION_STRING }}
+        connection-string-type: SQLServer
   
     - name: List contents of frontend-build
       run: ls -R frontend-build
