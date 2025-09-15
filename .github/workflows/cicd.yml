@@ -67,6 +67,11 @@ jobs:
     needs: build-and-test-api
   
     steps:
+    - name: Download API publish artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: api-publish
+        path: api-publish
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
       with:
