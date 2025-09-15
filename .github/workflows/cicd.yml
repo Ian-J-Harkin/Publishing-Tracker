@@ -76,6 +76,20 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set connection string
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: PublishingTrackerApi        
+        connection-strings-json: |
+          [
+            {
+              "name": "DefaultConnection",
+              "value": "Server=tcp:publishingtracker.database.windows.net,1433;Initial Catalog=PublishingTracker;Persist Security Info=False;User ID=ijharkin@hotmail.com;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Authentication=\\\"Active Directory Integrated\\\";",
+              "type": "SQLServer",
+              "slotSetting": false
+            }
+          ]  
     - name: 'Deploy to Azure Web App'
       uses: azure/webapps-deploy@v2
       with:
@@ -96,6 +110,8 @@ jobs:
       uses: azure/login@v1
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+       
   
     - name: List contents of frontend-build
       run: ls -R frontend-build
