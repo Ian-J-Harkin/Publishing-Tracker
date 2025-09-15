@@ -8,6 +8,7 @@ using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using PublishingTracker.Api.Services;
 
+Console.WriteLine($" starting program.cs");
 var builder = WebApplication.CreateBuilder(args);
 
 //debug conn string firstly
