@@ -25,6 +25,12 @@ jobs:
       run: dotnet test Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln --no-restore --verbosity normal
     - name: List project files
       run: find . -name "*.csproj"
+    - name: Upload API publish artifact
+      uses: actions/upload-artifact@v4
+      with:
+       name: api-publish
+       path: ${{ github.workspace }}/api-publish
+
     - name: Publish API 
       run: dotnet publish PublishingTracker.Api.csproj -c Release -o ${{ github.workspace }}/api-publish
       working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api 
