@@ -64,7 +64,16 @@ if (app.Environment.IsDevelopment() || !app.Environment.IsEnvironment("Testing")
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
-        db.Database.Migrate();
+        // wrap in try-catch to handle potential migration issues
+        try
+        {
+            db.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Migration failed: {ex.Message}");
+        }
+        
         if (!db.Users.Any(u => u.Email == "test@test.com"))
         {
             db.Users.Add(new PublishingTracker.Api.Models.User
@@ -385,7 +394,7 @@ importGroup.MapGet("/history", async ([FromServices] PublishingTrackerDbContext 
     return Results.Ok(history);
 });
 // fix for azure port
-// app.Run();
-app.Run("http://0.0.0.0:8080");
+ app.Run();
+// app.Run("http://0.0.0.0:8080");
 
 public partial class Program { }
