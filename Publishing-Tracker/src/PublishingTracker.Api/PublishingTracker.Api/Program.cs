@@ -18,6 +18,7 @@ static bool IsRunningInAzure()
 }
 
 
+Console.WriteLine($" starting program.cs");
 var builder = WebApplication.CreateBuilder(args);
 
 //debug conn string firstly
