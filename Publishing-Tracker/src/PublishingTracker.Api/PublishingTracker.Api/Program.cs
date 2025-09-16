@@ -1,12 +1,22 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using PublishingTracker.Api.Services;
+using System.Text;
+
+static bool IsRunningInAzure()
+{
+    string? instanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+    string? hostname = Environment.GetEnvironmentVariable("WEBSITE_HOSTNAME");
+
+    return !string.IsNullOrEmpty(instanceId) && !string.IsNullOrEmpty(hostname);
+}
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,14 +36,31 @@ builder.Services.AddCors(options =>
         });
 });
 
-if (!builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));        
-}
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+//if (!builder.Environment.IsEnvironment("Testing"))
+//{
+//    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+//        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));        
+//}
 
-Console.WriteLine($"[DEBUG] Connection string: {connectionString}");
+if(IsRunningInAzure())
+{
+    Console.WriteLine("Running in Azure environment.");
+    //builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+    //    options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
+    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+            options.UseNpgsql(Environment.GetEnvironmentVariable("NEON_POSTGRESQL_CONNECTIONSTRING")));
+
+}
+else
+{
+    Console.WriteLine("Running in Local/Development environment.");
+    // Use PostgreSQL for local development
+    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}   
+//var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+//Console.WriteLine($"[DEBUG] Connection string: {connectionString}");
 
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
