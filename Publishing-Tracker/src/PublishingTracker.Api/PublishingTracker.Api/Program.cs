@@ -109,17 +109,17 @@ if ( !app.Environment.IsEnvironment("Testing"))
             Console.WriteLine($"Migration failed: {ex.Message}");
         }
         
-        if (!db.Users.Any(u => u.Email == "test@test.com"))
-        {
-            db.Users.Add(new PublishingTracker.Api.Models.User
-            {
-                Email = "test@test.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-                FirstName = "Test",
-                LastName = "User"
-            });
-            db.SaveChanges();
-        }
+        //if (!db.Users.Any(u => u.Email == "test@test.com"))
+        //{
+        //    db.Users.Add(new PublishingTracker.Api.Models.User
+        //    {
+        //        Email = "test@test.com",
+        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+        //        FirstName = "Test",
+        //        LastName = "User"
+        //    });
+        //    db.SaveChanges();
+        //}
     }
 }
 
@@ -430,7 +430,7 @@ importGroup.MapGet("/history", async ([FromServices] PublishingTrackerDbContext 
 });
 // fix for azure port
 app.Urls.Add("http://*:8080");
-// app.Run();
+app.Run();
 //app.Run("http://0.0.0.0:8080");
 
 public partial class Program { }
