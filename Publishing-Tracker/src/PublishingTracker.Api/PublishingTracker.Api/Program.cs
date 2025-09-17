@@ -26,15 +26,27 @@ var builder = WebApplication.CreateBuilder(args);
 Console.WriteLine($"🔍 Connection string starts with: {conn?.Substring(0, 40)}...");
 
 // Add services to the container.
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowAll",
+//        builder =>
+//        {
+//            builder.WithOrigins("http://localhost:5173")
+//                   .AllowAnyMethod()
+//                   .AllowAnyHeader();
+//        });
+//});
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        builder =>
-        {
-            builder.WithOrigins("http://localhost:5173")
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.WithOrigins(allowedOrigins!)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
 });
 
 //if (!builder.Environment.IsEnvironment("Testing"))
@@ -43,7 +55,7 @@ builder.Services.AddCors(options =>
 //        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));        
 //}
 
-if(IsRunningInAzure())
+if (IsRunningInAzure())
 {
     Console.WriteLine("Running in Azure environment.");
     //builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
@@ -75,7 +87,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     });
 
@@ -140,6 +152,10 @@ app.MapPost("/api/auth/register", async (IAuthService authService, RegisterReque
 app.MapPost("/api/auth/login", async (IAuthService authService, LoginRequest request) =>
 {
     var authResponse = await authService.LoginAsync(request);
+    if (authResponse == null)
+        {
+            return Results.Unauthorized();
+        }
     return authResponse == null ? Results.Unauthorized() : Results.Ok(authResponse);
 });
 
@@ -297,7 +313,7 @@ platformsGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db) 
         {
             Id = p.Id,
             Name = p.Name,
-            BaseUrl = p.BaseUrl,
+            BaseUrl = p.BaseUrl!,
             CommissionRate = p.CommissionRate ?? 0
         })
         .ToListAsync();
@@ -408,6 +424,10 @@ importGroup.MapPost("/upload", async ([FromServices] PublishingTrackerDbContext 
 {
     // This is a placeholder for the upload logic.
     // In a real application, you would save the file and return a file ID.
+    using var stream = new MemoryStream();
+    await file.CopyToAsync(stream); // Example async operation
+
+    // Save to DB or storage here...
     return Results.Ok(new { fileName = file.FileName });
 });
 
@@ -416,6 +436,7 @@ importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext
     // This is a placeholder for the processing logic.
     // In a real application, you would retrieve the file, parse it using the mapping,
     // and create the sale records.
+    await Task.CompletedTask; // Example dummy async operation
     return Results.Ok(new { message = "Import processing started." });
 });
 
