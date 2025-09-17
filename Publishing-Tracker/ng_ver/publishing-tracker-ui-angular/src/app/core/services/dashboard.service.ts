@@ -7,7 +7,7 @@ import { DashboardSummary } from '../models/dashboard';
   providedIn: 'root'
 })
 export class DashboardService {
-  private apiUrl = 'http://localhost:5000/api/dashboard';
+  private apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/dashboard';
 
   constructor(private http: HttpClient) { }
 

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Book, CreateBook, UpdateBook } from '../types/book';
 
-const API_URL = 'http://localhost:5000/api/books';
+const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/books';
 
 const getAuthToken = () => {
     return localStorage.getItem('token');

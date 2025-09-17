@@ -22,7 +22,7 @@ describe('platformService', () => {
         const result = await platformService.getPlatforms();
 
         expect(result).toEqual(platforms);
-        expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:5000/api/platforms', {
+        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/platforms', {
             headers: { Authorization: 'Bearer test-token' }
         });
     });
@@ -33,7 +33,7 @@ describe('platformService', () => {
 
         await platformService.requestPlatform(platformRequest);
 
-        expect(mockedAxios.post).toHaveBeenCalledWith('http://localhost:5000/api/platforms/requests', platformRequest, {
+        expect(mockedAxios.post).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/platforms/requests', platformRequest, {
             headers: { Authorization: 'Bearer test-token' }
         });
     });

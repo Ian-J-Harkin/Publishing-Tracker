@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Platform, PlatformRequest } from '../types/platform';
 
-const API_URL = 'http://localhost:5000/api/platforms';
+const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
 
 const getAuthToken = () => {
     return localStorage.getItem('token');

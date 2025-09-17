@@ -6,7 +6,7 @@ import { Platform, PlatformRequest } from '../models/platform';
 describe('PlatformService', () => {
   let service: PlatformService;
   let httpMock: HttpTestingController;
-  const apiUrl = 'http://localhost:5000/api/platforms';
+  const apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
   const mockToken = 'test-token';
 
   beforeEach(() => {

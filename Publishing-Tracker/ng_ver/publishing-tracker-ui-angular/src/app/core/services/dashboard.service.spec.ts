@@ -6,7 +6,7 @@ import { DashboardSummary } from '../models/dashboard';
 describe('DashboardService', () => {
   let service: DashboardService;
   let httpMock: HttpTestingController;
-  const apiUrl = 'http://localhost:5000/api/dashboard';
+  const apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/dashboard';
   const mockToken = 'test-token';
 
   beforeEach(() => {

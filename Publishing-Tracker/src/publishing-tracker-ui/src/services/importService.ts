@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { ImportJob, ColumnMapping } from '../types/import';
 
-const API_URL = 'http://localhost:5000/api/import';
+const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/import';
 
 const getAuthToken = () => {
     return localStorage.getItem('token');

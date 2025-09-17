@@ -6,7 +6,7 @@ import { Book, CreateBook, UpdateBook } from '../models/book';
 describe('BookService', () => {
   let service: BookService;
   let httpMock: HttpTestingController;
-  const apiUrl = 'http://localhost:5000/api/books';
+  const apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/books';
   const mockToken = 'test-token';
 
   beforeEach(() => {

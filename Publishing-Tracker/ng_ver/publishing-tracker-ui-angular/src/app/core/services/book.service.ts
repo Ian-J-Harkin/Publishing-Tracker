@@ -7,7 +7,7 @@ import { Book, CreateBook, UpdateBook } from '../models/book';
   providedIn: 'root'
 })
 export class BookService {
-  private apiUrl = 'http://localhost:5000/api/books';
+  private apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/books';
 
   constructor(private http: HttpClient) { }
 

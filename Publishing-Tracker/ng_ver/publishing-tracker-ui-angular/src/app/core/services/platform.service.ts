@@ -7,7 +7,7 @@ import { Platform, PlatformRequest } from '../models/platform';
   providedIn: 'root'
 })
 export class PlatformService {
-  private apiUrl = 'http://localhost:5000/api/platforms';
+  private apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
 
   constructor(private http: HttpClient) { }
 

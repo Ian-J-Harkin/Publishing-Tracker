@@ -28,7 +28,7 @@ describe('dashboardService', () => {
         const result = await dashboardService.getDashboardSummary();
 
         expect(result).toEqual(summary);
-        expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:5000/api/dashboard/summary', {
+        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/summary', {
             headers: { Authorization: 'Bearer test-token' }
         });
     });
@@ -40,7 +40,7 @@ describe('dashboardService', () => {
         const result = await dashboardService.getYoYComparison();
 
         expect(result).toEqual(yoy);
-        expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:5000/api/dashboard/yoy', {
+        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/yoy', {
             headers: { Authorization: 'Bearer test-token' }
         });
     });
@@ -52,7 +52,7 @@ describe('dashboardService', () => {
         const result = await dashboardService.getSeasonalPerformance();
 
         expect(result).toEqual(seasonal);
-        expect(mockedAxios.get).toHaveBeenCalledWith('http://localhost:5000/api/dashboard/seasonal', {
+        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/seasonal', {
             headers: { Authorization: 'Bearer test-token' }
         });
     });

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Sale, CreateSale } from '../types/sale';
 
-const API_URL = 'http://localhost:5000/api/sales';
+const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/sales';
 
 const getAuthToken = () => {
     return localStorage.getItem('token');
