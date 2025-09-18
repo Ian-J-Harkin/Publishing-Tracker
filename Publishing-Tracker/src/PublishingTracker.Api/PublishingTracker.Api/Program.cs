@@ -22,8 +22,10 @@ Console.WriteLine($" starting program.cs");
 var builder = WebApplication.CreateBuilder(args);
 
 //debug conn string firstly
- var conn = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine($"🔍 Connection string starts with: {conn?.Substring(0, 40)}...");
+ //var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+
+var conn = Environment.GetEnvironmentVariable("NEON_POSTGRESQL_CONNECTIONSTRING");
+Console.WriteLine($"🔍Neon Connection string is: {conn}  ...");
 
 // Add services to the container.
 //builder.Services.AddCors(options =>
@@ -87,9 +89,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
+        //// check if reading jwt values 
+        var jwtIssuer = builder.Configuration["Jwt:Issuer"];
+        var jwtAudience = builder.Configuration["Jwt:Audience"];
+        var jwtKey = builder.Configuration["Jwt:Key"];
+        if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience)) {
+            throw new InvalidOperationException("JWT configuration is incomplete.");
+        }
+        
     });
+
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -108,30 +119,38 @@ if ( !app.Environment.IsEnvironment("Testing"))
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    using (var scope = app.Services.CreateScope())
+    Console.WriteLine($"Creating database scope");
+    try
     {
-        var db = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
-        // wrap in try-catch to handle potential migration issues
-        try
+        using (var scope = app.Services.CreateScope())
         {
-            db.Database.Migrate();
+            var db = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
+            // wrap in try-catch to handle potential migration issues
+            try
+            {
+                db.Database.Migrate();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Migration failed: {ex.Message}");
+            }
+
+            //if (!db.Users.Any(u => u.Email == "test@test.com"))
+            //{
+            //    db.Users.Add(new PublishingTracker.Api.Models.User
+            //    {
+            //        Email = "test@test.com",
+            //        PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
+            //        FirstName = "Test",
+            //        LastName = "User"
+            //    });
+            //    db.SaveChanges();
+            //}
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Migration failed: {ex.Message}");
-        }
-        
-        //if (!db.Users.Any(u => u.Email == "test@test.com"))
-        //{
-        //    db.Users.Add(new PublishingTracker.Api.Models.User
-        //    {
-        //        Email = "test@test.com",
-        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123"),
-        //        FirstName = "Test",
-        //        LastName = "User"
-        //    });
-        //    db.SaveChanges();
-        //}
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Database setup failed: {ex.Message}");
     }
 }
 
