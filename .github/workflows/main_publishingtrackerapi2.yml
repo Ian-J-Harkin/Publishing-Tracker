@@ -26,7 +26,8 @@ jobs:
         run: dotnet restore Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api.sln
 
       - name: Build with dotnet
-        run: dotnet build PublishingTracker.Api.csproj --configuration Release working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api
+        run: dotnet build PublishingTracker.Api.csproj --configuration Release 
+        working-directory: ${{ github.workspace }}/Publishing-Tracker/src/PublishingTracker.Api/PublishingTracker.Api
 
       - name: dotnet publish
         run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
@@ -66,4 +67,5 @@ jobs:
           package: .
 
           
+
 
