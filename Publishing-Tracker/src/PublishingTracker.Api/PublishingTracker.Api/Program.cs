@@ -60,10 +60,10 @@ builder.Services.AddCors(options =>
 if (IsRunningInAzure())
 {
     Console.WriteLine("Running in Azure environment.");
-    //builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-    //    options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
     builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseNpgsql(Environment.GetEnvironmentVariable("NEON_POSTGRESQL_CONNECTIONSTRING")));
+        options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
+   // builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+     //       options.UseNpgsql(Environment.GetEnvironmentVariable("NEON_POSTGRESQL_CONNECTIONSTRING")));
 
 }
 else
