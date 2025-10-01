@@ -413,7 +413,7 @@ importGroup.MapGet("/history", async ([FromServices] PublishingTrackerDbContext 
     return Results.Ok(history);
 });
 // fix for azure port
-app.Urls.Add("http://*:8080");
+//app.Urls.Add("http://*:8080");
 app.Run();
 
 static bool IsRunningInAzure()
