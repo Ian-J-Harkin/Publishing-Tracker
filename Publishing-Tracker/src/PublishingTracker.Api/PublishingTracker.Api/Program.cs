@@ -72,7 +72,7 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if ( !app.Environment.IsEnvironment("Testing"))
+if (app.Environment.IsEnvironment("Testing"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -423,5 +423,6 @@ static bool IsRunningInAzure()
 
     return !string.IsNullOrEmpty(instanceId) && !string.IsNullOrEmpty(hostname);
 }
+
 
 public partial class Program { }
