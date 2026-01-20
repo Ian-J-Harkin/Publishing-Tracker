@@ -3,18 +3,26 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
+using System.Security.Claims;
 
-namespace PublishingTracker.Api.Extensions;
+namespace PublishingTracker.Api.Features.Sales;
 
-public static class SalesRoutes
+public static class SalesEndpoints
 {
-    public static void MapSalesRoutes(this WebApplication app)
+    public static void MapSalesEndpoints(this WebApplication app)
     {
         var salesGroup = app.MapGroup("/api/sales").RequireAuthorization();
 
-        salesGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
+        salesGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
-            var userId = int.Parse(httpContext.User.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+            var logger = loggerFactory.CreateLogger("SalesEndpoints");
+            if (!TryGetUserId(httpContext, out var userId))
+            {
+                logger.LogWarning("Could not retrieve user ID from token.");
+                return Results.Unauthorized();
+            }
+
+            logger.LogInformation("Fetching sales for User {UserId}", userId);
             var sales = await db.Sales
                 .Where(s => s.Book.UserId == userId)
                 .Select(s => new SaleDto
@@ -34,12 +42,19 @@ public static class SalesRoutes
             return Results.Ok(sales);
         });
 
-        salesGroup.MapPost("/", async ([FromServices] PublishingTrackerDbContext db, CreateSaleDto createSaleDto, HttpContext httpContext) =>
+        salesGroup.MapPost("/", async ([FromServices] PublishingTrackerDbContext db, CreateSaleDto createSaleDto, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
-            var userId = int.Parse(httpContext.User.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+            var logger = loggerFactory.CreateLogger("SalesEndpoints");
+            if (!TryGetUserId(httpContext, out var userId))
+            {
+                logger.LogWarning("Could not retrieve user ID from token during sale creation.");
+                return Results.Unauthorized();
+            }
+
             var book = await db.Books.FirstOrDefaultAsync(b => b.Id == createSaleDto.BookId && b.UserId == userId);
             if (book == null)
             {
+                logger.LogWarning("User {UserId} tried to create a sale for a book they do not own (BookId: {BookId})", userId, createSaleDto.BookId);
                 return Results.NotFound("Book not found or does not belong to the user.");
             }
 
@@ -58,7 +73,21 @@ public static class SalesRoutes
             db.Sales.Add(sale);
             await db.SaveChangesAsync();
 
+            logger.LogInformation("User {UserId} created a sale (SaleId: {SaleId}) for BookId {BookId}", userId, sale.Id, sale.BookId);
+
             return Results.Created($"/api/sales/{sale.Id}", sale);
         });
+    }
+
+    private static bool TryGetUserId(HttpContext httpContext, out int userId)
+    {
+        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out userId))
+        {
+            return true;
+        }
+
+        userId = 0;
+        return false;
     }
 }

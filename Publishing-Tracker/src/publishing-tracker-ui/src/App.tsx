@@ -13,7 +13,7 @@ const ImportPage = lazy(() => import('./pages/ImportPage'));
 const ImportHistoryPage = lazy(() => import('./pages/ImportHistoryPage'));
 const PlatformsPage = lazy(() => import('./pages/PlatformsPage'));
 const RequestPlatformPage = lazy(() => import('./pages/RequestPlatformPage'));
-const MainLayout = lazy(() => import('./components/MainLayout'));
+const MainLayout = lazy(() => import('./components/layout/MainLayout'));
 
 function App() {
     return (

@@ -108,6 +108,12 @@ Select a pricing tier (e.g., Basic for dev).
 Click Review + create, then Create.
 
 After deployment, go to the database and copy the ADO.NET connection string.
+>>>>>>
+Entra passwordless --
+
+Server=tcp:publishingtracker.database.windows.net,1433;Initial Catalog=PublishingTracker;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication="Active Directory Default";
+
+>>>>>>
 
 3. Create an Azure Key Vault
 Used to store secrets securely.
@@ -123,6 +129,7 @@ Click Review + create, then Create.
 After creation, go to Secrets > Generate/Import.
 
 Name the secret (e.g., DefaultConnection) and paste the connection string.
+>>>> AzureConnection
 
 Click Create.
 

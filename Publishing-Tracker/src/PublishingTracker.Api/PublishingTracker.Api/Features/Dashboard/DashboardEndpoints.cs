@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models.Dtos;
+using System.Security.Claims;
 
-namespace PublishingTracker.Api.Extensions;
+namespace PublishingTracker.Api.Features.Dashboard;
 
-public static class DashboardRoutes
+public static class DashboardEndpoints
 {
-    public static void MapDashboardRoutes(this WebApplication app)
+    public static void MapDashboardEndpoints(this WebApplication app)
     {
         var dashboardGroup = app.MapGroup("/api/dashboard").RequireAuthorization();
 
@@ -51,10 +52,16 @@ public static class DashboardRoutes
             return Results.Ok(summary);
         });
 
-        dashboardGroup.MapGet("/yoy", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
+        dashboardGroup.MapGet("/yoy", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
-            var userId = int.Parse(httpContext.User.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+            var logger = loggerFactory.CreateLogger("DashboardEndpoints");
+            if (!TryGetUserId(httpContext, out var userId))
+            {
+                logger.LogWarning("Could not retrieve user ID from token when fetching YOY data.");
+                return Results.Unauthorized();
+            }
 
+            logger.LogInformation("Fetching YOY data for User {UserId}.", userId);
             var currentYearRevenue = await db.Sales
                 .Where(s => s.Book.UserId == userId && s.SaleDate.Year == DateTime.Now.Year)
                 .SumAsync(s => s.Revenue);
@@ -73,10 +80,16 @@ public static class DashboardRoutes
             return Results.Ok(yoyComparison);
         });
 
-        dashboardGroup.MapGet("/seasonal", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
+        dashboardGroup.MapGet("/seasonal", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
-            var userId = int.Parse(httpContext.User.Claims.First(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+            var logger = loggerFactory.CreateLogger("DashboardEndpoints");
+            if (!TryGetUserId(httpContext, out var userId))
+            {
+                logger.LogWarning("Could not retrieve user ID from token when fetching seasonal data.");
+                return Results.Unauthorized();
+            }
 
+            logger.LogInformation("Fetching seasonal data for User {UserId}.", userId);
             var seasonalData = await db.Sales
                 .Where(s => s.Book.UserId == userId)
                 .GroupBy(s => s.SaleDate.Month)
@@ -86,5 +99,17 @@ public static class DashboardRoutes
 
             return Results.Ok(seasonalData);
         });
+    }
+
+    private static bool TryGetUserId(HttpContext httpContext, out int userId)
+    {
+        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out userId))
+        {
+            return true;
+        }
+
+        userId = 0;
+        return false;
     }
 }
