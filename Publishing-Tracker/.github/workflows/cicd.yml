@@ -33,15 +33,15 @@ jobs:
         node-version: '20.x'
     - name: Install dependencies
       run: npm install
-      working-directory: src/publishing-tracker-ui
+      working-directory: apps/ui-react
     - name: Build
       run: npm run build
-      working-directory: src/publishing-tracker-ui
+      working-directory: apps/ui-react
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
         name: frontend-build
-        path: src/publishing-tracker-ui/dist
+        path: apps/ui-react/dist
 
   deploy-api:
     runs-on: ubuntu-latest

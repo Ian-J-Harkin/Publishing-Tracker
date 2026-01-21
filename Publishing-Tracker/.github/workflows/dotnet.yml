@@ -39,4 +39,4 @@ jobs:
       uses: azure/webapps-deploy@v2
       with:
         app-name: 'your-app-name' # Replace with your App Service name
-        package: '${{ github.workspace }}/src/PublishingTracker.Api/PublishingTracker.Api/bin/Release/net8.0'
+        package: '${{ github.workspace }}/apps/api/PublishingTracker.Api/PublishingTracker.Api/bin/Release/net8.0'

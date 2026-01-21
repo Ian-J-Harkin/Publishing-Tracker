@@ -1,0 +1,20 @@
+<div>
+  <h1>Platforms</h1>
+  <a routerLink="/platforms/request">Request New Platform</a>
+  <div *ngIf="error" class="error">{{ error }}</div>
+  <div *ngIf="platforms$ | async as platforms; else loading">
+    <div *ngIf="platforms.length > 0; else noPlatforms">
+      <ul>
+        <li *ngFor="let platform of platforms">
+          {{ platform.name }} - {{ platform.baseUrl }} - {{ platform.commissionRate }}
+        </li>
+      </ul>
+    </div>
+    <ng-template #noPlatforms>
+      <p>No platforms found.</p>
+    </ng-template>
+  </div>
+  <ng-template #loading>
+    <p>Loading...</p>
+  </ng-template>
+</div>
