@@ -1,6 +1,15 @@
-Publishing Tracker
+# Publishing Tracker
+
 A full-stack application for managing book publications and sales tracking. Built with .NET Web API backend and dual frontend options (React and Angular).
 
+**Tech Stack:**
+- Backend: .NET 8 Web API
+- Frontend (Primary): React with Vite
+- Frontend (Alternative): Angular
+- Database: SQL Server / Azure SQL
+- Cloud: Azure
+
+---
 Tech Stack:
 
 Backend: .NET 8 Web API
