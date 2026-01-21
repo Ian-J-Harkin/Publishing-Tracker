@@ -10,14 +10,10 @@ A full-stack application for managing book publications and sales tracking. Buil
 - Cloud: Azure
 
 ---
-Tech Stack:
 
-Backend: .NET 8 Web API
-Frontend (Primary): React with Vite
-Frontend (Alternative): Angular
-Database: SQL Server / Azure SQL
-Cloud: Azure
-Project Structure
+## Project Structure
+
+```
 Publishing-Tracker/
 ├── apps/
 │   ├── api/
@@ -41,6 +37,8 @@ Publishing-Tracker/
 ├── devops/                                   # Azure/Infrastructure
 ├── docs/                                     # Documentation
 └── README.md
+
+---
 Prerequisites
 All Projects
 Git
