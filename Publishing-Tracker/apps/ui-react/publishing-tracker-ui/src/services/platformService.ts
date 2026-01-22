@@ -19,7 +19,7 @@ const getPlatforms = async (): Promise<Platform[]> => {
 
 const requestPlatform = async (platformRequest: PlatformRequest): Promise<void> => {
     const token = getAuthToken();
-    await axios.post(`${API_URL}/requests`, platformRequest, {
+    await axios.post(`${API_URL}/`, platformRequest, {
         headers: {
             Authorization: `Bearer ${token}`
         }

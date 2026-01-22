@@ -11,51 +11,66 @@ public static class PlatformEndpoints
 {
     public static void MapPlatformEndpoints(this WebApplication app)
     {
+        // RequireAuthorization ensures a valid JWT is present
         var platformsGroup = app.MapGroup("/api/platforms").RequireAuthorization();
 
-        platformsGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db, [FromServices] ILoggerFactory loggerFactory) =>
+        // --- GET ALL PLATFORMS ---
+        platformsGroup.MapGet("/", async (PublishingTrackerDbContext db) =>
         {
-            var logger = loggerFactory.CreateLogger("PlatformEndpoints");
-            logger.LogInformation("Fetching all platforms.");
             var platforms = await db.Platforms
-                .Select(p => new PlatformDto
+                .Select(p => new PlatformResponseDto
                 {
                     Id = p.Id,
                     Name = p.Name,
-                    BaseUrl = p.BaseUrl!,
-                    CommissionRate = p.CommissionRate ?? 0
+                    BaseUrl = p.BaseUrl ?? string.Empty,
+                    CommissionRate = p.CommissionRate, // ?? 0.00m,
+                    IsActive = p.IsActive
                 })
                 .ToListAsync();
+
             return Results.Ok(platforms);
         });
 
-        platformsGroup.MapPost("/requests", async ([FromServices] PublishingTrackerDbContext db, PlatformRequestDto requestDto, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        // --- CREATE NEW PLATFORM (Replacing the "Requests" table) ---
+        platformsGroup.MapPost("/", async (PublishingTrackerDbContext db, PlatformRequestDto requestDto, HttpContext httpContext) =>
         {
-            var logger = loggerFactory.CreateLogger("PlatformEndpoints");
+            // Security precaution: Identify the user
             if (!TryGetUserId(httpContext, out var userId))
             {
-                logger.LogWarning("Could not retrieve user ID from token when creating a platform request.");
                 return Results.Unauthorized();
             }
 
-            var platformRequest = new PlatformRequest
+            // Create the actual Database Entity from the DTO
+            var platform = new Platform
             {
                 Name = requestDto.Name,
                 BaseUrl = requestDto.BaseUrl,
                 CommissionRate = requestDto.CommissionRate,
-                UserId = userId
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+                // UserId = userId // Include this if you add UserId to your Platform table
             };
 
-            db.PlatformRequests.Add(platformRequest);
+            db.Platforms.Add(platform);
             await db.SaveChangesAsync();
 
-            logger.LogInformation("User {UserId} created a new platform request for {PlatformName}.", userId, requestDto.Name);
-            return Results.Created($"/api/platforms/requests/{platformRequest.Id}", platformRequest);
+            // Return the Response DTO (clean data for the React frontend)
+            var response = new PlatformResponseDto
+            {
+                Id = platform.Id,
+                Name = platform.Name,
+                BaseUrl = platform.BaseUrl ?? string.Empty,
+                CommissionRate = platform.CommissionRate,
+                IsActive = platform.IsActive
+            };
+
+            return Results.Created($"/api/platforms/{platform.Id}", response);
         })
-        .WithName("RequestPlatform")
+        .WithName("CreatePlatform")
         .WithOpenApi();
     }
 
+    // Helper stays here to serve the POST method
     private static bool TryGetUserId(HttpContext httpContext, out int userId)
     {
         var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);

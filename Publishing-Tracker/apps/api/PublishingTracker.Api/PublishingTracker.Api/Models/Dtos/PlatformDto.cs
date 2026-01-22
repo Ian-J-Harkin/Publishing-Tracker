@@ -1,17 +1,25 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace PublishingTracker.Api.Models.Dtos
-{
-    public class PlatformDto
+{ 
+
+    // What you send TO the API to create/update
+    public class PlatformRequestDto
     {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string BaseUrl { get; set; }
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        public string? BaseUrl { get; set; }
+        [Range(0, 1)]
         public decimal CommissionRate { get; set; }
     }
 
-    public class PlatformRequestDto
+    // What the API sends BACK to the frontend
+    public class PlatformResponseDto
     {
-        public string Name { get; set; }
-        public string BaseUrl { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? BaseUrl { get; set; }
         public decimal CommissionRate { get; set; }
+        public bool IsActive { get; set; }
     }
 }

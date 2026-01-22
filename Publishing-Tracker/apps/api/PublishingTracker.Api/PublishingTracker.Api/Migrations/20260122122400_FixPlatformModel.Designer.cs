@@ -12,8 +12,8 @@ using PublishingTracker.Api.Data;
 namespace PublishingTracker.Api.Migrations
 {
     [DbContext(typeof(PublishingTrackerDbContext))]
-    [Migration("20250916203314_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260122122400_FixPlatformModel")]
+    partial class FixPlatformModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -128,7 +128,7 @@ namespace PublishingTracker.Api.Migrations
                     b.Property<string>("BaseUrl")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("CommissionRate")
+                    b.Property<decimal>("CommissionRate")
                         .HasPrecision(5, 4)
                         .HasColumnType("decimal(5,4)");
 
@@ -148,35 +148,6 @@ namespace PublishingTracker.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Platforms");
-                });
-
-            modelBuilder.Entity("PublishingTracker.Api.Models.PlatformRequest", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("BaseUrl")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("CommissionRate")
-                        .HasPrecision(5, 4)
-                        .HasColumnType("decimal(5, 2)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("PlatformRequests");
                 });
 
             modelBuilder.Entity("PublishingTracker.Api.Models.Sale", b =>
@@ -277,17 +248,6 @@ namespace PublishingTracker.Api.Migrations
                 });
 
             modelBuilder.Entity("PublishingTracker.Api.Models.ImportJob", b =>
-                {
-                    b.HasOne("PublishingTracker.Api.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PublishingTracker.Api.Models.PlatformRequest", b =>
                 {
                     b.HasOne("PublishingTracker.Api.Models.User", "User")
                         .WithMany()

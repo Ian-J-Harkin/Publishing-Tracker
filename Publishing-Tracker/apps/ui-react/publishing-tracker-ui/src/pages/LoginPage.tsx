@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import authService from '../services/authService';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import '../pages/LoginPage.css';
 
 const LoginPage = () => {
@@ -70,6 +70,10 @@ const LoginPage = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                    <p>Don't have an account? <Link to="/register">Register here</Link></p>
+                </div>
             </div>
         </div>
     );

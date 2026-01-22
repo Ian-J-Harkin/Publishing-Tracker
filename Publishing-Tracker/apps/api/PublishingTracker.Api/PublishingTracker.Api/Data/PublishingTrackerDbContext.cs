@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PublishingTracker.Api.Models.Dtos;
 
 namespace PublishingTracker.Api.Data;
 
@@ -13,8 +14,7 @@ public class PublishingTrackerDbContext : DbContext
     public DbSet<Models.Sale> Sales { get; set; }
     public DbSet<Models.Platform> Platforms { get; set; }
     public DbSet<Models.ImportJob> ImportJobs { get; set; }
-    public DbSet<Models.PlatformRequest> PlatformRequests { get; set; }
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -36,9 +36,6 @@ public class PublishingTrackerDbContext : DbContext
             entity.Property(e => e.CommissionRate).HasPrecision(5, 4);
         });
 
-        modelBuilder.Entity<Models.PlatformRequest>(entity =>
-        {
-            entity.Property(e => e.CommissionRate).HasPrecision(5, 4);
-        });
+       
     }
 }

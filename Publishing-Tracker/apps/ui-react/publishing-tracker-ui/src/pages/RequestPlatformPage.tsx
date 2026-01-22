@@ -63,8 +63,8 @@ const RequestPlatformPage = () => {
                             id="commissionRate" 
                             type="number" 
                             step="0.01"
-                            value={commissionRate} 
-                            onChange={e => setCommissionRate(parseFloat(e.target.value))} 
+                            value={commissionRate || ''} 
+                            onChange={e => setCommissionRate(e.target.value === '' ? 0 : parseFloat(e.target.value))} 
                             required 
                             inputMode="decimal" 
                         />
