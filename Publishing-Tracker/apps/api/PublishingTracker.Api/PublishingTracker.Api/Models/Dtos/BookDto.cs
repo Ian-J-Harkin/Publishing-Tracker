@@ -52,4 +52,9 @@ namespace PublishingTracker.Api.Models.Dtos
         public string? Genre { get; set; }
         public string? Description { get; set; }
     }
+    public class BookPerformanceDto
+    {
+        public string PlatformName { get; set; } = string.Empty;
+        public decimal TotalRevenue { get; set; }
+    }
 }

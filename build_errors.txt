@@ -1,0 +1,10 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  PublishingTracker.Api -> C:\Github\PublishingTracker\Publishing-Tracker\apps\api\PublishingTracker.Api\PublishingTracker.Api\bin\Debug\net9.0\PublishingTracker.Api.dll
+  PublishingTracker.Api.Tests -> C:\Github\PublishingTracker\Publishing-Tracker\apps\api\PublishingTracker.Api\PublishingTracker.Api.Tests\bin\Debug\net9.0\PublishingTracker.Api.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.35

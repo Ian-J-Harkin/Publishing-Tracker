@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
-using System.Security.Claims;
+using PublishingTracker.Api.Services;
 
 namespace PublishingTracker.Api.Features.Books;
 
@@ -13,133 +11,56 @@ public static class BookEndpoints
     {
         var booksGroup = app.MapGroup("/api/books").RequireAuthorization();
 
-        booksGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapGet("/", async ([FromServices] IBookService bookService) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            logger.LogInformation("Fetching all books.");
-            var books = await db.Books.ToListAsync();
+            var books = await bookService.GetAllAsync();
             return Results.Ok(books);
         });
 
-        booksGroup.MapGet("/{id}", async ([FromServices] PublishingTrackerDbContext db, int id, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapGet("/{id}", async ([FromServices] IBookService bookService, int id) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            logger.LogInformation("Fetching book with ID {BookId}.", id);
-            var book = await db.Books.FindAsync(id);
-            if (book == null)
-            {
-                logger.LogWarning("Book with ID {BookId} not found.", id);
-            }
+            var book = await bookService.GetByIdAsync(id);
             return book == null ? Results.NotFound() : Results.Ok(book);
         });
 
-        booksGroup.MapPost("/", async ([FromServices] PublishingTrackerDbContext db, CreateBookDto createBookDto, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapPost("/", async ([FromServices] IBookService bookService, CreateBookDto createBookDto) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            if (!TryGetUserId(httpContext, out var userId))
+            try
             {
-                logger.LogWarning("Could not retrieve user ID from token during book creation.");
+                var book = await bookService.CreateAsync(createBookDto);
+                return Results.Created($"/api/books/{book.Id}", book);
+            }
+            catch (UnauthorizedAccessException)
+            {
                 return Results.Unauthorized();
             }
-
-            var book = new Book
-            {
-                Title = createBookDto.Title,
-                Author = createBookDto.Author,
-                ISBN = createBookDto.ISBN,
-                PublicationDate = createBookDto.PublicationDate,
-                BasePrice = createBookDto.BasePrice,
-                Genre = createBookDto.Genre,
-                Description = createBookDto.Description,
-                UserId = userId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            db.Books.Add(book);
-            await db.SaveChangesAsync();
-
-            logger.LogInformation("User {UserId} created a new book (BookId: {BookId}).", userId, book.Id);
-            return Results.Created($"/api/books/{book.Id}", book);
         });
 
-        booksGroup.MapPut("/{id}", async ([FromServices] PublishingTrackerDbContext db, int id, UpdateBookDto updateBookDto, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapPut("/{id}", async ([FromServices] IBookService bookService, int id, UpdateBookDto updateBookDto) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            var book = await db.Books.FindAsync(id);
-            if (book == null)
-            {
-                logger.LogWarning("Book with ID {BookId} not found for update.", id);
-                return Results.NotFound();
-            }
-
-            if (updateBookDto.Title != null) book.Title = updateBookDto.Title;
-            if (updateBookDto.Author != null) book.Author = updateBookDto.Author;
-            if (updateBookDto.ISBN != null) book.ISBN = updateBookDto.ISBN;
-            if (updateBookDto.PublicationDate.HasValue) book.PublicationDate = updateBookDto.PublicationDate;
-            if (updateBookDto.BasePrice.HasValue) book.BasePrice = updateBookDto.BasePrice;
-            if (updateBookDto.Genre != null) book.Genre = updateBookDto.Genre;
-            if (updateBookDto.Description != null) book.Description = updateBookDto.Description;
-            book.UpdatedAt = DateTime.UtcNow;
-
-            await db.SaveChangesAsync();
-            logger.LogInformation("Book with ID {BookId} was updated.", id);
-            return Results.Ok(book);
+            var book = await bookService.UpdateAsync(id, updateBookDto);
+            return book == null ? Results.NotFound() : Results.Ok(book);
         });
 
-        booksGroup.MapDelete("/{id}", async ([FromServices] PublishingTrackerDbContext db, int id, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapDelete("/{id}", async ([FromServices] IBookService bookService, int id) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            var book = await db.Books.FindAsync(id);
-            if (book == null)
-            {
-                logger.LogWarning("Book with ID {BookId} not found for deletion.", id);
-                return Results.NotFound();
-            }
-
-            db.Books.Remove(book);
-            await db.SaveChangesAsync();
-
-            logger.LogInformation("Book with ID {BookId} was deleted.", id);
+            await bookService.DeleteAsync(id);
             return Results.NoContent();
         });
 
-        booksGroup.MapGet("/{id}/performance", async ([FromServices] PublishingTrackerDbContext db, int id, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        booksGroup.MapGet("/{id}/performance", async ([FromServices] IBookService bookService, int id) =>
         {
-            var logger = loggerFactory.CreateLogger("BookEndpoints");
-            if (!TryGetUserId(httpContext, out var userId))
+            var performanceData = await bookService.GetPerformanceAsync(id);
+            
+            if (performanceData == null)
             {
-                logger.LogWarning("Could not retrieve user ID from token when fetching book performance.");
-                return Results.Unauthorized();
+                // This could mean book not found OR user unauthorized for book. 
+                // To keep it simple and secure, we can return NotFound or generic 'Access Denied'.
+                // Since service handles logic, null implies "cannot retrieve data".
+                return Results.NotFound("Book not found or access denied.");
             }
-
-            var book = await db.Books.FirstOrDefaultAsync(b => b.Id == id && b.UserId == userId);
-            if (book == null)
-            {
-                logger.LogWarning("User {UserId} tried to access performance data for a book they do not own (BookId: {BookId}).", userId, id);
-                return Results.NotFound("Book not found or does not belong to the user.");
-            }
-
-            logger.LogInformation("Fetching performance data for BookId {BookId} for User {UserId}.", id, userId);
-            var performanceData = await db.Sales
-                .Where(s => s.BookId == id)
-                .GroupBy(s => s.Platform.Name)
-                .Select(g => new { PlatformName = g.Key, TotalRevenue = g.Sum(s => s.Revenue) })
-                .ToListAsync();
 
             return Results.Ok(performanceData);
         });
-    }
-
-    private static bool TryGetUserId(HttpContext httpContext, out int userId)
-    {
-        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out userId))
-        {
-            return true;
-        }
-
-        userId = 0;
-        return false;
     }
 }
