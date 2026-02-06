@@ -29,18 +29,21 @@ builder.Services.AddCors(options =>
     });
 });
 
-if (IsRunningInAzure())
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    Console.WriteLine("Running in Azure environment.");
-    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
-}
-else
-{
-    Console.WriteLine("Running in Local/Development environment.");
-    // Use PostgreSQL for local development
-    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    if (IsRunningInAzure())
+    {
+        Console.WriteLine("Running in Azure environment.");
+        builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
+    }
+    else
+    {
+        Console.WriteLine("Running in Local/Development environment.");
+        // Use PostgreSQL for local development
+        builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    }
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
