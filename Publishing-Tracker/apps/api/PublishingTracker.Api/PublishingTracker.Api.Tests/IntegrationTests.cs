@@ -94,7 +94,7 @@ namespace PublishingTracker.Api.Tests
         {
             var client = await GetAuthenticatedClientAsync();
             var requestDto = new PlatformRequestDto { Name = "New Platform", BaseUrl = "http://newplatform.com" };
-            var response = await client.PostAsJsonAsync("/api/platforms/requests", requestDto);
+            var response = await client.PostAsJsonAsync("/api/platforms", requestDto);
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
     }

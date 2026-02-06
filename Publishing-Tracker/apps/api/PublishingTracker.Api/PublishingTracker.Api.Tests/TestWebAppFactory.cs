@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Services;
+using Microsoft.Extensions.Hosting;
 
 namespace PublishingTracker.Api.Tests
 {
@@ -56,12 +57,11 @@ namespace PublishingTracker.Api.Tests
             });
         }
 
-        public async Task<HttpClient> GetAuthenticatedClientAsync()
+        protected override IHost CreateHost(IHostBuilder builder)
         {
-            var client = CreateClient();
-            using (var scope = Services.CreateScope())
+            var host = base.CreateHost(builder);
+            using (var scope = host.Services.CreateScope())
             {
-                var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
                 var dbContext = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
                 if (dbContext.Database.IsInMemory())
                 {
@@ -72,6 +72,18 @@ namespace PublishingTracker.Api.Tests
                         dbContext.SaveChanges();
                     }
                 }
+            }
+            return host;
+        }
+
+        public async Task<HttpClient> GetAuthenticatedClientAsync()
+        {
+            var client = CreateClient();
+            using (var scope = Services.CreateScope())
+            {
+                var tokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
+                
                 var user = dbContext.Users.First(u => u.Email == "test@test.com");
                 var token = tokenService.CreateToken(user);
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);

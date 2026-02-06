@@ -117,7 +117,10 @@ if (app.Environment.IsEnvironment("Testing"))
             // wrap in try-catch to handle potential migration issues
             try
             {
-                db.Database.Migrate();
+                if (db.Database.IsRelational())
+                {
+                    db.Database.Migrate();
+                }
             }
             catch (Exception ex)
             {
