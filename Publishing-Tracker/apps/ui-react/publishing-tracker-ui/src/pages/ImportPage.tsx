@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importService } from '../services/importService';
-import { ColumnMapping } from '../types/import';
+import { ImportJob, ColumnMapping } from '../types/import';
 
 const ImportPage = () => {
     const navigate = useNavigate();
@@ -20,7 +20,7 @@ const ImportPage = () => {
     const [headers, setHeaders] = useState<string[]>([]);
     const [step, setStep] = useState<'upload' | 'mapping' | 'summary'>('upload');
     const [error, setError] = useState<string | null>(null);
-    const [summary, setSummary] = useState<{ message: string } | null>(null);
+    const [summary, setSummary] = useState<ImportJob | null>(null);
 
     const autoMapHeaders = (availableHeaders: string[]) => {
         const newMapping = { ...mapping };
@@ -162,13 +162,30 @@ const ImportPage = () => {
                     </div>
                 )}
 
-                {step === 'summary' && (
+                {step === 'summary' && summary && (
                     <div style={{ ...pageStyles.stepContainer, textAlign: 'center' }}>
                         <div style={pageStyles.successIcon}>✓</div>
-                        <h3>Step 3: Import Complete</h3>
-                        <div style={pageStyles.summaryBox}>
-                            <p style={{ fontSize: '1.1rem' }}>{summary?.message}</p>
+                        <h3>Import Complete</h3>
+                        <div style={pageStyles.summaryGrid}>
+                            <div style={pageStyles.summaryStat}>
+                                <span style={pageStyles.statLabel}>Processed</span>
+                                <span style={pageStyles.statValue}>{summary.recordsProcessed}</span>
+                            </div>
+                            <div style={pageStyles.summaryStat}>
+                                <span style={pageStyles.statLabel}>Successful</span>
+                                <span style={pageStyles.statValue} className="text-success">{summary.recordsSuccessful}</span>
+                            </div>
+                            <div style={pageStyles.summaryStat}>
+                                <span style={pageStyles.statLabel}>Failed</span>
+                                <span style={pageStyles.statValue} className={summary.recordsFailed > 0 ? "text-danger" : ""}>{summary.recordsFailed}</span>
+                            </div>
                         </div>
+                        {summary.errorLog && (
+                            <div style={pageStyles.errorLogBox}>
+                                <strong>Error Log:</strong>
+                                <pre style={pageStyles.errorPre}>{summary.errorLog}</pre>
+                            </div>
+                        )}
                         <div style={pageStyles.actions}>
                             <button className="btn-primary" onClick={() => navigate('/sales')}>View Sales Ledger</button>
                         </div>
@@ -200,7 +217,13 @@ const pageStyles = {
     actions: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' },
     cancelBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: '600' },
     errorBanner: { backgroundColor: '#fef2f2', color: 'var(--danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' },
-    select: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'white', color: 'var(--text-main)', appearance: 'none' as const }
+    select: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'white', color: 'var(--text-main)', appearance: 'none' as const },
+    summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', margin: '2rem 0' },
+    summaryStat: { padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
+    statLabel: { fontSize: '0.875rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+    statValue: { fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-main)' },
+    errorLogBox: { textAlign: 'left' as const, marginTop: '2.5rem', padding: '1.5rem', backgroundColor: '#fff1f2', borderRadius: '12px', border: '1px solid #fecaca' },
+    errorPre: { whiteSpace: 'pre-wrap' as const, fontSize: '0.85rem', color: '#991b1b', marginTop: '0.5rem', maxHeight: '150px', overflowY: 'auto' as const }
 };
 
 export default ImportPage;

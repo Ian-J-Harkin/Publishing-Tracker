@@ -17,12 +17,22 @@ public static class ImportEndpoints
             var logger = loggerFactory.CreateLogger("ImportEndpoints");
             if (!TryGetUserId(httpContext, out var userId))
             {
-                logger.LogWarning("Could not retrieve user ID from token during file upload.");
                 return Results.Unauthorized();
             }
 
             logger.LogInformation("User {UserId} uploaded file {FileName}.", userId, file.FileName);
             
+            // Ensure temp directory exists
+            var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
+            if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
+
+            // Save file for processing step
+            var filePath = Path.Combine(tempDir, $"{userId}_{file.FileName}");
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
             // Extract headers for mapping
             var headers = new List<string>();
             using (var reader = new StreamReader(file.OpenReadStream()))
@@ -37,21 +47,37 @@ public static class ImportEndpoints
             return Results.Ok(new { fileName = file.FileName, headers });
         });
 
-        importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext db, ColumnMappingDto mapping, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext db, [FromServices] ICsvImportService importService, ProcessImportRequest request, HttpContext httpContext) =>
         {
-            var logger = loggerFactory.CreateLogger("ImportEndpoints");
             if (!TryGetUserId(httpContext, out var userId))
             {
-                logger.LogWarning("Could not retrieve user ID from token during import processing.");
                 return Results.Unauthorized();
             }
 
-            logger.LogInformation("User {UserId} started processing an import.", userId);
-            // This is a placeholder for the processing logic.
-            // In a real application, you would retrieve the file, parse it using the mapping,
-            // and create the sale records.
-            await Task.CompletedTask; // Example dummy async operation
-            return Results.Ok(new { message = "Import processing started." });
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads", $"{userId}_{request.FileName}");
+            if (!File.Exists(filePath))
+            {
+                return Results.BadRequest(new { message = "Uploaded file not found. Please upload again." });
+            }
+
+            try
+            {
+                // We need to wrap the file back into an IFormFile-like structure for the service or just pass the stream
+                // To keep the service interface clean and reusable, let's use a physical file stream
+                using var stream = File.OpenRead(filePath);
+                var formFile = new FormFile(stream, 0, stream.Length, "file", request.FileName);
+                
+                var result = await importService.ProcessImportAsync(userId, formFile, request.Mapping);
+
+                // Cleanup
+                File.Delete(filePath);
+
+                return Results.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem(ex.Message);
+            }
         });
 
         importGroup.MapGet("/history", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
@@ -71,6 +97,8 @@ public static class ImportEndpoints
             return Results.Ok(history);
         });
     }
+
+    public record ProcessImportRequest(string FileName, ColumnMappingDto Mapping);
 
     private static bool TryGetUserId(HttpContext httpContext, out int userId)
     {

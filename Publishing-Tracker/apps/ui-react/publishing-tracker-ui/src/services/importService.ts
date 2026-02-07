@@ -15,7 +15,7 @@ const uploadFile = async (file: File): Promise<{ fileName: string, headers: stri
     return response.data;
 };
 
-const processFile = async (fileName: string, mapping: ColumnMapping): Promise<{ message: string }> => {
+const processFile = async (fileName: string, mapping: ColumnMapping): Promise<ImportJob> => {
     const response = await axiosClient.post(`${API_URL}/process`, { fileName, mapping });
     return response.data;
 };
