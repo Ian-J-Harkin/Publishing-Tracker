@@ -53,21 +53,26 @@ const BookListPage = () => {
     const rowVirtualizer = useVirtualizer({
         count: books.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 70,
+        estimateSize: () => 80,
         overscan: 5,
     });
 
-    if (loading && books.length === 0) return <div style={pageStyles.centered}>Scanning Library...</div>;
+    if (loading && books.length === 0) return (
+        <div style={pageStyles.centered}>
+            <div className="shimmer" style={{ height: '100px', borderRadius: '16px', marginBottom: '2rem' }}></div>
+            <div className="shimmer" style={{ height: '600px', borderRadius: '16px' }}></div>
+        </div>
+    );
 
     return (
         <div style={pageStyles.container}>
             <div style={pageStyles.header}>
                 <div>
-                    <h1 style={pageStyles.title}>My Portfolio</h1>
-                    <p style={pageStyles.subtitle}>Manage your published works and track their performance.</p>
+                    <h1>IP Portfolio</h1>
+                    <p style={pageStyles.subtitle}>High-level management of your intellectual property assets.</p>
                 </div>
-                <Link to="/books/add" className="btn-primary" style={pageStyles.addBtn}>
-                    + Add New Book
+                <Link to="/books/add" className="btn-primary animate-pulse" style={pageStyles.addBtn}>
+                    <span style={{ fontSize: '1.25rem' }}>+</span> Register New Title
                 </Link>
             </div>
 
@@ -76,7 +81,7 @@ const BookListPage = () => {
                     <span style={pageStyles.searchIcon}>🔍</span>
                     <input
                         type="text"
-                        placeholder="Search by title or author..."
+                        placeholder="Search assets by title or author identity..."
                         value={searchTerm}
                         onChange={handleSearchChange}
                         style={pageStyles.searchInput}
@@ -88,18 +93,18 @@ const BookListPage = () => {
 
             <div className="card" style={pageStyles.tableCard}>
                 <div style={pageStyles.tableHeader}>
-                    <div style={{ flex: 2.5 }}>Title & Author</div>
-                    <div style={{ flex: 1.5 }}>Release Date</div>
+                    <div style={{ flex: 2.5 }}>Asset Title & Attribution</div>
+                    <div style={{ flex: 1.5 }}>Publication Date</div>
                     <div style={{ flex: 1 }}>Genre</div>
-                    <div style={{ flex: 1, textAlign: 'right' }}>Actions</div>
+                    <div style={{ flex: 1, textAlign: 'right' }}>Management</div>
                 </div>
 
                 <div ref={parentRef} style={pageStyles.scrollArea}>
                     {books.length === 0 && !loading ? (
                         <div style={pageStyles.emptyState}>
-                            <div style={pageStyles.emptyIcon}>📚</div>
-                            <h3>No books found</h3>
-                            <p>Try adjusting your search or add a new title to your collection.</p>
+                            <div style={pageStyles.emptyIcon}>💎</div>
+                            <h3>Portfolio is Empty</h3>
+                            <p>Begin building your legacy by registering your first title.</p>
                         </div>
                     ) : (
                         <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
@@ -109,6 +114,7 @@ const BookListPage = () => {
                                 return (
                                     <div
                                         key={virtualItem.key}
+                                        className="row-hover"
                                         style={{
                                             ...pageStyles.row,
                                             height: `${virtualItem.size}px`,
@@ -121,24 +127,24 @@ const BookListPage = () => {
                                             </Link>
                                             <div style={pageStyles.bookAuthor}>{book.author}</div>
                                         </div>
-                                        <div style={{ flex: 1.5, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                        <div style={{ flex: 1.5, color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '600' }}>
                                             {book.publicationDate ? new Date(book.publicationDate).toLocaleDateString(undefined, {
                                                 year: 'numeric',
-                                                month: 'short',
+                                                month: 'long',
                                                 day: 'numeric'
-                                            }) : 'TBA'}
+                                            }) : 'Unscheduled'}
                                         </div>
                                         <div style={{ flex: 1 }}>
-                                            <span style={pageStyles.genreBadge}>{book.genre || 'Uncategorized'}</span>
+                                            <span style={pageStyles.genreBadge}>{book.genre || 'General IP'}</span>
                                         </div>
-                                        <div style={{ flex: 1, textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                            <Link to={`/books/performance/${book.id}`} style={pageStyles.actionIcon} title="Analytics">
+                                        <div style={{ flex: 1, textAlign: 'right', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                                            <Link to={`/books/performance/${book.id}`} style={pageStyles.actionIcon} title="Economics">
                                                 📊
                                             </Link>
                                             <button
                                                 onClick={() => handleDelete(book.id, book.title)}
                                                 style={pageStyles.deleteBtn}
-                                                title="Delete"
+                                                title="De-register"
                                             >
                                                 🗑️
                                             </button>
@@ -150,38 +156,46 @@ const BookListPage = () => {
                     )}
                 </div>
             </div>
+
+            <style>{`
+                .row-hover {
+                    transition: all 0.2s ease-out;
+                }
+                .row-hover:hover {
+                    background: rgba(255, 255, 255, 0.03) !important;
+                    box-shadow: inset 4px 0 0 var(--primary);
+                }
+            `}</style>
         </div>
     );
 };
 
 const pageStyles = {
-    container: { animation: 'fadeIn 0.3s ease' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' },
-    title: { fontSize: '1.875rem', fontWeight: '800', marginBottom: '0.25rem' },
-    subtitle: { color: 'var(--text-muted)' },
-    addBtn: { padding: '0.75rem 1.5rem', borderRadius: '10px' },
-    searchCard: { padding: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center' },
+    container: { animation: 'fadeIn 0.5s ease' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' },
+    subtitle: { color: 'var(--text-muted)', fontSize: '1.1rem' },
+    addBtn: { padding: '0.8rem 1.75rem' },
+    searchCard: { padding: '0.75rem', marginBottom: '2rem' },
     searchWrapper: { position: 'relative' as const, flex: 1, display: 'flex', alignItems: 'center' },
-    searchIcon: { position: 'absolute' as const, left: '1rem', color: '#94a3b8' },
+    searchIcon: { position: 'absolute' as const, left: '1.25rem', color: '#94a3b8', fontSize: '1.1rem' },
     searchInput: {
         width: '100%',
-        padding: '0.75rem 1rem 0.75rem 2.5rem',
-        borderRadius: '8px',
-        border: '1px solid var(--border)',
-        fontSize: '1rem',
-        outline: 'none',
+        padding: '0.85rem 1rem 0.85rem 3.25rem',
+        background: 'transparent',
+        border: 'none',
+        fontSize: '1.1rem',
     },
     tableCard: { padding: 0, overflow: 'hidden' },
     tableHeader: {
         display: 'flex',
-        padding: '1rem 1.5rem',
-        backgroundColor: '#f8fafc',
+        padding: '1.25rem 2rem',
+        backgroundColor: 'rgba(255,255,255,0.02)',
         borderBottom: '1px solid var(--border)',
-        fontWeight: '700',
+        fontWeight: '800',
         color: '#64748b',
         textTransform: 'uppercase' as const,
-        fontSize: '0.75rem',
-        letterSpacing: '0.05em',
+        fontSize: '0.7rem',
+        letterSpacing: '0.15em',
     },
     scrollArea: { height: '600px', overflow: 'auto', position: 'relative' as const },
     row: {
@@ -191,27 +205,29 @@ const pageStyles = {
         width: '100%',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 1.5rem',
+        padding: '0 2rem',
         borderBottom: '1px solid var(--border)',
         boxSizing: 'border-box' as const,
-        transition: 'background-color 0.2s',
     },
-    bookTitle: { color: 'var(--text-main)', textDecoration: 'none', fontWeight: '700', fontSize: '1rem', display: 'block' },
-    bookAuthor: { fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' },
+    bookTitle: { color: '#fff', textDecoration: 'none', fontWeight: '800', fontSize: '1.1rem', marginBottom: '4px', display: 'block' },
+    bookAuthor: { fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' },
     genreBadge: {
-        fontSize: '0.75rem',
-        padding: '0.25rem 0.6rem',
+        fontSize: '0.7rem',
+        padding: '4px 12px',
         borderRadius: '20px',
-        backgroundColor: '#f1f5f9',
-        color: '#475569',
-        fontWeight: '600'
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        color: 'var(--text-muted)',
+        fontWeight: '800',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.05em',
+        border: '1px solid var(--border)'
     },
-    actionIcon: { textDecoration: 'none', fontSize: '1.2rem', cursor: 'pointer', transition: 'transform 0.2s' },
-    deleteBtn: { backgroundColor: 'transparent', border: 'none', fontSize: '1.2rem', cursor: 'pointer' },
-    emptyState: { textAlign: 'center' as const, padding: '5rem 2rem', color: 'var(--text-muted)' },
-    emptyIcon: { fontSize: '3rem', marginBottom: '1rem' },
-    errorBanner: { padding: '1rem', backgroundColor: '#fef2f2', color: 'var(--danger)', borderRadius: '8px', marginBottom: '1rem', border: '1px solid #fee2e2' },
-    centered: { padding: '10rem', textAlign: 'center' as const, color: 'var(--text-muted)', fontSize: '1.2rem' }
+    actionIcon: { textDecoration: 'none', fontSize: '1.4rem', cursor: 'pointer', transition: 'transform 0.2s' },
+    deleteBtn: { backgroundColor: 'transparent', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'rgba(239, 68, 68, 0.4)' },
+    emptyState: { textAlign: 'center' as const, padding: '8rem 2rem' },
+    emptyIcon: { fontSize: '4rem', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 20px var(--primary-glow))' },
+    errorBanner: { padding: '1.5rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '16px', border: '1px solid var(--danger)', marginBottom: '2rem' },
+    centered: { padding: '10rem', textAlign: 'center' as const }
 };
 
 export default BookListPage;

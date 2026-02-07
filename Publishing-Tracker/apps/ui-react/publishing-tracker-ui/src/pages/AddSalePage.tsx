@@ -32,7 +32,7 @@ const AddSalePage = () => {
                 setBooks(availableBooks);
                 setPlatforms(availablePlatforms);
             } catch {
-                setError('Failed to fetch required data for sales entry.');
+                setError('Failed to fetch required metadata for transaction logging.');
             }
         };
         fetchData();
@@ -50,7 +50,7 @@ const AddSalePage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (sale.bookId === 0 || sale.platformId === 0) {
-            setError('Please select both a book and a platform.');
+            setError('Selection Required: Please specify both target publication and distribution channel.');
             return;
         }
 
@@ -58,7 +58,7 @@ const AddSalePage = () => {
             await saleService.createSale(sale);
             navigate('/sales');
         } catch {
-            setError('Failed to log transaction. Please check your network or entry data.');
+            setError('Transmission Error: Failed to secure transaction data on the ledger.');
         }
     };
 
@@ -67,8 +67,8 @@ const AddSalePage = () => {
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Manual Sales Entry</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Use this for platforms that don't support CSV exports or for one-off direct sales.</p>
+                <h1>Manual Entry</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Log direct-to-consumer sales or platform-specific manual entries.</p>
             </div>
 
             <div className="card" style={pageStyles.formCard}>
@@ -76,9 +76,9 @@ const AddSalePage = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
-                        <label>Target Publication</label>
-                        <select name="bookId" value={sale.bookId} onChange={handleChange} required style={pageStyles.input}>
-                            <option value="0">--- Select a Book ---</option>
+                        <label>Intellectual Property Asset</label>
+                        <select name="bookId" value={sale.bookId} onChange={handleChange} required>
+                            <option value="0">--- Select Publication Title ---</option>
                             {books.map(book => (
                                 <option key={book.id} value={book.id}>{book.title}</option>
                             ))}
@@ -87,30 +87,29 @@ const AddSalePage = () => {
 
                     <div style={pageStyles.gridRow}>
                         <div className="form-group" style={{ flex: 2 }}>
-                            <label>Distribution Platform</label>
-                            <select name="platformId" value={sale.platformId} onChange={handleChange} required style={pageStyles.input}>
-                                <option value="0">--- Select Platform ---</option>
+                            <label>Sales Channel</label>
+                            <select name="platformId" value={sale.platformId} onChange={handleChange} required>
+                                <option value="0">--- Distribution Platform ---</option>
                                 {platforms.map(platform => (
                                     <option key={platform.id} value={platform.id}>{platform.name}</option>
                                 ))}
                             </select>
                         </div>
-                        <div className="form-group" style={{ flex: 1 }}>
-                            <label>Sale Date</label>
+                        <div className="form-group" style={{ flex: 1.2 }}>
+                            <label>Transaction Date</label>
                             <input
                                 type="date"
                                 name="saleDate"
                                 value={sale.saleDate}
                                 onChange={handleChange}
                                 required
-                                style={pageStyles.input}
                             />
                         </div>
                     </div>
 
                     <div style={pageStyles.gridRow}>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Units Sold</label>
+                            <label>Volume (Units)</label>
                             <input
                                 type="number"
                                 name="quantity"
@@ -118,12 +117,11 @@ const AddSalePage = () => {
                                 value={sale.quantity}
                                 onChange={handleChange}
                                 required
-                                style={pageStyles.input}
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Currency</label>
-                            <select name="currency" value={sale.currency} onChange={handleChange} style={pageStyles.input}>
+                            <label>Reporting Currency</label>
+                            <select name="currency" value={sale.currency} onChange={handleChange}>
                                 <option value="USD">USD ($)</option>
                                 <option value="GBP">GBP (£)</option>
                                 <option value="EUR">EUR (€)</option>
@@ -135,7 +133,7 @@ const AddSalePage = () => {
 
                     <div style={pageStyles.gridRow}>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>List Price ({sale.currency})</label>
+                            <label>Market Price ({sale.currency})</label>
                             <input
                                 type="number"
                                 step="0.01"
@@ -143,12 +141,11 @@ const AddSalePage = () => {
                                 value={sale.unitPrice}
                                 onChange={handleChange}
                                 required
-                                style={pageStyles.input}
                                 placeholder="0.00"
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
-                            <label>Royalty per Unit ({sale.currency})</label>
+                            <label>Accrued Royalty ({sale.currency})</label>
                             <input
                                 type="number"
                                 step="0.01"
@@ -156,7 +153,6 @@ const AddSalePage = () => {
                                 value={sale.royalty}
                                 onChange={handleChange}
                                 required
-                                style={pageStyles.input}
                                 placeholder="0.00"
                             />
                         </div>
@@ -164,8 +160,8 @@ const AddSalePage = () => {
 
                     <div style={pageStyles.revenueProjection}>
                         <div style={pageStyles.projectionMeta}>
-                            <span style={pageStyles.projectionLabel}>Calculated Revenue</span>
-                            <span style={pageStyles.projectionSub}>Quantity × Royalty</span>
+                            <span style={pageStyles.projectionLabel}>Net Projected Yield</span>
+                            <span style={pageStyles.projectionSub}>Dynamic Calculation (Volume × Royalty)</span>
                         </div>
                         <div style={pageStyles.projectionValue}>
                             {sale.currency} {projectedRevenue}
@@ -174,54 +170,68 @@ const AddSalePage = () => {
 
                     <div style={pageStyles.actions}>
                         <button type="button" onClick={() => navigate('/sales')} style={pageStyles.cancelBtn}>
-                            Cancel
+                            Discard Entry
                         </button>
-                        <button type="submit" className="btn-primary" style={{ padding: '0.75rem 2rem' }}>
-                            Log Transaction
+                        <button type="submit" className="btn-primary" style={{ padding: '0.85rem 2.5rem' }}>
+                            Validate & Commit
                         </button>
                     </div>
                 </form>
             </div>
+
+            <style>{`
+                @keyframes glowPulse {
+                    0% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.1); }
+                    50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+                    100% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.1); }
+                }
+            `}</style>
         </div>
     );
 };
 
 const pageStyles = {
-    wrapper: { maxWidth: '700px', margin: '0 auto' },
-    header: { marginBottom: '2.5rem', textAlign: 'center' as const },
-    formCard: { padding: '2.5rem' },
-    gridRow: { display: 'flex', gap: '1.5rem', marginBottom: '1rem' },
-    input: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem' },
+    wrapper: { maxWidth: '750px', margin: '0 auto', animation: 'fadeIn 0.5s ease-out' },
+    header: { marginBottom: '3rem' },
+    formCard: { padding: '3rem', border: '1px solid rgba(255,255,255,0.1)' },
+    gridRow: { display: 'flex', gap: '2rem', marginBottom: '1rem' },
     errorBanner: {
-        backgroundColor: '#fef2f2',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
         color: 'var(--danger)',
-        padding: '1rem',
+        padding: '1.25rem',
         borderRadius: '12px',
-        marginBottom: '2rem',
-        border: '1px solid #fee2e2',
+        marginBottom: '2.5rem',
+        border: '1px solid var(--danger)',
         textAlign: 'center' as const,
-        fontSize: '0.9rem'
+        fontSize: '0.95rem',
+        fontWeight: '600'
     },
     revenueProjection: {
-        marginTop: '2rem',
-        padding: '1.5rem',
-        backgroundColor: '#f8fafc',
-        borderRadius: '12px',
-        border: '1px solid var(--border)',
+        marginTop: '2.5rem',
+        padding: '2rem',
+        background: 'rgba(56, 189, 248, 0.05)',
+        borderRadius: '16px',
+        border: '1px solid rgba(56, 189, 248, 0.2)',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        animation: 'glowPulse 3s infinite ease-in-out'
     },
-    projectionMeta: { display: 'flex', flexDirection: 'column' as const },
-    projectionLabel: { fontWeight: '700', color: 'var(--text-main)', fontSize: '1.1rem' },
-    projectionSub: { fontSize: '0.8rem', color: 'var(--text-muted)' },
-    projectionValue: { fontSize: '1.5rem', fontWeight: '800', color: 'var(--primary)' },
+    projectionMeta: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
+    projectionLabel: { fontWeight: '800', color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.01em' },
+    projectionSub: { fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+    projectionValue: {
+        fontSize: '2rem',
+        fontWeight: '900',
+        color: 'var(--primary)',
+        textShadow: '0 0 20px var(--primary-glow)'
+    },
     actions: {
         display: 'flex',
         justifyContent: 'flex-end',
-        gap: '1.5rem',
-        marginTop: '2.5rem',
-        paddingTop: '1.5rem',
+        gap: '2rem',
+        marginTop: '3rem',
+        paddingTop: '2rem',
         borderTop: '1px solid var(--border)',
         alignItems: 'center'
     },
@@ -229,9 +239,11 @@ const pageStyles = {
         backgroundColor: 'transparent',
         border: 'none',
         color: 'var(--text-muted)',
-        fontWeight: '600',
+        fontWeight: '700',
         cursor: 'pointer',
-        fontSize: '1rem'
+        fontSize: '0.95rem',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.1em'
     }
 };
 

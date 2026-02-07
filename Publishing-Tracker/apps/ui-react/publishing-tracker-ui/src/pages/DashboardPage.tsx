@@ -3,10 +3,16 @@ import { useDashboardData } from '../hooks/useDashboardData';
 const DashboardPage = () => {
     const { summary, yoy, seasonal, loading, error } = useDashboardData();
 
-    if (loading) return <div style={dashStyles.centered}>Loading metrics...</div>;
+    if (loading) return <div style={dashStyles.centered}>
+        <div className="shimmer" style={{ height: '200px', borderRadius: '16px', marginBottom: '2rem' }}></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div className="shimmer" style={{ height: '400px', borderRadius: '16px' }}></div>
+            <div className="shimmer" style={{ height: '400px', borderRadius: '16px' }}></div>
+        </div>
+    </div>;
+
     if (error) return <div style={dashStyles.errorBanner}>{error}</div>;
 
-    // Helper to get month name
     const getMonthName = (monthNum: number) => {
         return new Date(0, monthNum - 1).toLocaleString('default', { month: 'short' });
     };
@@ -14,82 +20,98 @@ const DashboardPage = () => {
     return (
         <div style={dashStyles.container}>
             <div style={dashStyles.header}>
-                <h1 style={dashStyles.title}>Analytics Overview</h1>
-                <p style={{ color: 'var(--text-muted)' }}>Real-time performance across all publishing channels.</p>
+                <h1 style={{ marginBottom: '0.5rem' }}>Strategic Analytics</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Performance intelligence for your intellectual property.</p>
             </div>
 
-            {/* Top Stats Cards */}
             <div style={dashStyles.kpiGrid}>
-                <div className="card" style={dashStyles.statCard}>
-                    <div style={dashStyles.iconCircle}>💰</div>
-                    <div>
-                        <p style={dashStyles.label}>Total Revenue</p>
+                {/* Revenue Card - Premium Gradient */}
+                <div className="card metric-card" style={dashStyles.statCard}>
+                    <div style={dashStyles.iconBox}>💰</div>
+                    <div style={{ flex: 1 }}>
+                        <p style={dashStyles.label}>Cumulative Revenue</p>
                         {summary?.revenueByCurrency && summary.revenueByCurrency.length > 0 ? (
                             summary.revenueByCurrency.map(r => (
                                 <h2 key={r.currency} style={dashStyles.value}>
-                                    {r.currency} {r.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                    <span style={{ color: 'var(--primary)', marginRight: '8px' }}>{r.currency}</span>
+                                    {r.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </h2>
                             ))
                         ) : (
-                            <h2 style={dashStyles.value}>$0.00</h2>
+                            <h2 style={dashStyles.value}>USD 0.00</h2>
                         )}
                     </div>
                 </div>
-                <div className="card" style={dashStyles.statCard}>
-                    <div style={dashStyles.iconCircle}>📚</div>
+
+                {/* Books Card */}
+                <div className="card metric-card" style={dashStyles.statCard}>
+                    <div style={{ ...dashStyles.iconBox, background: 'rgba(129, 140, 248, 0.1)' }}>📚</div>
                     <div>
-                        <p style={dashStyles.label}>Books Published</p>
-                        <h2 style={dashStyles.value}>{summary?.totalBooksPublished}</h2>
+                        <p style={dashStyles.label}>Active Portfolio</p>
+                        <h2 style={dashStyles.value}>{summary?.totalBooksPublished} <span style={dashStyles.unit}>Titles</span></h2>
                     </div>
                 </div>
-                <div className="card" style={dashStyles.statCard}>
-                    <div style={dashStyles.iconCircle}>📈</div>
+
+                {/* Transactions Card */}
+                <div className="card metric-card" style={dashStyles.statCard}>
+                    <div style={{ ...dashStyles.iconBox, background: 'rgba(244, 114, 182, 0.1)' }}>📈</div>
                     <div>
-                        <p style={dashStyles.label}>Transactions</p>
-                        <h2 style={dashStyles.value}>{summary?.totalSalesTransactions.toLocaleString()}</h2>
+                        <p style={dashStyles.label}>Market Volume</p>
+                        <h2 style={dashStyles.value}>{summary?.totalSalesTransactions.toLocaleString()} <span style={dashStyles.unit}>Sales</span></h2>
                     </div>
                 </div>
             </div>
 
-            {/* Middle Section: Growth and Top Performers */}
             <div style={dashStyles.bottomGrid}>
-                <div className="card" style={dashStyles.card}>
-                    <h3 style={dashStyles.sectionTitle}>Business Growth</h3>
-                    <div style={{ ...dashStyles.growthValue, color: (yoy?.growth ?? 0) >= 0 ? '#10b981' : '#ef4444' }}>
-                        {(yoy?.growth ?? 0) >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}%
-                        <span style={dashStyles.subLabel}>vs last year</span>
+                {/* Growth Card */}
+                <div className="card" style={dashStyles.growthCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                        <h3 style={dashStyles.sectionTitle}>Year-over-Year Growth</h3>
+                        <div style={{
+                            ...dashStyles.growthBadge,
+                            backgroundColor: (yoy?.growth ?? 0) >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            color: (yoy?.growth ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)'
+                        }}>
+                            {(yoy?.growth ?? 0) >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}%
+                        </div>
                     </div>
 
                     <div style={dashStyles.miniList}>
                         <div style={dashStyles.listItem}>
-                            <span>🏆 Top Performing Book</span>
-                            <strong>{summary?.topPerformingBook || 'N/A'}</strong>
+                            <div style={dashStyles.listInfo}>
+                                <div style={dashStyles.listLabel}>Top Revenue Title</div>
+                                <div style={dashStyles.listValue}>{summary?.topPerformingBook || 'Acquiring data...'}</div>
+                            </div>
+                            <span style={dashStyles.listIcon}>🥇</span>
                         </div>
                         <div style={dashStyles.listItem}>
-                            <span>🏪 Primary Platform</span>
-                            <strong>{summary?.topPerformingPlatform || 'N/A'}</strong>
+                            <div style={dashStyles.listInfo}>
+                                <div style={dashStyles.listLabel}>Dominant Sales Channel</div>
+                                <div style={dashStyles.listValue}>{summary?.topPerformingPlatform || 'Acquiring data...'}</div>
+                            </div>
+                            <span style={dashStyles.listIcon}>🏛️</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Seasonal Revenue Visualization */}
-                <div className="card" style={dashStyles.card}>
-                    <h3 style={dashStyles.sectionTitle}>Monthly Revenue Trend</h3>
+                {/* Revenue Trend Visualization */}
+                <div className="card" style={dashStyles.trendCard}>
+                    <h3 style={dashStyles.sectionTitle}>Monthly Revenue Trajectory</h3>
                     <div style={dashStyles.tableWrapper}>
                         {seasonal?.map((s: { month: number; totalRevenue: number }) => {
-                            // Simple visual logic to create a "bar" effect
                             const maxRev = Math.max(...(seasonal?.map((m: { totalRevenue: number }) => m.totalRevenue) || [1]));
-                            const barWidth = (s.totalRevenue / maxRev) * 100;
+                            const barHeight = (s.totalRevenue / (maxRev || 1)) * 100;
 
                             return (
-                                <div key={s.month} style={dashStyles.tableRow}>
-                                    <span style={{ width: '60px', fontWeight: '600' }}>{getMonthName(s.month)}</span>
-                                    <div style={dashStyles.barContainer}>
-                                        <div style={{ ...dashStyles.bar, width: `${barWidth}%` }} />
+                                <div key={s.month} style={dashStyles.trendColumn}>
+                                    <div style={dashStyles.barWrapper}>
+                                        <div style={{
+                                            ...dashStyles.bar,
+                                            height: `${Math.max(barHeight, 5)}%`,
+                                            background: `linear-gradient(to top, var(--primary), var(--secondary))`
+                                        }} />
                                     </div>
-                                    <strong style={{ marginLeft: '12px', minWidth: '80px', textAlign: 'right' }}>
-                                        ${s.totalRevenue.toFixed(0)}
-                                    </strong>
+                                    <span style={dashStyles.monthLabel}>{getMonthName(s.month)}</span>
                                 </div>
                             );
                         })}
@@ -101,27 +123,57 @@ const DashboardPage = () => {
 };
 
 const dashStyles = {
-    container: { animation: 'fadeIn 0.4s ease' },
-    header: { marginBottom: '2.5rem' },
-    title: { fontSize: '1.875rem', fontWeight: '800', marginBottom: '0.5rem', color: '#0f172a' },
-    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' },
-    statCard: { display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.5rem' },
-    iconCircle: { width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' },
-    label: { color: '#64748b', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.25rem' },
-    value: { fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0 },
-    bottomGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' },
-    card: { padding: '2rem' },
-    sectionTitle: { fontSize: '1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#334145', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-    growthValue: { fontSize: '2.5rem', fontWeight: '800', marginBottom: '1rem' },
-    subLabel: { fontSize: '0.9rem', color: '#94a3b8', marginLeft: '10px', fontWeight: '400' },
-    miniList: { display: 'flex', flexDirection: 'column' as const, gap: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' },
-    listItem: { display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#475569' },
-    tableWrapper: { display: 'flex', flexDirection: 'column' as const, gap: '8px' },
-    tableRow: { display: 'flex', alignItems: 'center', padding: '4px 0' },
-    barContainer: { flex: 1, height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' },
-    bar: { height: '100%', backgroundColor: '#38bdf8', borderRadius: '4px' },
-    centered: { padding: '10rem', textAlign: 'center' as const, color: '#64748b', fontSize: '1.1rem' },
-    errorBanner: { padding: '1.5rem', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '12px', border: '1px solid #fee2e2' }
+    container: { animation: 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1)' },
+    header: { marginBottom: '3rem' },
+    kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', marginBottom: '2.5rem' },
+    statCard: { display: 'flex', alignItems: 'center', gap: '1.5rem', padding: '2rem' },
+    iconBox: {
+        width: '64px',
+        height: '64px',
+        borderRadius: '16px',
+        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.75rem',
+        boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'
+    },
+    label: { color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+    value: { fontSize: '2rem', fontWeight: '800', color: '#fff', margin: 0, letterSpacing: '-0.02em' },
+    unit: { fontSize: '1rem', fontWeight: '500', color: 'var(--text-muted)', marginLeft: '4px' },
+    bottomGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' },
+    growthCard: { padding: '2.5rem' },
+    growthBadge: {
+        padding: '0.5rem 1rem',
+        borderRadius: '12px',
+        fontSize: '1rem',
+        fontWeight: '800',
+        display: 'flex',
+        alignItems: 'center'
+    },
+    sectionTitle: { fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#fff' },
+    miniList: { display: 'flex', flexDirection: 'column' as const, gap: '1.25rem' },
+    listItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '1.25rem',
+        backgroundColor: 'rgba(255,255,255,0.02)',
+        borderRadius: '16px',
+        border: '1px solid var(--border)'
+    },
+    listInfo: { display: 'flex', flexDirection: 'column' as const, gap: '2px' },
+    listLabel: { fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' as const },
+    listValue: { fontSize: '1rem', fontWeight: '700', color: '#fff' },
+    listIcon: { fontSize: '1.5rem' },
+    trendCard: { padding: '2.5rem', display: 'flex', flexDirection: 'column' as const },
+    tableWrapper: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flex: 1, gap: '10px', minHeight: '240px' },
+    trendColumn: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', flex: 1, gap: '12px' },
+    barWrapper: { width: '100%', flex: 1, position: 'relative' as const, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
+    bar: { width: '100%', maxWidth: '30px', borderRadius: '6px 6px 2px 2px', transition: 'height 1s cubic-bezier(0.34, 1.56, 0.64, 1)' },
+    monthLabel: { fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' as const },
+    centered: { padding: '5rem', textAlign: 'center' as const },
+    errorBanner: { padding: '2rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '16px', border: '1px solid var(--danger)' }
 };
 
 export default DashboardPage;

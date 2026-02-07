@@ -23,7 +23,6 @@ const SalesPage = () => {
     const [error, setError] = useState<string | null>(null);
     const parentRef = useRef<HTMLDivElement>(null);
 
-    // Initial load for metadata
     useEffect(() => {
         const loadMetadata = async () => {
             try {
@@ -40,12 +39,10 @@ const SalesPage = () => {
         loadMetadata();
     }, []);
 
-    // Fetch sales and summary on filter change
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Remove empty strings from filters before sending
                 const cleanFilters = Object.fromEntries(
                     Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined)
                 );
@@ -77,208 +74,181 @@ const SalesPage = () => {
     const rowVirtualizer = useVirtualizer({
         count: sales.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 50, // Slightly larger for better readability
+        estimateSize: () => 64,
     });
 
-    if (loading) return <div className="loading">Loading ledger...</div>;
-    if (error) return <div className="error-message">{error}</div>;
+    if (loading && sales.length === 0) return (
+        <div style={pageStyles.centered}>
+            <div className="shimmer" style={{ height: '100px', borderRadius: '16px', marginBottom: '2rem' }}></div>
+            <div className="shimmer" style={{ height: '600px', borderRadius: '16px' }}></div>
+        </div>
+    );
 
     return (
-        <div>
-            {/* Header with Action Button */}
+        <div style={pageStyles.container}>
             <div style={pageStyles.headerRow}>
-                <h1>Sales Management</h1>
-                <Link to="/sales/add" className="btn-primary">
-                    + Add Manual Sale
+                <div>
+                    <h1 style={{ marginBottom: '0.25rem' }}>Sales Ledger</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Manage your verified royalty streams and transactions.</p>
+                </div>
+                <Link to="/sales/add" className="btn-primary animate-pulse">
+                    <span style={{ fontSize: '1.2rem' }}>+</span> Add Manual Entry
                 </Link>
             </div>
 
-            {/* US-008: Sales Summary Ribbon */}
             <div style={pageStyles.summaryRibbon}>
-                <div style={pageStyles.summaryCard}>
+                <div className="card metric-card" style={pageStyles.summaryCard}>
                     <label style={pageStyles.summaryLabel}>Total Revenue</label>
-                    <div style={pageStyles.summaryValue}>${summary?.totalRevenue.toLocaleString() || '0.00'}</div>
+                    <div style={pageStyles.summaryValue}>${summary?.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</div>
                 </div>
-                <div style={pageStyles.summaryCard}>
-                    <label style={pageStyles.summaryLabel}>Units Sold</label>
-                    <div style={pageStyles.summaryValue}>{summary?.totalUnitsSold.toLocaleString() || '0'}</div>
+                <div className="card metric-card" style={pageStyles.summaryCard}>
+                    <label style={pageStyles.summaryLabel}>Global Unit Sales</label>
+                    <div style={{ ...pageStyles.summaryValue, color: 'var(--secondary)' }}>{summary?.totalUnitsSold.toLocaleString() || '0'}</div>
                 </div>
-                <div style={pageStyles.summaryCard}>
-                    <label style={pageStyles.summaryLabel}>Avg Royalty</label>
-                    <div style={pageStyles.summaryValue}>${summary?.averageRoyalty.toFixed(2) || '0.00'}</div>
+                <div className="card metric-card" style={pageStyles.summaryCard}>
+                    <label style={pageStyles.summaryLabel}>Avg Royalty/Unit</label>
+                    <div style={{ ...pageStyles.summaryValue, color: 'var(--accent)' }}>${summary?.averageRoyalty.toFixed(2) || '0.00'}</div>
                 </div>
             </div>
 
-            {/* US-009: Filter Bar */}
             <div className="card" style={pageStyles.filterBar}>
                 <div style={pageStyles.filterGroup}>
-                    <label>Book</label>
-                    <select name="bookId" value={filters.bookId || ''} onChange={handleFilterChange} style={pageStyles.filterSelect}>
-                        <option value="">All Books</option>
+                    <label>Filter by Publication</label>
+                    <select name="bookId" value={filters.bookId || ''} onChange={handleFilterChange}>
+                        <option value="">All Works</option>
                         {books.map((b: Book) => <option key={b.id} value={b.id}>{b.title}</option>)}
                     </select>
                 </div>
                 <div style={pageStyles.filterGroup}>
-                    <label>Platform</label>
-                    <select name="platformId" value={filters.platformId || ''} onChange={handleFilterChange} style={pageStyles.filterSelect}>
+                    <label>Sales Channel</label>
+                    <select name="platformId" value={filters.platformId || ''} onChange={handleFilterChange}>
                         <option value="">All Platforms</option>
                         {platforms.map((p: Platform) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                 </div>
                 <div style={pageStyles.filterGroup}>
-                    <label>From</label>
-                    <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} style={pageStyles.filterInput} />
+                    <label>Start Date</label>
+                    <input type="date" name="startDate" value={filters.startDate} onChange={handleFilterChange} />
                 </div>
                 <div style={pageStyles.filterGroup}>
-                    <label>To</label>
-                    <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} style={pageStyles.filterInput} />
+                    <label>End Date</label>
+                    <input type="date" name="endDate" value={filters.endDate} onChange={handleFilterChange} />
                 </div>
             </div>
 
-            {/* Main Data Container */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {/* Table Header Labels */}
                 <div style={pageStyles.tableHead}>
                     <div style={{ flex: 1 }}>Date</div>
-                    <div style={{ flex: 2 }}>Book</div>
-                    <div style={{ flex: 1.5 }}>Platform</div>
-                    <div style={{ flex: 1 }}>Qty</div>
-                    <div style={{ flex: 1 }}>Price</div>
+                    <div style={{ flex: 2 }}>Title</div>
+                    <div style={{ flex: 1.5 }}>Channel</div>
+                    <div style={{ flex: 0.8 }}>Qty</div>
                     <div style={{ flex: 1 }}>Royalty</div>
                     <div style={{ flex: 1, textAlign: 'right' }}>Revenue</div>
                 </div>
 
-                {/* Virtualized List Container */}
-                <div
-                    ref={parentRef}
-                    style={{ height: '600px', overflow: 'auto', position: 'relative' }}
-                >
-                    <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-                        {rowVirtualizer.getVirtualItems().map(virtualItem => {
-                            const sale = sales[virtualItem.index];
-                            return (
-                                <div
-                                    key={virtualItem.key}
-                                    style={{
-                                        ...pageStyles.row,
-                                        height: `${virtualItem.size}px`,
-                                        transform: `translateY(${virtualItem.start}px)`
-                                    }}
-                                >
-                                    <div style={{ flex: 1, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                        {new Date(sale.saleDate).toLocaleDateString()}
+                <div ref={parentRef} style={pageStyles.scrollContainer}>
+                    {sales.length === 0 && !loading ? (
+                        <div style={{ padding: '5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                            <h3>No matching sales found</h3>
+                            <p>Try adjusting your search parameters.</p>
+                        </div>
+                    ) : (
+                        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                            {rowVirtualizer.getVirtualItems().map(virtualItem => {
+                                const sale = sales[virtualItem.index];
+                                if (!sale) return null;
+                                return (
+                                    <div
+                                        key={virtualItem.key}
+                                        className="row-hover"
+                                        style={{
+                                            ...pageStyles.row,
+                                            height: `${virtualItem.size}px`,
+                                            transform: `translateY(${virtualItem.start}px)`
+                                        }}
+                                    >
+                                        <div style={{ flex: 1, color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                                            {new Date(sale.saleDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </div>
+                                        <div style={{ flex: 2, fontWeight: '700', fontSize: '1rem', color: '#fff' }}>
+                                            {sale.bookTitle}
+                                        </div>
+                                        <div style={{ flex: 1.5 }}>
+                                            <span style={pageStyles.platformBadge}>{sale.platformName}</span>
+                                        </div>
+                                        <div style={{ flex: 0.8, fontWeight: '800', color: 'var(--secondary)' }}>{sale.quantity}</div>
+                                        <div style={{ flex: 1, fontSize: '0.9rem', color: 'var(--success)', fontWeight: '600' }}>
+                                            ${sale.royalty.toFixed(2)}
+                                        </div>
+                                        <div style={{ flex: 1, textAlign: 'right', fontWeight: '900', color: 'var(--primary)', fontSize: '1.1rem' }}>
+                                            ${sale.revenue?.toFixed(2) || '0.00'}
+                                        </div>
                                     </div>
-                                    <div style={{ flex: 2, fontWeight: '600', fontSize: '0.9rem' }}>
-                                        {sale.bookTitle}
-                                    </div>
-                                    <div style={{ flex: 1.5 }}>
-                                        <span style={pageStyles.platformBadge}>{sale.platformName}</span>
-                                    </div>
-                                    <div style={{ flex: 1, fontWeight: '500' }}>{sale.quantity}</div>
-                                    <div style={{ flex: 1, fontSize: '0.9rem' }}>${sale.unitPrice.toFixed(2)}</div>
-                                    <div style={{ flex: 1, fontSize: '0.9rem', color: '#059669' }}>${sale.royalty.toFixed(2)}</div>
-                                    <div style={{ flex: 1, textAlign: 'right', fontWeight: '700', color: 'var(--primary)' }}>
-                                        ${sale.revenue?.toFixed(2) || '0.00'}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
+
+            <style>{`
+                .row-hover {
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    cursor: default;
+                }
+                .row-hover:hover {
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    transform: scale(1.002) translateY(0) !important;
+                    z-index: 10;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                }
+            `}</style>
         </div>
     );
 };
 
 const pageStyles = {
-    headerRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '2rem'
-    },
+    container: { animation: 'fadeIn 0.5s ease-out' },
+    headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3rem' },
+    summaryRibbon: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' },
+    summaryCard: { padding: '2rem', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
+    summaryLabel: { fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' as const, letterSpacing: '0.1em' },
+    summaryValue: { fontSize: '2.25rem', fontWeight: '900', color: '#fff', letterSpacing: '-0.02em' },
+    filterBar: { display: 'flex', gap: '2rem', padding: '2rem', marginBottom: '2rem', flexWrap: 'wrap' as const, alignItems: 'center' },
+    filterGroup: { display: 'flex', flexDirection: 'column' as const, gap: '0.65rem', flex: 1, minWidth: '200px' },
     tableHead: {
         display: 'flex',
-        padding: '1rem 1.5rem',
-        backgroundColor: '#f1f5f9',
+        padding: '1.25rem 2rem',
+        background: 'rgba(255,255,255,0.02)',
         borderBottom: '1px solid var(--border)',
-        fontSize: '0.75rem',
-        fontWeight: '700',
+        fontSize: '0.7rem',
+        fontWeight: '800',
         textTransform: 'uppercase' as const,
-        color: 'var(--text-muted)',
-        letterSpacing: '0.05em'
+        color: '#64748b',
+        letterSpacing: '0.1em'
     },
+    scrollContainer: { height: '600px', overflow: 'auto', position: 'relative' as const },
     row: {
         position: 'absolute' as const,
         left: 0,
         width: '100%',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 1.5rem',
+        padding: '0 2rem',
         borderBottom: '1px solid var(--border)',
         boxSizing: 'border-box' as const,
     },
     platformBadge: {
-        backgroundColor: '#eff6ff',
-        color: '#1e40af',
-        padding: '2px 8px',
-        borderRadius: '4px',
-        fontSize: '0.75rem',
-        fontWeight: '500'
+        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+        color: 'var(--primary)',
+        padding: '6px 14px',
+        borderRadius: '20px',
+        fontSize: '0.7rem',
+        fontWeight: '800',
+        letterSpacing: '0.05em',
+        border: '1px solid rgba(56, 189, 248, 0.2)'
     },
-    summaryRibbon: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '1.5rem',
-        marginBottom: '2rem'
-    },
-    summaryCard: {
-        backgroundColor: 'white',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        border: '1px solid var(--border)',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-    },
-    summaryLabel: {
-        display: 'block',
-        fontSize: '0.75rem',
-        color: 'var(--text-muted)',
-        textTransform: 'uppercase' as const,
-        marginBottom: '0.5rem',
-        fontWeight: '600'
-    },
-    summaryValue: {
-        fontSize: '1.75rem',
-        fontWeight: '700',
-        color: 'var(--text-main)'
-    },
-    filterBar: {
-        display: 'flex',
-        gap: '1.5rem',
-        padding: '1.25rem 1.5rem',
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap' as const,
-        alignItems: 'flex-end'
-    },
-    filterGroup: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '0.5rem',
-        flex: 1,
-        minWidth: '150px'
-    },
-    filterSelect: {
-        padding: '0.6rem',
-        borderRadius: '6px',
-        border: '1px solid var(--border)',
-        fontSize: '0.9rem'
-    },
-    filterInput: {
-        padding: '0.55rem',
-        borderRadius: '6px',
-        border: '1px solid var(--border)',
-        fontSize: '0.9rem'
-    }
+    centered: { padding: '5rem', textAlign: 'center' as const }
 };
 
 export default SalesPage;
