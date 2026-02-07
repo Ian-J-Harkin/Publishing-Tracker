@@ -93,3 +93,5 @@ _ReSharper*/
 *.sdf
 *.opensdf
 *.vsidx
+.agent/skills/create-agent/SKILL.md
+.agents/skills/create-agent/SKILL.md

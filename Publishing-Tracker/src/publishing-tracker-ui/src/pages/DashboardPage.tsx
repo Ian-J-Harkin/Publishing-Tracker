@@ -47,11 +47,11 @@ const DashboardPage = () => {
             <div style={dashStyles.bottomGrid}>
                 <div className="card" style={dashStyles.card}>
                     <h3 style={dashStyles.sectionTitle}>Business Growth</h3>
-                    <div style={{...dashStyles.growthValue, color: yoy?.growth >= 0 ? '#10b981' : '#ef4444'}}>
-                        {yoy?.growth >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}% 
+                    <div style={{ ...dashStyles.growthValue, color: yoy?.growth >= 0 ? '#10b981' : '#ef4444' }}>
+                        {yoy?.growth >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}%
                         <span style={dashStyles.subLabel}>vs last year</span>
                     </div>
-                    
+
                     <div style={dashStyles.miniList}>
                         <div style={dashStyles.listItem}>
                             <span>🏆 Top Performing Book</span>
@@ -68,11 +68,11 @@ const DashboardPage = () => {
                 <div className="card" style={dashStyles.card}>
                     <h3 style={dashStyles.sectionTitle}>Monthly Revenue Trend</h3>
                     <div style={dashStyles.tableWrapper}>
-                        {seasonal?.map(s => {
+                        {seasonal?.map((s: { month: number; totalRevenue: number }) => {
                             // Simple visual logic to create a "bar" effect
-                            const maxRev = Math.max(...(seasonal?.map(m => m.totalRevenue) || [1]));
+                            const maxRev = Math.max(...(seasonal?.map((m: { totalRevenue: number }) => m.totalRevenue) || [1]));
                             const barWidth = (s.totalRevenue / maxRev) * 100;
-                            
+
                             return (
                                 <div key={s.month} style={dashStyles.tableRow}>
                                     <span style={{ width: '60px', fontWeight: '600' }}>{getMonthName(s.month)}</span>
@@ -103,12 +103,12 @@ const dashStyles = {
     value: { fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: 0 },
     bottomGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' },
     card: { padding: '2rem' },
-    sectionTitle: { fontSize: '1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#334155', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+    sectionTitle: { fontSize: '1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#334145', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
     growthValue: { fontSize: '2.5rem', fontWeight: '800', marginBottom: '1rem' },
     subLabel: { fontSize: '0.9rem', color: '#94a3b8', marginLeft: '10px', fontWeight: '400' },
-    miniList: { display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' },
+    miniList: { display: 'flex', flexDirection: 'column' as const, gap: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' },
     listItem: { display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', color: '#475569' },
-    tableWrapper: { display: 'flex', flexDirection: 'column', gap: '8px' },
+    tableWrapper: { display: 'flex', flexDirection: 'column' as const, gap: '8px' },
     tableRow: { display: 'flex', alignItems: 'center', padding: '4px 0' },
     barContainer: { flex: 1, height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' },
     bar: { height: '100%', backgroundColor: '#38bdf8', borderRadius: '4px' },

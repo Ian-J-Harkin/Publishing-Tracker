@@ -1,43 +1,27 @@
-import axios from 'axios';
+import axiosClient from '../api/axiosClient';
 import { ImportJob, ColumnMapping } from '../types/import';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/import';
-
-const getAuthToken = () => {
-    return localStorage.getItem('token');
-};
+const API_URL = '/api/import';
 
 const uploadFile = async (file: File): Promise<{ fileName: string }> => {
-    const token = getAuthToken();
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await axios.post(`${API_URL}/upload`, formData, {
+    const response = await axiosClient.post(`${API_URL}/upload`, formData, {
         headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`
+            'Content-Type': 'multipart/form-data'
         }
     });
     return response.data;
 };
 
 const processFile = async (fileName: string, mapping: ColumnMapping): Promise<{ message: string }> => {
-    const token = getAuthToken();
-    const response = await axios.post(`${API_URL}/process`, { fileName, mapping }, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.post(`${API_URL}/process`, { fileName, mapping });
     return response.data;
 };
 
 const getHistory = async (): Promise<ImportJob[]> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/history`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.get(`${API_URL}/history`);
     return response.data;
 };
 
