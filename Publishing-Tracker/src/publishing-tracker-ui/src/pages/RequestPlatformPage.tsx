@@ -16,7 +16,7 @@ const RequestPlatformPage = () => {
             const request: PlatformRequest = { name, baseUrl, commissionRate };
             await platformService.requestPlatform(request);
             navigate('/platforms');
-        } catch (err) {
+        } catch {
             setError('Failed to submit request. Please check your network connection.');
         }
     };
@@ -36,37 +36,37 @@ const RequestPlatformPage = () => {
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label htmlFor="name">Platform Name</label>
-                        <input 
-                            id="name" 
-                            type="text" 
-                            value={name} 
-                            onChange={e => setName(e.target.value)} 
+                        <input
+                            id="name"
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
                             placeholder="e.g. Google Play Books"
-                            required 
+                            required
                         />
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="baseUrl">Platform Website (URL)</label>
-                        <input 
-                            id="baseUrl" 
-                            type="url" 
-                            value={baseUrl} 
-                            onChange={e => setBaseUrl(e.target.value)} 
+                        <input
+                            id="baseUrl"
+                            type="url"
+                            value={baseUrl}
+                            onChange={e => setBaseUrl(e.target.value)}
                             placeholder="https://example.com"
                         />
                     </div>
 
                     <div className="form-group">
                         <label htmlFor="commissionRate">Standard Commission Rate</label>
-                        <input 
-                            id="commissionRate" 
-                            type="number" 
+                        <input
+                            id="commissionRate"
+                            type="number"
                             step="0.01"
-                            value={commissionRate} 
-                            onChange={e => setCommissionRate(parseFloat(e.target.value))} 
-                            required 
-                            inputMode="decimal" 
+                            value={commissionRate}
+                            onChange={e => setCommissionRate(parseFloat(e.target.value))}
+                            required
+                            inputMode="decimal"
                         />
                         <small style={pageStyles.helperText}>
                             Enter as a decimal (e.g., 0.30 for 30%).

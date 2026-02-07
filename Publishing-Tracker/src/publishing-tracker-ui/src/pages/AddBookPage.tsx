@@ -27,7 +27,7 @@ const AddBookPage = () => {
         try {
             await bookService.createBook(data);
             navigate('/books');
-        } catch (err) {
+        } catch {
             setError('Failed to create book. Please check your inputs.');
         }
     };
@@ -41,7 +41,7 @@ const AddBookPage = () => {
 
             <div className="card" style={pageStyles.formCard}>
                 {error && <div style={pageStyles.errorBanner}>{error}</div>}
-                
+
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="form-group">
                         <label htmlFor="title">Book Title</label>

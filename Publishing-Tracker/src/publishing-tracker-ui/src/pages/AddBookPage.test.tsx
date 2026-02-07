@@ -5,12 +5,14 @@ import { BrowserRouter } from 'react-router-dom';
 import AddBookPage from './AddBookPage';
 import { bookService } from '../services/bookService';
 
+import { Book } from '../types/book';
+
 jest.mock('../services/bookService');
 const mockedBookService = bookService as jest.Mocked<typeof bookService>;
 
 describe('AddBookPage', () => {
     it('should submit a new book', async () => {
-        mockedBookService.createBook.mockResolvedValue({} as any);
+        mockedBookService.createBook.mockResolvedValue({} as Book);
 
         render(
             <BrowserRouter>

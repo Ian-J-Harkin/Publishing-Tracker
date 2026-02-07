@@ -13,7 +13,7 @@ const PlatformsPage = () => {
             try {
                 const data = await platformService.getPlatforms();
                 setPlatforms(data);
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch platforms');
             } finally {
                 setLoading(false);
@@ -46,7 +46,7 @@ const PlatformsPage = () => {
                             {platform.name.charAt(0).toUpperCase()}
                         </div>
                         <h3 style={{ marginBottom: '0.5rem' }}>{platform.name}</h3>
-                        
+
                         <div style={pageStyles.detailRow}>
                             <span style={pageStyles.label}>Base URL:</span>
                             <a href={platform.baseUrl} target="_blank" rel="noreferrer" style={pageStyles.link}>

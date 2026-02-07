@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { saleService } from '../services/saleService';
 import { Sale } from '../types/sale';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { theme } from '../styles/theme';
 
 const SalesPage = () => {
     const [sales, setSales] = useState<Sale[]>([]);
@@ -16,7 +15,7 @@ const SalesPage = () => {
             try {
                 const salesData = await saleService.getSales();
                 setSales(salesData);
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch sales transactions.');
             } finally {
                 setLoading(false);
@@ -55,20 +54,20 @@ const SalesPage = () => {
                 </div>
 
                 {/* Virtualized List Container */}
-                <div 
-                    ref={parentRef} 
+                <div
+                    ref={parentRef}
                     style={{ height: '600px', overflow: 'auto', position: 'relative' }}
                 >
                     <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
                         {rowVirtualizer.getVirtualItems().map(virtualItem => {
                             const sale = sales[virtualItem.index];
                             return (
-                                <div 
-                                    key={virtualItem.key} 
-                                    style={{ 
+                                <div
+                                    key={virtualItem.key}
+                                    style={{
                                         ...pageStyles.row,
-                                        height: `${virtualItem.size}px`, 
-                                        transform: `translateY(${virtualItem.start}px)` 
+                                        height: `${virtualItem.size}px`,
+                                        transform: `translateY(${virtualItem.start}px)`
                                     }}
                                 >
                                     <div style={{ flex: 1, color: 'var(--text-muted)', fontSize: '0.9rem' }}>

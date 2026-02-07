@@ -20,16 +20,26 @@ const LoginPage = () => {
             console.log('Attempting login with:', { email });
             const response = await authService.login({ email, password });
             console.log('Login response:', response.data);
-            
+
             if (!response.data.token) {
                 throw new Error('No token received from server');
             }
-            
+
             login(response.data.token);
             navigate('/dashboard');
-        } catch (error: any) {
-            const errorMsg = error?.response?.data?.message || error?.message || 'Login failed';
-            console.error('Login error:', error);
+        } catch (err: unknown) {
+            let errorMsg = 'Login failed';
+
+            if (err && typeof err === 'object') {
+                const axiosErr = err as { response?: { data?: { message?: string } } };
+                if (axiosErr.response?.data?.message) {
+                    errorMsg = axiosErr.response.data.message;
+                } else if (err instanceof Error) {
+                    errorMsg = err.message;
+                }
+            }
+
+            console.error('Login error:', err);
             setError(errorMsg);
         } finally {
             setLoading(false);

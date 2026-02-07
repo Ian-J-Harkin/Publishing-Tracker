@@ -30,7 +30,6 @@ export interface UpdateBook {
 }
 
 export interface BookPerformance {
-    date: string;
-    revenue: number;
-    salesCount: number;
+    platformName: string;
+    totalRevenue: number;
 }

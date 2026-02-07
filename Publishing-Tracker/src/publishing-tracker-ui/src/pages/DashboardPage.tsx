@@ -47,8 +47,8 @@ const DashboardPage = () => {
             <div style={dashStyles.bottomGrid}>
                 <div className="card" style={dashStyles.card}>
                     <h3 style={dashStyles.sectionTitle}>Business Growth</h3>
-                    <div style={{ ...dashStyles.growthValue, color: yoy?.growth >= 0 ? '#10b981' : '#ef4444' }}>
-                        {yoy?.growth >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}%
+                    <div style={{ ...dashStyles.growthValue, color: (yoy?.growth ?? 0) >= 0 ? '#10b981' : '#ef4444' }}>
+                        {(yoy?.growth ?? 0) >= 0 ? '↑' : '↓'} {(Math.abs(yoy?.growth || 0) * 100).toFixed(1)}%
                         <span style={dashStyles.subLabel}>vs last year</span>
                     </div>
 

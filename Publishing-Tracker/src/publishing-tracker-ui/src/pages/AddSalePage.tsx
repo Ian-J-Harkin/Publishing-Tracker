@@ -28,7 +28,7 @@ const AddSalePage = () => {
                 const platformsData = await platformService.getPlatforms();
                 setBooks(booksData);
                 setPlatforms(platformsData);
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch required data for sales entry.');
             }
         };
@@ -38,8 +38,8 @@ const AddSalePage = () => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         // Basic conversion for numeric fields to ensure data integrity
-        const processedValue = (name === 'bookId' || name === 'platformId' || name === 'quantity' || name === 'unitPrice' || name === 'royalty') 
-            ? Number(value) 
+        const processedValue = (name === 'bookId' || name === 'platformId' || name === 'quantity' || name === 'unitPrice' || name === 'royalty')
+            ? Number(value)
             : value;
 
         setSale(prevSale => ({
@@ -53,7 +53,7 @@ const AddSalePage = () => {
         try {
             await saleService.createSale(sale);
             navigate('/sales');
-        } catch (err) {
+        } catch {
             setError('Failed to log transaction. Please check your data.');
         }
     };
@@ -67,7 +67,7 @@ const AddSalePage = () => {
 
             <div className="card" style={pageStyles.formCard}>
                 {error && <div style={pageStyles.errorBanner}>{error}</div>}
-                
+
                 <form onSubmit={handleSubmit}>
                     <div className="form-group">
                         <label>Select Book</label>
@@ -91,12 +91,12 @@ const AddSalePage = () => {
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
                             <label>Sale Date</label>
-                            <input 
-                                type="date" 
-                                name="saleDate" 
-                                value={sale.saleDate instanceof Date ? sale.saleDate.toISOString().split('T')[0] : sale.saleDate} 
-                                onChange={handleChange} 
-                                required 
+                            <input
+                                type="date"
+                                name="saleDate"
+                                value={sale.saleDate instanceof Date ? sale.saleDate.toISOString().split('T')[0] : sale.saleDate}
+                                onChange={handleChange}
+                                required
                             />
                         </div>
                     </div>
@@ -104,39 +104,39 @@ const AddSalePage = () => {
                     <div style={pageStyles.row}>
                         <div className="form-group" style={{ flex: 1 }}>
                             <label>Quantity</label>
-                            <input 
-                                type="number" 
-                                name="quantity" 
-                                value={sale.quantity} 
-                                onChange={handleChange} 
-                                required 
-                                inputMode="numeric" 
+                            <input
+                                type="number"
+                                name="quantity"
+                                value={sale.quantity}
+                                onChange={handleChange}
+                                required
+                                inputMode="numeric"
                             />
                         </div>
                         <div className="form-group" style={{ flex: 1 }}>
                             <label>Unit Price ($)</label>
-                            <input 
-                                type="number" 
+                            <input
+                                type="number"
                                 step="0.01"
-                                name="unitPrice" 
-                                value={sale.unitPrice} 
-                                onChange={handleChange} 
-                                required 
-                                inputMode="decimal" 
+                                name="unitPrice"
+                                value={sale.unitPrice}
+                                onChange={handleChange}
+                                required
+                                inputMode="decimal"
                             />
                         </div>
                     </div>
 
                     <div className="form-group">
                         <label>Total Royalty Earned ($)</label>
-                        <input 
-                            type="number" 
+                        <input
+                            type="number"
                             step="0.01"
-                            name="royalty" 
-                            value={sale.royalty} 
-                            onChange={handleChange} 
-                            required 
-                            inputMode="decimal" 
+                            name="royalty"
+                            value={sale.royalty}
+                            onChange={handleChange}
+                            required
+                            inputMode="decimal"
                             placeholder="0.00"
                         />
                     </div>
