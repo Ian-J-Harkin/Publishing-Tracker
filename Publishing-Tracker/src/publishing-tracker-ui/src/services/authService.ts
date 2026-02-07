@@ -2,11 +2,11 @@ import axiosClient from '../api/axiosClient';
 
 const API_URL = '/api/auth';
 
-const register = (data: any) => {
+const register = (data: Record<string, unknown>) => {
     return axiosClient.post(`${API_URL}/register`, data);
 };
 
-const login = (data: any) => {
+const login = (data: Record<string, unknown>) => {
     return axiosClient.post(`${API_URL}/login`, data);
 };
 

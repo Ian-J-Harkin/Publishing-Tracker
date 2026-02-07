@@ -1,5 +1,5 @@
 import axiosClient from '../api/axiosClient';
-import { Book, CreateBook, UpdateBook } from '../types/book';
+import { Book, CreateBook, UpdateBook, BookPerformance } from '../types/book';
 
 const API_URL = '/api/books';
 
@@ -27,7 +27,7 @@ const deleteBook = async (id: number): Promise<void> => {
     await axiosClient.delete(`${API_URL}/${id}`);
 };
 
-const getBookPerformance = async (id: number): Promise<any[]> => {
+const getBookPerformance = async (id: number): Promise<BookPerformance[]> => {
     const response = await axiosClient.get(`${API_URL}/${id}/performance`);
     return response.data;
 };

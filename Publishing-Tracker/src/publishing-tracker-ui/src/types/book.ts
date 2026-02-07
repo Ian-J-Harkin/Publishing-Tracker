@@ -28,3 +28,9 @@ export interface UpdateBook {
     genre?: string;
     description?: string;
 }
+
+export interface BookPerformance {
+    date: string;
+    revenue: number;
+    salesCount: number;
+}
