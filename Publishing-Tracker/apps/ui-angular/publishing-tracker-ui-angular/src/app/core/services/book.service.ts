@@ -1,45 +1,37 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Book, CreateBook, UpdateBook } from '../models/book';
+import { Book, CreateBook, UpdateBook, BookPerformance } from '../models/book';
 
 @Injectable({
   providedIn: 'root'
 })
 export class BookService {
-  private apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/books';
+  private apiUrl = '/api/books';
 
   constructor(private http: HttpClient) { }
 
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
-
   getBooks(): Observable<Book[]> {
-    return this.http.get<Book[]>(this.apiUrl, { headers: this.getAuthHeaders() });
+    return this.http.get<Book[]>(this.apiUrl);
   }
 
   getBook(id: number): Observable<Book> {
-    return this.http.get<Book>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
+    return this.http.get<Book>(`${this.apiUrl}/${id}`);
   }
 
   createBook(book: CreateBook): Observable<Book> {
-    return this.http.post<Book>(this.apiUrl, book, { headers: this.getAuthHeaders() });
+    return this.http.post<Book>(this.apiUrl, book);
   }
 
   updateBook(id: number, book: UpdateBook): Observable<Book> {
-    return this.http.put<Book>(`${this.apiUrl}/${id}`, book, { headers: this.getAuthHeaders() });
+    return this.http.put<Book>(`${this.apiUrl}/${id}`, book);
   }
 
   deleteBook(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  getBookPerformance(id: number): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/${id}/performance`, { headers: this.getAuthHeaders() });
+  getBookPerformance(id: number): Observable<BookPerformance[]> {
+    return this.http.get<BookPerformance[]>(`${this.apiUrl}/${id}/performance`);
   }
 }

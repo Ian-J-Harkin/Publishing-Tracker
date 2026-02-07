@@ -1,13 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { BookService } from './book.service';
-import { Book, CreateBook, UpdateBook } from '../models/book';
+import { Book, CreateBook, UpdateBook, BookPerformance } from '../models/book';
 
 describe('BookService', () => {
   let service: BookService;
   let httpMock: HttpTestingController;
-  const apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/books';
-  const mockToken = 'test-token';
+  const apiUrl = '/api/books';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -16,7 +15,6 @@ describe('BookService', () => {
     });
     service = TestBed.inject(BookService);
     httpMock = TestBed.inject(HttpTestingController);
-    spyOn(localStorage, 'getItem').and.returnValue(mockToken);
   });
 
   afterEach(() => {
@@ -34,7 +32,6 @@ describe('BookService', () => {
     });
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.method).toBe('GET');
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockBooks);
   });
 
@@ -45,7 +42,6 @@ describe('BookService', () => {
     });
     const req = httpMock.expectOne(`${apiUrl}/1`);
     expect(req.request.method).toBe('GET');
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockBook);
   });
 
@@ -58,7 +54,6 @@ describe('BookService', () => {
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(newBook);
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockBook);
   });
 
@@ -71,7 +66,6 @@ describe('BookService', () => {
     const req = httpMock.expectOne(`${apiUrl}/1`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual(updatedBook);
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockBook);
   });
 
@@ -79,18 +73,16 @@ describe('BookService', () => {
     service.deleteBook(1).subscribe();
     const req = httpMock.expectOne(`${apiUrl}/1`);
     expect(req.request.method).toBe('DELETE');
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush({});
   });
 
   it('should get book performance', () => {
-    const mockPerformance = { sales: 100, revenue: 1000 };
+    const mockPerformance: BookPerformance[] = [{ platformName: 'Amazon', totalRevenue: 1000 }];
     service.getBookPerformance(1).subscribe(performance => {
       expect(performance).toEqual(mockPerformance);
     });
     const req = httpMock.expectOne(`${apiUrl}/1/performance`);
     expect(req.request.method).toBe('GET');
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockPerformance);
   });
 });

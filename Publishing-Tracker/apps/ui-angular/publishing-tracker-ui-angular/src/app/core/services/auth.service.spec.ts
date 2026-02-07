@@ -33,7 +33,7 @@ describe('AuthService', () => {
       const mockUser = { username: 'test', password: 'password' };
       service.register(mockUser).subscribe();
 
-      const req = httpMock.expectOne('http://localhost:5226/api/auth/register');
+      const req = httpMock.expectOne('/api/auth/register');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockUser);
       req.flush({});
@@ -48,7 +48,7 @@ describe('AuthService', () => {
 
       service.login(mockUser).subscribe();
 
-      const req = httpMock.expectOne('http://localhost:5226/api/auth/login');
+      const req = httpMock.expectOne('/api/auth/login');
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(mockUser);
       req.flush(mockResponse);

@@ -16,3 +16,14 @@ export interface PlatformPerformance {
     totalRevenue: number;
     percentageOfTotal: number;
 }
+
+export interface YoYComparison {
+    currentYearRevenue: number;
+    lastYearRevenue: number;
+    growth: number;
+}
+
+export interface SeasonalPerformance {
+    month: number;
+    totalRevenue: number;
+}

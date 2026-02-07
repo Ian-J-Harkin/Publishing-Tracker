@@ -6,8 +6,7 @@ import { Platform, PlatformRequest } from '../models/platform';
 describe('PlatformService', () => {
   let service: PlatformService;
   let httpMock: HttpTestingController;
-  const apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
-  const mockToken = 'test-token';
+  const apiUrl = '/api/platforms';
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -16,7 +15,6 @@ describe('PlatformService', () => {
     });
     service = TestBed.inject(PlatformService);
     httpMock = TestBed.inject(HttpTestingController);
-    spyOn(localStorage, 'getItem').and.returnValue(mockToken);
   });
 
   afterEach(() => {
@@ -34,7 +32,6 @@ describe('PlatformService', () => {
     });
     const req = httpMock.expectOne(apiUrl);
     expect(req.request.method).toBe('GET');
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush(mockPlatforms);
   });
 
@@ -44,7 +41,6 @@ describe('PlatformService', () => {
     const req = httpMock.expectOne(`${apiUrl}/requests`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(newPlatformRequest);
-    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${mockToken}`);
     req.flush({});
   });
 });

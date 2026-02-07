@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Platform, PlatformRequest } from '../models/platform';
 
@@ -7,23 +7,15 @@ import { Platform, PlatformRequest } from '../models/platform';
   providedIn: 'root'
 })
 export class PlatformService {
-  private apiUrl = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
+  private apiUrl = '/api/platforms';
 
   constructor(private http: HttpClient) { }
 
-  private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token');
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
-
   getPlatforms(): Observable<Platform[]> {
-    return this.http.get<Platform[]>(this.apiUrl, { headers: this.getAuthHeaders() });
+    return this.http.get<Platform[]>(this.apiUrl);
   }
 
   requestPlatform(platformRequest: PlatformRequest): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/requests`, platformRequest, { headers: this.getAuthHeaders() });
+    return this.http.post<void>(`${this.apiUrl}/requests`, platformRequest);
   }
 }
