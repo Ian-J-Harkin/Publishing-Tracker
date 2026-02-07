@@ -165,12 +165,9 @@ const ImportPage = () => {
                 {step === 'summary' && summary && (
                     <div style={{ ...pageStyles.stepContainer, textAlign: 'center' }}>
                         <div style={pageStyles.successIcon}>✓</div>
-                        <h3>Import Complete</h3>
+                        <h3 style={{ marginBottom: '1.5rem' }}>Import Synchronized</h3>
+
                         <div style={pageStyles.summaryGrid}>
-                            <div style={pageStyles.summaryStat}>
-                                <span style={pageStyles.statLabel}>Processed</span>
-                                <span style={pageStyles.statValue}>{summary.recordsProcessed}</span>
-                            </div>
                             <div style={pageStyles.summaryStat}>
                                 <span style={pageStyles.statLabel}>Successful</span>
                                 <span style={pageStyles.statValue} className="text-success">{summary.recordsSuccessful}</span>
@@ -179,15 +176,31 @@ const ImportPage = () => {
                                 <span style={pageStyles.statLabel}>Failed</span>
                                 <span style={pageStyles.statValue} className={summary.recordsFailed > 0 ? "text-danger" : ""}>{summary.recordsFailed}</span>
                             </div>
+                            <div style={pageStyles.summaryStat}>
+                                <span style={pageStyles.statLabel}>Accuracy</span>
+                                <span style={pageStyles.statValue}>
+                                    {summary.recordsProcessed > 0 ? Math.round((summary.recordsSuccessful / summary.recordsProcessed) * 100) : 0}%
+                                </span>
+                            </div>
                         </div>
+
+                        {summary.recordsFailed > 0 && (
+                            <div style={pageStyles.performanceBarBase}>
+                                <div style={{
+                                    ...pageStyles.performanceBarFill,
+                                    width: `${(summary.recordsSuccessful / summary.recordsProcessed) * 100}%`
+                                }} />
+                            </div>
+                        )}
+
                         {summary.errorLog && (
                             <div style={pageStyles.errorLogBox}>
-                                <strong>Error Log:</strong>
+                                <div style={pageStyles.diagnosticHeader}>Diagnostic Audit Trail</div>
                                 <pre style={pageStyles.errorPre}>{summary.errorLog}</pre>
                             </div>
                         )}
                         <div style={pageStyles.actions}>
-                            <button className="btn-primary" onClick={() => navigate('/sales')}>View Sales Ledger</button>
+                            <button className="btn-primary" onClick={() => navigate('/sales')}>Go to Sales Ledger</button>
                         </div>
                     </div>
                 )}
@@ -222,6 +235,9 @@ const pageStyles = {
     summaryStat: { padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
     statLabel: { fontSize: '0.875rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
     statValue: { fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-main)' },
+    performanceBarBase: { height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', margin: '2rem 0', overflow: 'hidden' },
+    performanceBarFill: { height: '100%', backgroundColor: '#10b981', transition: 'width 1s ease-out' },
+    diagnosticHeader: { fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' as const, color: '#991b1b', marginBottom: '0.75rem', letterSpacing: '0.05em' },
     errorLogBox: { textAlign: 'left' as const, marginTop: '2.5rem', padding: '1.5rem', backgroundColor: '#fff1f2', borderRadius: '12px', border: '1px solid #fecaca' },
     errorPre: { whiteSpace: 'pre-wrap' as const, fontSize: '0.85rem', color: '#991b1b', marginTop: '0.5rem', maxHeight: '150px', overflowY: 'auto' as const }
 };
