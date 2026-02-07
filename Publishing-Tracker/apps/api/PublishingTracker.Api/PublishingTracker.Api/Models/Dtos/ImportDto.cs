@@ -30,5 +30,8 @@ namespace PublishingTracker.Api.Models.Dtos
         public string Quantity { get; set; } = string.Empty;
         public string UnitPrice { get; set; } = string.Empty;
         public string Royalty { get; set; } = string.Empty;
+        public string Revenue { get; set; } = string.Empty;
+        public string Currency { get; set; } = string.Empty;
+        public string OrderId { get; set; } = string.Empty;
     }
 }

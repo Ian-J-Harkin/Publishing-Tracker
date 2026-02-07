@@ -17,4 +17,7 @@ export interface ColumnMapping {
     quantity: string;
     unitPrice: string;
     royalty: string;
+    revenue: string;
+    currency: string;
+    orderId: string;
 }

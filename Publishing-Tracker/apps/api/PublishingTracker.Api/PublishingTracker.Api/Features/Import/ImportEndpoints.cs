@@ -22,13 +22,19 @@ public static class ImportEndpoints
             }
 
             logger.LogInformation("User {UserId} uploaded file {FileName}.", userId, file.FileName);
-            // This is a placeholder for the upload logic.
-            // In a real application, you would save the file and return a file ID.
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream); // Example async operation
+            
+            // Extract headers for mapping
+            var headers = new List<string>();
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                var firstLine = await reader.ReadLineAsync();
+                if (!string.IsNullOrEmpty(firstLine))
+                {
+                    headers = firstLine.Split(',').Select(h => h.Trim('"', ' ')).ToList();
+                }
+            }
 
-            // Save to DB or storage here...
-            return Results.Ok(new { fileName = file.FileName });
+            return Results.Ok(new { fileName = file.FileName, headers });
         });
 
         importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext db, ColumnMappingDto mapping, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>

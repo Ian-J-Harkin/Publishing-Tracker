@@ -3,7 +3,7 @@ import { ImportJob, ColumnMapping } from '../types/import';
 
 const API_URL = '/api/import';
 
-const uploadFile = async (file: File): Promise<{ fileName: string }> => {
+const uploadFile = async (file: File): Promise<{ fileName: string, headers: string[] }> => {
     const formData = new FormData();
     formData.append('file', file);
 

@@ -12,11 +12,32 @@ const ImportPage = () => {
         saleDate: '',
         quantity: '',
         unitPrice: '',
-        royalty: ''
+        royalty: '',
+        revenue: '',
+        currency: '',
+        orderId: ''
     });
+    const [headers, setHeaders] = useState<string[]>([]);
     const [step, setStep] = useState<'upload' | 'mapping' | 'summary'>('upload');
     const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<{ message: string } | null>(null);
+
+    const autoMapHeaders = (availableHeaders: string[]) => {
+        const newMapping = { ...mapping };
+        availableHeaders.forEach(header => {
+            const h = header.toLowerCase();
+            if (h.includes('title') || h.includes('book')) newMapping.bookTitle = header;
+            if (h.includes('platform')) newMapping.platform = header;
+            if (h.includes('date')) newMapping.saleDate = header;
+            if (h.includes('qty') || h.includes('quantity')) newMapping.quantity = header;
+            if (h.includes('price')) newMapping.unitPrice = header;
+            if (h.includes('royalty')) newMapping.royalty = header;
+            if (h.includes('revenue') || h.includes('total')) newMapping.revenue = header;
+            if (h.includes('currency')) newMapping.currency = header;
+            if (h.includes('order') || h.includes('id')) newMapping.orderId = header;
+        });
+        setMapping(newMapping);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -28,7 +49,9 @@ const ImportPage = () => {
     const handleUpload = async () => {
         if (file) {
             try {
-                await importService.uploadFile(file);
+                const data = await importService.uploadFile(file);
+                setHeaders(data.headers);
+                autoMapHeaders(data.headers);
                 setStep('mapping');
             } catch {
                 setError('Failed to upload file. Ensure it is a valid CSV.');
@@ -36,7 +59,7 @@ const ImportPage = () => {
         }
     };
 
-    const handleMappingChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMappingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const { name, value } = e.target;
         setMapping(prevMapping => ({ ...prevMapping, [name]: value }));
     };
@@ -117,13 +140,17 @@ const ImportPage = () => {
                             {(Object.keys(mapping) as Array<keyof ColumnMapping>).map((key) => (
                                 <div className="form-group" key={key}>
                                     <label style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1')}</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         name={key}
-                                        placeholder="CSV Column Name"
                                         value={mapping[key]}
                                         onChange={handleMappingChange}
-                                    />
+                                        style={pageStyles.select}
+                                    >
+                                        <option value="">Select CSV Column</option>
+                                        {headers.map(h => (
+                                            <option key={h} value={h}>{h}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             ))}
                         </div>
@@ -172,7 +199,8 @@ const pageStyles = {
     successIcon: { width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#10b981', color: 'white', fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' },
     actions: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' },
     cancelBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: '600' },
-    errorBanner: { backgroundColor: '#fef2f2', color: 'var(--danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }
+    errorBanner: { backgroundColor: '#fef2f2', color: 'var(--danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' },
+    select: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'white', color: 'var(--text-main)', appearance: 'none' as const }
 };
 
 export default ImportPage;
