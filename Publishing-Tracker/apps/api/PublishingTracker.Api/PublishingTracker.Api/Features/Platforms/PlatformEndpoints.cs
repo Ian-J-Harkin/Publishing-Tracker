@@ -15,15 +15,24 @@ public static class PlatformEndpoints
         var platformsGroup = app.MapGroup("/api/platforms").RequireAuthorization();
 
         // --- GET ALL PLATFORMS ---
-        platformsGroup.MapGet("/", async (PublishingTrackerDbContext db) =>
+        platformsGroup.MapGet("/", async (PublishingTrackerDbContext db, [FromQuery] string? search) =>
         {
-            var platforms = await db.Platforms
+            var query = db.Platforms.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var term = search.ToLower();
+                query = query.Where(p => p.Name.ToLower().Contains(term));
+            }
+
+            var platforms = await query
+                .OrderBy(p => p.Name)
                 .Select(p => new PlatformResponseDto
                 {
                     Id = p.Id,
                     Name = p.Name,
                     BaseUrl = p.BaseUrl ?? string.Empty,
-                    CommissionRate = p.CommissionRate, // ?? 0.00m,
+                    CommissionRate = p.CommissionRate,
                     IsActive = p.IsActive
                 })
                 .ToListAsync();

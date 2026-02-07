@@ -10,7 +10,7 @@ const BookListPage = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const parentRef = useRef<HTMLDivElement>(null);
-    const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const fetchBooks = useCallback(async (search?: string) => {
         try {

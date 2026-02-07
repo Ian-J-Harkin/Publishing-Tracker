@@ -1,84 +1,126 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { platformService } from '../services/platformService';
-import { PlatformRequest } from '../types/platform';
+
+const requestSchema = z.object({
+    name: z.string().min(2, 'Platform identity must be at least 2 characters'),
+    baseUrl: z.string().url('A valid distribution URL is required').or(z.literal('')),
+    commissionRate: z.number().min(0).max(1, 'Rate must be between 0.00 and 1.00 (e.g. 0.30 for 30%)'),
+});
+
+type RequestFormData = z.infer<typeof requestSchema>;
 
 const RequestPlatformPage = () => {
-    const [name, setName] = useState('');
-    const [baseUrl, setBaseUrl] = useState('');
-    const [commissionRate, setCommissionRate] = useState(0);
-    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting }
+    } = useForm<RequestFormData>({
+        resolver: zodResolver(requestSchema),
+        defaultValues: {
+            name: '',
+            baseUrl: '',
+            commissionRate: 0.30
+        }
+    });
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const [submissionStatus, setSubmissionStatus] = React.useState<'idle' | 'success' | 'error'>('idle');
+
+    const onSubmit = async (data: RequestFormData) => {
         try {
-            const request: PlatformRequest = { name, baseUrl, commissionRate };
-            await platformService.requestPlatform(request);
-            navigate('/platforms');
+            setSubmissionStatus('idle');
+            await platformService.requestPlatform(data);
+            setSubmissionStatus('success');
+            setTimeout(() => navigate('/platforms'), 2000);
         } catch {
-            setError('Failed to submit request. Please check your network connection.');
+            setSubmissionStatus('error');
         }
     };
+
+    if (submissionStatus === 'success') {
+        return (
+            <div style={pageStyles.centered}>
+                <div style={pageStyles.successContainer}>
+                    <div style={pageStyles.successIcon}>✓</div>
+                    <h2>Request Transmitted</h2>
+                    <p style={{ color: 'var(--text-muted)' }}>
+                        Our data synchronization team has received your integration request.
+                        Redirecting to the distribution index...
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Request New Platform</h1>
-                <p style={{ color: 'var(--text-muted)' }}>
-                    Don't see your marketplace? Request an integration and we'll review it.
+                <h1>Request Integration</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
+                    Expand your reach. Request new marketplace support for our analytics engine.
                 </p>
             </div>
 
             <div className="card" style={pageStyles.formCard}>
-                {error && <div style={pageStyles.errorBanner}>{error}</div>}
+                {submissionStatus === 'error' && (
+                    <div style={pageStyles.errorBanner}>
+                        <strong>Network Failure:</strong> Unable to secure the request at this time.
+                    </div>
+                )}
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="form-group">
-                        <label htmlFor="name">Platform Name</label>
+                        <label>Platform Identity</label>
                         <input
-                            id="name"
-                            type="text"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            placeholder="e.g. Google Play Books"
-                            required
+                            {...register('name')}
+                            placeholder="e.g. Google Play Books, Kobo Writing Life"
+                            style={errors.name ? { borderColor: 'var(--danger)' } : {}}
                         />
+                        {errors.name && <small style={pageStyles.errorText}>{errors.name.message}</small>}
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="baseUrl">Platform Website (URL)</label>
+                        <label>Base Distribution URL</label>
                         <input
-                            id="baseUrl"
-                            type="url"
-                            value={baseUrl}
-                            onChange={e => setBaseUrl(e.target.value)}
-                            placeholder="https://example.com"
+                            {...register('baseUrl')}
+                            placeholder="https://publish.example.com"
+                            style={errors.baseUrl ? { borderColor: 'var(--danger)' } : {}}
                         />
+                        {errors.baseUrl && <small style={pageStyles.errorText}>{errors.baseUrl.message}</small>}
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="commissionRate">Standard Commission Rate</label>
+                        <label>Average Commission Rate (0.00 - 1.00)</label>
                         <input
-                            id="commissionRate"
                             type="number"
                             step="0.01"
-                            value={commissionRate}
-                            onChange={e => setCommissionRate(parseFloat(e.target.value))}
-                            required
-                            inputMode="decimal"
+                            {...register('commissionRate', { valueAsNumber: true })}
+                            style={errors.commissionRate ? { borderColor: 'var(--danger)' } : {}}
                         />
                         <small style={pageStyles.helperText}>
-                            Enter as a decimal (e.g., 0.30 for 30%).
+                            Input the decimal merchant fee (e.g., 0.30 represents a 30% flat fee).
                         </small>
+                        {errors.commissionRate && <small style={pageStyles.errorText}>{errors.commissionRate.message}</small>}
+                    </div>
+
+                    <div style={pageStyles.infoBox}>
+                        <div style={{ fontSize: '1.5rem' }}>ℹ️</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            Requests are reviewed for API compatibility and data structure alignment.
+                            Approved platforms will appear for all users.
+                        </div>
                     </div>
 
                     <div style={pageStyles.actions}>
                         <button type="button" onClick={() => navigate('/platforms')} style={pageStyles.cancelBtn}>
-                            Cancel
+                            Discard Request
                         </button>
-                        <button type="submit" className="btn-primary">
-                            Submit Request
+                        <button type="submit" className="btn-primary" disabled={isSubmitting}>
+                            {isSubmitting ? 'Transmitting...' : 'Commit Request'}
                         </button>
                     </div>
                 </form>
@@ -88,38 +130,64 @@ const RequestPlatformPage = () => {
 };
 
 const pageStyles = {
-    wrapper: { maxWidth: '800px', margin: '0 auto' },
-    header: { marginBottom: '2rem' },
-    formCard: { padding: '2.5rem' },
+    wrapper: { maxWidth: '750px', margin: '0 auto', animation: 'fadeIn 0.5s ease' },
+    header: { marginBottom: '3rem' },
+    formCard: { padding: '3rem', border: '1px solid rgba(255,255,255,0.05)' },
+    infoBox: {
+        padding: '1.25rem',
+        backgroundColor: 'rgba(56, 189, 248, 0.05)',
+        borderRadius: '12px',
+        border: '1px solid rgba(56, 189, 248, 0.1)',
+        display: 'flex',
+        gap: '1rem',
+        alignItems: 'center',
+        marginTop: '2rem'
+    },
     errorBanner: {
-        backgroundColor: '#fef2f2',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
         color: 'var(--danger)',
         padding: '1rem',
-        borderRadius: '8px',
-        marginBottom: '1.5rem',
-        border: '1px solid #fee2e2',
-        fontSize: '0.9rem',
+        borderRadius: '12px',
+        marginBottom: '2rem',
+        border: '1px solid var(--danger)',
+        fontSize: '0.95rem',
+        fontWeight: '600'
     },
-    helperText: {
-        display: 'block',
-        marginTop: '0.5rem',
-        color: 'var(--text-muted)',
-        fontSize: '0.8rem'
-    },
+    errorText: { color: 'var(--danger)', fontSize: '0.8rem', fontWeight: '600', marginTop: '4px' },
+    helperText: { color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px', fontWeight: '500' },
     actions: {
         display: 'flex',
         justifyContent: 'flex-end',
-        gap: '1rem',
-        marginTop: '2rem',
-        paddingTop: '1.5rem',
+        gap: '2rem',
+        marginTop: '3rem',
+        paddingTop: '2rem',
         borderTop: '1px solid var(--border)',
+        alignItems: 'center'
     },
     cancelBtn: {
         backgroundColor: 'transparent',
         border: 'none',
         color: 'var(--text-muted)',
-        fontWeight: '600',
+        fontWeight: '700',
         cursor: 'pointer',
+        fontSize: '0.95rem',
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.1em'
+    },
+    centered: { padding: '15rem 2rem', textAlign: 'center' as const },
+    successContainer: { animation: 'fadeIn 0.5s ease' },
+    successIcon: {
+        width: '64px',
+        height: '64px',
+        borderRadius: '20px',
+        backgroundColor: 'var(--success)',
+        color: '#fff',
+        fontSize: '2rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 1.5rem',
+        boxShadow: '0 0 20px rgba(16, 185, 129, 0.4)'
     }
 };
 
