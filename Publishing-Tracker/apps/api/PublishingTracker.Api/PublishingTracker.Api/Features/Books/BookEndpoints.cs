@@ -11,9 +11,9 @@ public static class BookEndpoints
     {
         var booksGroup = app.MapGroup("/api/books").RequireAuthorization();
 
-        booksGroup.MapGet("/", async ([FromServices] IBookService bookService) =>
+        booksGroup.MapGet("/", async ([FromServices] IBookService bookService, [FromQuery] string? search) =>
         {
-            var books = await bookService.GetAllAsync();
+            var books = await bookService.GetAllAsync(search);
             return Results.Ok(books);
         });
 

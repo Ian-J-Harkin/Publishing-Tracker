@@ -21,10 +21,23 @@ public class BookService : IBookService
         _logger = logger;
     }
 
-    public async Task<List<Book>> GetAllAsync()
+    public async Task<List<Book>> GetAllAsync(string? searchTerm = null)
     {
-        _logger.LogInformation("Fetching all books.");
-        return await _context.Books.ToListAsync();
+        var userId = _currentUserService.UserId;
+        _logger.LogInformation("Fetching books for user {UserId}.", userId);
+
+        var query = _context.Books.Where(b => b.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term));
+        }
+
+        return await query
+            .OrderByDescending(b => b.PublicationDate)
+            .ThenBy(b => b.Title)
+            .ToListAsync();
     }
 
     public async Task<Book?> GetByIdAsync(int id)

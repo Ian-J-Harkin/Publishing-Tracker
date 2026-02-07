@@ -3,8 +3,8 @@ import { Book, CreateBook, UpdateBook, BookPerformance } from '../types/book';
 
 const API_URL = '/api/books';
 
-const getBooks = async (): Promise<Book[]> => {
-    const response = await axiosClient.get(API_URL);
+const getBooks = async (search?: string): Promise<Book[]> => {
+    const response = await axiosClient.get(API_URL, { params: { search } });
     return response.data;
 };
 
