@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { bookService } from '../services/bookService';
 import { Book } from '../types/book';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { theme } from '../styles/theme';
 
 const BookListPage = () => {
     const [books, setBooks] = useState<Book[]>([]);
@@ -14,7 +13,7 @@ const BookListPage = () => {
     const rowVirtualizer = useVirtualizer({
         count: books.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 60, 
+        estimateSize: () => 60,
     });
 
     useEffect(() => {
@@ -22,7 +21,7 @@ const BookListPage = () => {
             try {
                 const booksData = await bookService.getBooks();
                 setBooks(booksData);
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch books.');
             } finally {
                 setLoading(false);
@@ -36,7 +35,7 @@ const BookListPage = () => {
             try {
                 await bookService.deleteBook(id);
                 setBooks(books.filter(book => book.id !== id));
-            } catch (err) {
+            } catch {
                 setError('Failed to delete book.');
             }
         }
@@ -71,12 +70,12 @@ const BookListPage = () => {
                         {rowVirtualizer.getVirtualItems().map(virtualItem => {
                             const book = books[virtualItem.index];
                             return (
-                                <div 
-                                    key={virtualItem.key} 
-                                    style={{ 
+                                <div
+                                    key={virtualItem.key}
+                                    style={{
                                         ...pageStyles.row,
-                                        height: `${virtualItem.size}px`, 
-                                        transform: `translateY(${virtualItem.start}px)` 
+                                        height: `${virtualItem.size}px`,
+                                        transform: `translateY(${virtualItem.start}px)`
                                     }}
                                 >
                                     <div style={{ flex: 2, fontWeight: '600' }}>
@@ -88,8 +87,8 @@ const BookListPage = () => {
                                         {book.author}
                                     </div>
                                     <div style={{ flex: 1, textAlign: 'right' }}>
-                                        <button 
-                                            onClick={() => handleDelete(book.id)} 
+                                        <button
+                                            onClick={() => handleDelete(book.id)}
                                             style={pageStyles.deleteBtn}
                                         >
                                             Delete

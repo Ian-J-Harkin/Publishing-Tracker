@@ -17,7 +17,7 @@ describe('RequestPlatformPage', () => {
         );
 
         fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'New Platform' } });
-        fireEvent.change(screen.getByLabelText(/base url/i), { target: { value: 'new-url' } });
+        fireEvent.change(screen.getByLabelText(/platform website/i), { target: { value: 'new-url' } });
         fireEvent.change(screen.getByLabelText(/commission rate/i), { target: { value: '0.2' } });
         fireEvent.submit(screen.getByRole('button', { name: /submit request/i }));
 

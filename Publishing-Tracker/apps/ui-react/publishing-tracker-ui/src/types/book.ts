@@ -28,3 +28,8 @@ export interface UpdateBook {
     genre?: string;
     description?: string;
 }
+
+export interface BookPerformance {
+    platformName: string;
+    totalRevenue: number;
+}

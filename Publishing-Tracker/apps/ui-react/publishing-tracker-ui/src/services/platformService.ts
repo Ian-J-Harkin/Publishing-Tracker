@@ -1,29 +1,15 @@
-import axios from 'axios';
+import axiosClient from '../api/axiosClient';
 import { Platform, PlatformRequest } from '../types/platform';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/platforms';
-
-const getAuthToken = () => {
-    return localStorage.getItem('token');
-};
+const API_URL = '/api/platforms';
 
 const getPlatforms = async (): Promise<Platform[]> => {
-    const token = getAuthToken();
-    const response = await axios.get(API_URL, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.get(API_URL);
     return response.data;
 };
 
 const requestPlatform = async (platformRequest: PlatformRequest): Promise<void> => {
-    const token = getAuthToken();
-    await axios.post(`${API_URL}/`, platformRequest, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    await axiosClient.post(`${API_URL}/requests`, platformRequest);
 };
 
 export const platformService = {

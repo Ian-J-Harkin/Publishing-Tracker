@@ -1,0 +1,19 @@
+{
+    "name": "publishing-tracker-monorepo",
+    "private": true,
+    "description": "Monorepo for Publishing Tracker application",
+    "workspaces": [
+        "apps/ui-react/publishing-tracker-ui",
+        "apps/ui-angular/publishing-tracker-ui-angular"
+    ],
+    "scripts": {
+        "dev:react": "npm run dev --workspace=@publishing-tracker/ui-react",
+        "dev:angular": "npm run start --workspace=@publishing-tracker/ui-angular",
+        "build": "npm run build --workspaces --if-present",
+        "test": "npm test --workspaces --if-present",
+        "lint": "npm run lint --workspaces --if-present"
+    },
+    "devDependencies": {
+        "typescript": "~5.8.3"
+    }
+}

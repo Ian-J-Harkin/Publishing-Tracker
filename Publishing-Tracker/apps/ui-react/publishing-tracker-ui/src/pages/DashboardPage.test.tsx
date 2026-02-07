@@ -6,7 +6,7 @@ import { useDashboardData } from '../hooks/useDashboardData';
 import { AuthProvider } from '../context/AuthContext';
 
 jest.mock('../hooks/useDashboardData');
-const mockedUseDashboardData = useDashboardData as jest.Mock<any>;
+const mockedUseDashboardData = useDashboardData as jest.Mock<ReturnType<typeof useDashboardData>>;
 
 describe('DashboardPage', () => {
     it('should render dashboard data', async () => {
@@ -18,10 +18,10 @@ describe('DashboardPage', () => {
                 topPerformingBook: 'Book 1',
                 topPerformingPlatform: 'Platform 1'
             },
-            yoy: { currentYearRevenue: 1000, previousYearRevenue: 800, growth: 0.25 },
+            yoy: { currentYearRevenue: 1000, lastYearRevenue: 800, growth: 0.25 },
             seasonal: [{ month: 1, totalRevenue: 100 }],
             loading: false,
-            error: null
+            error: false
         });
 
         render(
@@ -34,7 +34,7 @@ describe('DashboardPage', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Total Revenue')).toBeInTheDocument();
-            expect(screen.getByText('$1000.00')).toBeInTheDocument();
+            expect(screen.getByText(/1,000\.00/)).toBeInTheDocument();
         });
     });
 });

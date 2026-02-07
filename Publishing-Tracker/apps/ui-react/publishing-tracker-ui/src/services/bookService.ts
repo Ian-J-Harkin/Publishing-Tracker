@@ -1,68 +1,34 @@
-import axios from 'axios';
-import { Book, CreateBook, UpdateBook } from '../types/book';
+import axiosClient from '../api/axiosClient';
+import { Book, CreateBook, UpdateBook, BookPerformance } from '../types/book';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/books';
-
-const getAuthToken = () => {
-    return localStorage.getItem('token');
-};
+const API_URL = '/api/books';
 
 const getBooks = async (): Promise<Book[]> => {
-    const token = getAuthToken();
-    const response = await axios.get(API_URL, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.get(API_URL);
     return response.data;
 };
 
 const getBookById = async (id: number): Promise<Book> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/${id}`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.get(`${API_URL}/${id}`);
     return response.data;
 };
 
 const createBook = async (book: CreateBook): Promise<Book> => {
-    const token = getAuthToken();
-    const response = await axios.post(API_URL, book, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.post(API_URL, book);
     return response.data;
 };
 
 const updateBook = async (id: number, book: UpdateBook): Promise<Book> => {
-    const token = getAuthToken();
-    const response = await axios.put(`${API_URL}/${id}`, book, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.put(`${API_URL}/${id}`, book);
     return response.data;
 };
 
 const deleteBook = async (id: number): Promise<void> => {
-    const token = getAuthToken();
-    await axios.delete(`${API_URL}/${id}`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    await axiosClient.delete(`${API_URL}/${id}`);
 };
 
-const getBookPerformance = async (id: number): Promise<any[]> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/${id}/performance`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+const getBookPerformance = async (id: number): Promise<BookPerformance[]> => {
+    const response = await axiosClient.get(`${API_URL}/${id}/performance`);
     return response.data;
 };
 

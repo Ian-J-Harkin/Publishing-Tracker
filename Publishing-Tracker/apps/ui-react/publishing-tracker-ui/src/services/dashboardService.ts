@@ -1,39 +1,20 @@
-import axios from 'axios';
-import { DashboardSummary } from '../types/dashboard';
+import axiosClient from '../api/axiosClient';
+import { DashboardSummary, YoYComparison, SeasonalPerformance } from '../types/dashboard';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/dashboard';
-
-const getAuthToken = () => {
-    return localStorage.getItem('token');
-};
+const API_URL = '/api/dashboard';
 
 const getDashboardSummary = async (): Promise<DashboardSummary> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/summary`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+    const response = await axiosClient.get(`${API_URL}/summary`);
     return response.data;
 };
 
-const getYoYComparison = async (): Promise<any> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/yoy`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+const getYoYComparison = async (): Promise<YoYComparison> => {
+    const response = await axiosClient.get(`${API_URL}/yoy`);
     return response.data;
 };
 
-const getSeasonalPerformance = async (): Promise<any> => {
-    const token = getAuthToken();
-    const response = await axios.get(`${API_URL}/seasonal`, {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    });
+const getSeasonalPerformance = async (): Promise<SeasonalPerformance[]> => {
+    const response = await axiosClient.get(`${API_URL}/seasonal`);
     return response.data;
 };
 

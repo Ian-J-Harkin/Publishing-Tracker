@@ -1,17 +1,12 @@
-import axios from 'axios';
+import axiosClient from '../api/axiosClient';
 import { dashboardService } from './dashboardService';
 import { DashboardSummary } from '../types/dashboard';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('../api/axiosClient');
+const mockedAxiosClient = axiosClient as jest.Mocked<typeof axiosClient>;
 
 describe('dashboardService', () => {
-    beforeEach(() => {
-        localStorage.setItem('token', 'test-token');
-    });
-
     afterEach(() => {
-        localStorage.clear();
         jest.clearAllMocks();
     });
 
@@ -23,37 +18,31 @@ describe('dashboardService', () => {
             topPerformingBook: 'Book 1',
             topPerformingPlatform: 'Platform 1'
         };
-        mockedAxios.get.mockResolvedValue({ data: summary });
+        mockedAxiosClient.get.mockResolvedValue({ data: summary });
 
         const result = await dashboardService.getDashboardSummary();
 
         expect(result).toEqual(summary);
-        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/summary', {
-            headers: { Authorization: 'Bearer test-token' }
-        });
+        expect(mockedAxiosClient.get).toHaveBeenCalledWith('/api/dashboard/summary');
     });
 
     it('should fetch year-over-year comparison', async () => {
         const yoy = { currentYearRevenue: 1000, previousYearRevenue: 800, growth: 0.25 };
-        mockedAxios.get.mockResolvedValue({ data: yoy });
+        mockedAxiosClient.get.mockResolvedValue({ data: yoy });
 
         const result = await dashboardService.getYoYComparison();
 
         expect(result).toEqual(yoy);
-        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/yoy', {
-            headers: { Authorization: 'Bearer test-token' }
-        });
+        expect(mockedAxiosClient.get).toHaveBeenCalledWith('/api/dashboard/yoy');
     });
 
     it('should fetch seasonal performance', async () => {
         const seasonal = [{ month: 1, totalRevenue: 100 }];
-        mockedAxios.get.mockResolvedValue({ data: seasonal });
+        mockedAxiosClient.get.mockResolvedValue({ data: seasonal });
 
         const result = await dashboardService.getSeasonalPerformance();
 
         expect(result).toEqual(seasonal);
-        expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/seasonal', {
-            headers: { Authorization: 'Bearer test-token' }
-        });
+        expect(mockedAxiosClient.get).toHaveBeenCalledWith('/api/dashboard/seasonal');
     });
 });

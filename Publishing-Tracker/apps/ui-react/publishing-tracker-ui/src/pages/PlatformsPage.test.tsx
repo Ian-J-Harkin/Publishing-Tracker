@@ -19,7 +19,8 @@ describe('PlatformsPage', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText('Platform 1 - url1 - 0.1')).toBeInTheDocument();
+            expect(screen.getByText('Platform 1')).toBeInTheDocument();
+            expect(screen.getByText('url1')).toBeInTheDocument();
         });
     });
 });

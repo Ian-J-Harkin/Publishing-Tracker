@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { bookService } from '../services/bookService';
+import { BookPerformance } from '../types/book';
 import { CSVLink } from 'react-csv';
 
 const BookPerformancePage = () => {
     const { id } = useParams<{ id: string }>();
-    const [performanceData, setPerformanceData] = useState<any[]>([]);
+    const [performanceData, setPerformanceData] = useState<BookPerformance[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +17,7 @@ const BookPerformancePage = () => {
                     const data = await bookService.getBookPerformance(parseInt(id, 10));
                     setPerformanceData(data);
                 }
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch book performance data.');
             } finally {
                 setLoading(false);

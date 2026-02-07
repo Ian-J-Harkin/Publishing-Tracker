@@ -1,0 +1,157 @@
+
+> @publishing-tracker/ui-react@0.0.0 test
+> jest
+
+PASS src/services/platformService.test.ts
+PASS src/services/dashboardService.test.ts
+PASS src/pages/BookPerformancePage.test.tsx
+PASS src/pages/BookListPage.test.tsx
+FAIL src/components/ProtectedRoute.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/components/ProtectedRoute.tsx:1:8 - error TS1259: Module '"C:/Github/PublishingTracker/Publishing-Tracker/apps/ui-react/publishing-tracker-ui/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+
+    1 import React from 'react';
+             ~~~~~
+
+      node_modules/@types/react/index.d.ts:66:1
+        66 export = React;
+           ~~~~~~~~~~~~~~~
+        This module is declared with 'export =', and can only be used with a default import when using the 'esModuleInterop' flag.
+
+FAIL src/pages/DashboardPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/context/AuthContext.tsx:1:8 - error TS1259: Module '"C:/Github/PublishingTracker/Publishing-Tracker/apps/ui-react/publishing-tracker-ui/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+
+    1 import React, { createContext, useState, useContext } from 'react';
+             ~~~~~
+
+      node_modules/@types/react/index.d.ts:66:1
+        66 export = React;
+           ~~~~~~~~~~~~~~~
+        This module is declared with 'export =', and can only be used with a default import when using the 'esModuleInterop' flag.
+
+FAIL src/pages/RequestPlatformPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/pages/RequestPlatformPage.tsx:1:8 - error TS1259: Module '"C:/Github/PublishingTracker/Publishing-Tracker/apps/ui-react/publishing-tracker-ui/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+
+    1 import React, { useState } from 'react';
+             ~~~~~
+
+      node_modules/@types/react/index.d.ts:66:1
+        66 export = React;
+           ~~~~~~~~~~~~~~~
+        This module is declared with 'export =', and can only be used with a default import when using the 'esModuleInterop' flag.
+
+FAIL src/pages/PlatformsPage.test.tsx
+  ΓùÅ PlatformsPage ΓÇ║ should render platforms
+
+    Unable to find an element with the text: Platform 1 - url1 - 0.1. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+    Ignored nodes: comments, script, style
+    <body>
+      <div>
+        <div>
+          <div
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;"
+          >
+            <div>
+              <h1>
+                Publishing Platforms
+              </h1>
+              <p
+                style="color: var(--text-muted);"
+              >
+                Manage the platforms where your books are currently listed.
+              </p>
+            </div>
+            <a
+              class="btn-primary"
+              data-discover="true"
+              href="/platforms/request"
+            >
+              + Request New Platform
+            </a>
+          </div>
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;"
+          >
+            <div
+              class="card"
+              style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 2rem;"
+            >
+              <div
+                style="width: 50px; height: 50px; border-radius: 12px; background-color: var(--primary); color: white; font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;"
+              >
+                P
+              </div>
+              <h3
+                style="margin-bottom: 0.5rem;"
+              >
+                Platform 1
+              </h3>
+              <div
+                style="display: flex; justify-content: space-between; width: 100%; margin-top: 0.75rem; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 0.75rem;"
+              >
+                <span
+                  style="color: var(--text-muted); font-weight: 500;"
+                >
+                  Base URL:
+                </span>
+                <a
+                  href="url1"
+                  rel="noreferrer"
+                  style="color: var(--primary); text-decoration: none; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                  target="_blank"
+                >
+                  url1
+                </a>
+              </div>
+              <div
+                style="display: flex; justify-content: space-between; width: 100%; margin-top: 0.75rem; font-size: 0.9rem; border-top: 1px solid var(--border); padding-top: 0.75rem;"
+              >
+                <span
+                  style="color: var(--text-muted); font-weight: 500;"
+                >
+                  Commission:
+                </span>
+                <span
+                  style="background-color: rgb(241, 245, 249); padding: 2px 8px; border-radius: 6px; font-weight: 600;"
+                >
+                  10
+                  %
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+
+      19 |         );
+      20 |
+    > 21 |         await waitFor(() => {
+         |                      ^
+      22 |             expect(screen.getByText('Platform 1 - url1 - 0.1')).toBeInTheDocument();
+      23 |         });
+      24 |     });
+
+      at waitForWrapper (node_modules/@testing-library/dom/dist/wait-for.js:163:27)
+      at Object.<anonymous> (src/pages/PlatformsPage.test.tsx:21:22)
+
+PASS src/pages/AddBookPage.test.tsx
+
+Test Suites: 4 failed, 5 passed, 9 total
+Tests:       1 failed, 8 passed, 9 total
+Snapshots:   0 total
+Time:        5.398 s, estimated 7 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest

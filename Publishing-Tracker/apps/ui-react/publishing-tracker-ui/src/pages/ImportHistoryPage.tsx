@@ -12,7 +12,7 @@ const ImportHistoryPage = () => {
             try {
                 const historyData = await importService.getHistory();
                 setHistory(historyData);
-            } catch (err) {
+            } catch {
                 setError('Failed to fetch import history.');
             } finally {
                 setLoading(false);

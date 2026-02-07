@@ -1,0 +1,90 @@
+Node.js version v25.0.0 detected.
+Odd numbered Node.js versions will not enter LTS status and should not be used for production. For more information, please see https://nodejs.org/en/about/previous-releases/.
+[33mΓ¥»[39m Building...
+[32mΓ£ö[39m Building...
+[1mInitial chunk files[22m                    [2m | [22m[1mNames[22m                               [2m | [22m [1mRaw size[22m
+[32mchunk-ALWU4UEP.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m2.26 MB[39m[2m | [22m
+[32mpolyfills.js[39m                           [2m | [22m[2mpolyfills[22m                           [2m | [22m  [36m1.03 MB[39m[2m | [22m
+[32mchunk-GXDGXWXA.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m422.98 kB[39m[2m | [22m
+[32mchunk-UGGPW4Y6.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m262.06 kB[39m[2m | [22m
+[32mchunk-KSEHS2WL.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m260.60 kB[39m[2m | [22m
+[32mchunk-REOH3NZG.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m243.00 kB[39m[2m | [22m
+[32mchunk-VPVFMTEX.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m [36m96.21 kB[39m[2m | [22m
+[32mjasmine-cleanup-1.js[39m                   [2m | [22m[2mjasmine-cleanup-1[22m                   [2m | [22m [36m67.20 kB[39m[2m | [22m
+[32mchunk-33R3OM4S.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m [36m11.20 kB[39m[2m | [22m
+[32mspec-edit-book.component.spec.js[39m       [2m | [22m[2mspec-edit-book.component.spec[22m       [2m | [22m  [36m7.87 kB[39m[2m | [22m
+[32mspec-add-book.component.spec.js[39m        [2m | [22m[2mspec-add-book.component.spec[22m        [2m | [22m  [36m7.01 kB[39m[2m | [22m
+[32mspec-register.component.spec.js[39m        [2m | [22m[2mspec-register.component.spec[22m        [2m | [22m  [36m7.00 kB[39m[2m | [22m
+[32mspec-request-platform.component.spec.js[39m[2m | [22m[2mspec-request-platform.component.spec[22m[2m | [22m  [36m6.12 kB[39m[2m | [22m
+[32mspec-login.component.spec.js[39m           [2m | [22m[2mspec-login.component.spec[22m           [2m | [22m  [36m6.02 kB[39m[2m | [22m
+[32mspec-dashboard.component.spec.js[39m       [2m | [22m[2mspec-dashboard.component.spec[22m       [2m | [22m  [36m5.93 kB[39m[2m | [22m
+[32mspec-book-performance.component.spec.js[39m[2m | [22m[2mspec-book-performance.component.spec[22m[2m | [22m  [36m4.44 kB[39m[2m | [22m
+[32mtest_main.js[39m                           [2m | [22m[2mtest_main[22m                           [2m | [22m  [36m4.35 kB[39m[2m | [22m
+[32mspec-book-list.component.spec.js[39m       [2m | [22m[2mspec-book-list.component.spec[22m       [2m | [22m  [36m4.23 kB[39m[2m | [22m
+[32mspec-platforms.component.spec.js[39m       [2m | [22m[2mspec-platforms.component.spec[22m       [2m | [22m  [36m3.95 kB[39m[2m | [22m
+[32mspec-book.service.spec.js[39m              [2m | [22m[2mspec-book.service.spec[22m              [2m | [22m  [36m3.47 kB[39m[2m | [22m
+[32mchunk-6TRXNEZQ.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m3.45 kB[39m[2m | [22m
+[32mspec-main-layout.component.spec.js[39m     [2m | [22m[2mspec-main-layout.component.spec[22m     [2m | [22m  [36m3.30 kB[39m[2m | [22m
+[32mspec-auth.service.spec.js[39m              [2m | [22m[2mspec-auth.service.spec[22m              [2m | [22m  [36m2.48 kB[39m[2m | [22m
+[32mspec-auth.guard.spec.js[39m                [2m | [22m[2mspec-auth.guard.spec[22m                [2m | [22m  [36m2.24 kB[39m[2m | [22m
+[32mspec-dashboard.service.spec.js[39m         [2m | [22m[2mspec-dashboard.service.spec[22m         [2m | [22m  [36m2.22 kB[39m[2m | [22m
+[32mspec-platform.service.spec.js[39m          [2m | [22m[2mspec-platform.service.spec[22m          [2m | [22m  [36m1.71 kB[39m[2m | [22m
+[32mchunk-OHUA7777.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.50 kB[39m[2m | [22m
+[32mchunk-H357RS67.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.37 kB[39m[2m | [22m
+[32mchunk-JUUMQRS6.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.18 kB[39m[2m | [22m
+[32mchunk-GI6MFCLI.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.09 kB[39m[2m | [22m
+[32mjasmine-cleanup-0.js[39m                   [2m | [22m[2mjasmine-cleanup-0[22m                   [2m | [22m[36m519 bytes[39m[2m | [22m
+[32mstyles.css[39m                             [2m | [22m[2mstyles[22m                              [2m | [22m [36m95 bytes[39m[2m | [22m
+
+[1m [22m                                      [2m | [22m[1mInitial total[22m                       [2m | [22m  [1m4.74 MB[22m
+
+Application bundle generation complete. [16.523 seconds]
+
+[32m07 02 2026 17:47:28.654:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:9876/
+[32m07 02 2026 17:47:28.655:INFO [launcher]: [39mLaunching browsers ChromeHeadless with concurrency unlimited
+[32m07 02 2026 17:47:28.881:INFO [launcher]: [39mStarting browser ChromeHeadless
+[32m07 02 2026 17:47:32.277:INFO [Chrome Headless 144.0.0.0 (Windows 10)]: [39mConnected on socket FZzTtq4hrHvuxxmLAAAB with id 92188126
+Chrome Headless 144.0.0.0 (Windows 10): Executed 0 of 41[32m SUCCESS[39m (0 secs / 0 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 1 of 41[32m SUCCESS[39m (0 secs / 0.513 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 2 of 41[32m SUCCESS[39m (0 secs / 0.52 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 3 of 41[32m SUCCESS[39m (0 secs / 0.522 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 4 of 41[32m SUCCESS[39m (0 secs / 0.523 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 5 of 41[32m SUCCESS[39m (0 secs / 0.524 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 6 of 41[32m SUCCESS[39m (0 secs / 0.525 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 7 of 41[32m SUCCESS[39m (0 secs / 0.527 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 8 of 41[32m SUCCESS[39m (0 secs / 0.529 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 9 of 41[32m SUCCESS[39m (0 secs / 0.555 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 10 of 41[32m SUCCESS[39m (0 secs / 0.571 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 11 of 41[32m SUCCESS[39m (0 secs / 0.58 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 12 of 41[32m SUCCESS[39m (0 secs / 0.615 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 13 of 41[32m SUCCESS[39m (0 secs / 0.625 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 14 of 41[32m SUCCESS[39m (0 secs / 0.634 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 15 of 41[32m SUCCESS[39m (0 secs / 0.641 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 16 of 41[32m SUCCESS[39m (0 secs / 0.647 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 17 of 41[32m SUCCESS[39m (0 secs / 0.66 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 18 of 41[32m SUCCESS[39m (0 secs / 0.665 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 19 of 41[32m SUCCESS[39m (0 secs / 0.668 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 20 of 41[32m SUCCESS[39m (0 secs / 0.67 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 21 of 41[32m SUCCESS[39m (0 secs / 0.671 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 22 of 41[32m SUCCESS[39m (0 secs / 0.676 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 23 of 41[32m SUCCESS[39m (0 secs / 0.695 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 24 of 41[32m SUCCESS[39m (0 secs / 0.698 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 25 of 41[32m SUCCESS[39m (0 secs / 0.7 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 26 of 41[32m SUCCESS[39m (0 secs / 0.701 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 27 of 41[32m SUCCESS[39m (0 secs / 0.702 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 28 of 41[32m SUCCESS[39m (0 secs / 0.703 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 29 of 41[32m SUCCESS[39m (0 secs / 0.704 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 30 of 41[32m SUCCESS[39m (0 secs / 0.706 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 31 of 41[32m SUCCESS[39m (0 secs / 0.709 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 32 of 41[32m SUCCESS[39m (0 secs / 0.711 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 33 of 41[32m SUCCESS[39m (0 secs / 0.712 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 34 of 41[32m SUCCESS[39m (0 secs / 0.723 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 35 of 41[32m SUCCESS[39m (0 secs / 0.73 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 36 of 41[32m SUCCESS[39m (0 secs / 0.752 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 37 of 41[32m SUCCESS[39m (0 secs / 0.76 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 38 of 41[32m SUCCESS[39m (0 secs / 0.763 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 39 of 41[32m SUCCESS[39m (0 secs / 0.769 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 40 of 41[32m SUCCESS[39m (0 secs / 0.778 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 41 of 41[32m SUCCESS[39m (0 secs / 0.785 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 41 of 41[32m SUCCESS[39m (0.833 secs / 0.785 secs)
+[32mTOTAL: 41 SUCCESS[39m

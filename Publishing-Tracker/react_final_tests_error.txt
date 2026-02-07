@@ -1,0 +1,160 @@
+
+> @publishing-tracker/ui-react@0.0.0 test
+> jest
+
+FAIL src/components/ProtectedRoute.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/RequestPlatformPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/BookPerformancePage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/BookListPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/services/platformService.test.ts
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/services/dashboardService.test.ts
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/DashboardPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/AddBookPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+FAIL src/pages/PlatformsPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/setupTests.ts:2:42 - error TS2307: Cannot find module 'util' or its corresponding type declarations.
+
+    2 import { TextEncoder, TextDecoder } from 'util';
+                                               ~~~~~~
+    src/setupTests.ts:4:1 - error TS2304: Cannot find name 'global'.
+
+    4 global.TextEncoder = TextEncoder as any;
+      ~~~~~~
+    src/setupTests.ts:5:1 - error TS2304: Cannot find name 'global'.
+
+    5 global.TextDecoder = TextDecoder as any;
+      ~~~~~~
+
+Test Suites: 9 failed, 9 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        4.824 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { importService } from '../services/importService';
 import { ColumnMapping } from '../types/import';
 
 const ImportPage = () => {
+    const navigate = useNavigate();
     const [file, setFile] = useState<File | null>(null);
     const [mapping, setMapping] = useState<ColumnMapping>({
         bookTitle: '',
@@ -28,7 +30,7 @@ const ImportPage = () => {
             try {
                 await importService.uploadFile(file);
                 setStep('mapping');
-            } catch (err) {
+            } catch {
                 setError('Failed to upload file. Ensure it is a valid CSV.');
             }
         }
@@ -45,7 +47,7 @@ const ImportPage = () => {
                 const result = await importService.processFile(file.name, mapping);
                 setSummary(result);
                 setStep('summary');
-            } catch (err) {
+            } catch {
                 setError('Processing failed. Please check your column mappings.');
             }
         }
@@ -61,8 +63,8 @@ const ImportPage = () => {
                         backgroundColor: step === s ? 'var(--primary)' : (idx < ['upload', 'mapping', 'summary'].indexOf(step) ? '#10b981' : '#e2e8f0'),
                         color: 'white'
                     }}>{idx + 1}</div>
-                    <span style={{ 
-                        marginLeft: '8px', 
+                    <span style={{
+                        marginLeft: '8px',
                         marginRight: '16px',
                         fontWeight: step === s ? '600' : '400',
                         color: step === s ? 'var(--text-main)' : 'var(--text-muted)'
@@ -88,7 +90,7 @@ const ImportPage = () => {
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                             Upload the sales export from your publishing platform (KDP, IngramSpark, etc.)
                         </p>
-                        
+
                         <div style={pageStyles.dropZone}>
                             <input type="file" onChange={handleFileChange} accept=".csv,.txt" style={pageStyles.fileInput} id="file-upload" />
                             <label htmlFor="file-upload" style={pageStyles.fileLabel}>
@@ -110,17 +112,17 @@ const ImportPage = () => {
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                             Tell us which column header in your CSV matches our required fields.
                         </p>
-                        
+
                         <div style={pageStyles.grid}>
                             {(Object.keys(mapping) as Array<keyof ColumnMapping>).map((key) => (
                                 <div className="form-group" key={key}>
                                     <label style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1')}</label>
-                                    <input 
-                                        type="text" 
-                                        name={key} 
+                                    <input
+                                        type="text"
+                                        name={key}
                                         placeholder="CSV Column Name"
-                                        value={mapping[key]} 
-                                        onChange={handleMappingChange} 
+                                        value={mapping[key]}
+                                        onChange={handleMappingChange}
                                     />
                                 </div>
                             ))}

@@ -1,0 +1,206 @@
+
+> @publishing-tracker/ui-react@0.0.0 test
+> jest
+
+FAIL src/services/platformService.test.ts
+  ΓùÅ Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     ΓÇó If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     ΓÇó If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     ΓÇó To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     ΓÇó If you need a custom transformation, specify a "transform" option in your config.
+     ΓÇó If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui\src\services\platformService.test.ts:20
+            expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/platforms', {
+                                                                ^^^^
+
+    SyntaxError: Cannot use 'import.meta' outside a module
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1318:40)
+
+FAIL src/pages/BookPerformancePage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+       8 |
+       9 | jest.mock('react-router-dom', () => ({
+    > 10 |     ...jest.requireActual('react-router-dom'),
+         |             ^
+      11 |     useParams: () => ({
+      12 |         id: '1',
+      13 |     }),
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at src/pages/BookPerformancePage.test.tsx:10:13
+      at Object.<anonymous> (src/pages/BookPerformancePage.test.tsx:2:1)
+
+FAIL src/pages/BookListPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      1 | import { render, screen, waitFor } from '@testing-library/react';
+      2 | import '@testing-library/jest-dom';
+    > 3 | import { BrowserRouter } from 'react-router-dom';
+        | ^
+      4 | import BookListPage from './BookListPage';
+      5 | import { bookService } from '../services/bookService';
+      6 |
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/pages/BookListPage.test.tsx:3:1)
+
+FAIL src/services/dashboardService.test.ts
+  ΓùÅ Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     ΓÇó If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     ΓÇó If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     ΓÇó To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     ΓÇó If you need a custom transformation, specify a "transform" option in your config.
+     ΓÇó If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui\src\services\dashboardService.test.ts:26
+            expect(mockedAxios.get).toHaveBeenCalledWith(import.meta.env.VITE_API_BASE_URL + '/api/dashboard/summary', {
+                                                                ^^^^
+
+    SyntaxError: Cannot use 'import.meta' outside a module
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1318:40)
+
+FAIL src/components/ProtectedRoute.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      1 | import { render, screen } from '@testing-library/react';
+    > 2 | import { MemoryRouter, Routes, Route } from 'react-router-dom';
+        | ^
+      3 | import ProtectedRoute from './ProtectedRoute';
+      4 | import { AuthProvider } from '../context/AuthContext';
+      5 |
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/components/ProtectedRoute.test.tsx:2:1)
+
+FAIL src/pages/RequestPlatformPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      1 | import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+    > 2 | import { BrowserRouter } from 'react-router-dom';
+        | ^
+      3 | import RequestPlatformPage from './RequestPlatformPage';
+      4 | import { platformService } from '../services/platformService';
+      5 |
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/pages/RequestPlatformPage.test.tsx:2:1)
+
+FAIL src/pages/PlatformsPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      1 | import { render, screen, waitFor } from '@testing-library/react';
+    > 2 | import { BrowserRouter } from 'react-router-dom';
+        | ^
+      3 | import PlatformsPage from './PlatformsPage';
+      4 | import { platformService } from '../services/platformService';
+      5 | import { Platform } from '../types/platform';
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/pages/PlatformsPage.test.tsx:2:1)
+
+FAIL src/pages/DashboardPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      1 | import { render, screen, waitFor } from '@testing-library/react';
+      2 | import '@testing-library/jest-dom';
+    > 3 | import { BrowserRouter } from 'react-router-dom';
+        | ^
+      4 | import DashboardPage from './DashboardPage';
+      5 | import { useDashboardData } from '../hooks/useDashboardData';
+      6 | import { AuthProvider } from '../context/AuthContext';
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/pages/DashboardPage.test.tsx:3:1)
+
+FAIL src/pages/AddBookPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TextEncoder is not defined
+
+      2 | import userEvent from '@testing-library/user-event';
+      3 | import '@testing-library/jest-dom';
+    > 4 | import { BrowserRouter } from 'react-router-dom';
+        | ^
+      5 | import AddBookPage from './AddBookPage';
+      6 | import { bookService } from '../services/bookService';
+      7 |
+
+      at Object.<anonymous> (node_modules/react-router/dist/development/index.js:329:31)
+      at Object.<anonymous> (node_modules/react-router/dist/development/dom-export.js:19:20)
+      at Object.<anonymous> (node_modules/react-router-dom/dist/index.js:38:18)
+      at Object.<anonymous> (src/pages/AddBookPage.test.tsx:4:1)
+
+Test Suites: 9 failed, 9 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        3.997 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest

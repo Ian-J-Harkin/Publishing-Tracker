@@ -11,9 +11,10 @@
 //
 //
 // -- This is a parent command --
-export {};
+export { };
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Cypress {
     interface Chainable {
       login(email: string, password: string): Chainable<void>
@@ -22,12 +23,12 @@ declare global {
 }
 
 Cypress.Commands.add('login', (email, password) => {
-    cy.request('POST', '/api/auth/login', {
-        email,
-        password,
-    }).then((response) => {
-        localStorage.setItem('token', response.body.token);
-    });
+  cy.request('POST', '/api/auth/login', {
+    email,
+    password,
+  }).then((response) => {
+    localStorage.setItem('token', response.body.token);
+  });
 });
 //
 //

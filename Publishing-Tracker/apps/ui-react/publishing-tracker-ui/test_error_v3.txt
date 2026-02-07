@@ -1,0 +1,13 @@
+FAIL src/pages/AddBookPage.test.tsx
+  ΓùÅ Test suite failed to run
+
+    src/api/axiosClient.ts:4:14 - error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', or 'nodenext'.
+
+    4     baseURL: import.meta.env.VITE_API_BASE_URL,
+                   ~~~~~~~~~~~
+
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+Snapshots:   0 total
+Time:        25.06 s
+Ran all test suites matching src/pages/AddBookPage.test.tsx.
