@@ -14,8 +14,23 @@ export interface Sale {
 export interface CreateSale {
     bookId: number;
     platformId: number;
-    saleDate: Date;
+    saleDate: string; // ISO String
     quantity: number;
     unitPrice: number;
     royalty: number;
+    currency: string;
+}
+
+export interface SalesSummary {
+    totalRevenue: number;
+    totalUnitsSold: number;
+    averageRoyalty: number;
+    salesCount: number;
+}
+
+export interface SalesFilter {
+    bookId?: number;
+    platformId?: number;
+    startDate?: string;
+    endDate?: string;
 }

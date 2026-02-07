@@ -32,4 +32,5 @@ export interface UpdateBook {
 export interface BookPerformance {
     platformName: string;
     totalRevenue: number;
+    currency: string;
 }

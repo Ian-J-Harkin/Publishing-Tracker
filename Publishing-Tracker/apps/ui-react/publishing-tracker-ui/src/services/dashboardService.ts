@@ -1,7 +1,12 @@
 import axiosClient from '../api/axiosClient';
-import { DashboardSummary, YoYComparison, SeasonalPerformance } from '../types/dashboard';
+import { DashboardSummary, YoYComparison, SeasonalPerformance, DashboardData } from '../types/dashboard';
 
 const API_URL = '/api/dashboard';
+
+const getDashboardData = async (): Promise<DashboardData> => {
+    const response = await axiosClient.get(`${API_URL}/all`);
+    return response.data;
+};
 
 const getDashboardSummary = async (): Promise<DashboardSummary> => {
     const response = await axiosClient.get(`${API_URL}/summary`);
@@ -19,6 +24,7 @@ const getSeasonalPerformance = async (): Promise<SeasonalPerformance[]> => {
 };
 
 export const dashboardService = {
+    getDashboardData,
     getDashboardSummary,
     getYoYComparison,
     getSeasonalPerformance

@@ -1,9 +1,20 @@
+export interface CurrencyTotal {
+    currency: string;
+    totalAmount: number;
+}
+
 export interface DashboardSummary {
-    totalRevenue: number;
+    revenueByCurrency: CurrencyTotal[];
     totalBooksPublished: number;
     totalSalesTransactions: number;
     topPerformingBook: string;
     topPerformingPlatform: string;
+}
+
+export interface DashboardData {
+    summary: DashboardSummary;
+    yoY: YoYComparison;
+    seasonal: SeasonalPerformance[];
 }
 
 export interface RevenueChartData {

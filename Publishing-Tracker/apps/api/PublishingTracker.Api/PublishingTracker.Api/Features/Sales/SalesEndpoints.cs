@@ -15,22 +15,36 @@ public static class SalesEndpoints
         ///         csharp PublishingTracker.Api\Features\Sales\SalesEndpoints.cs
         // Replace the existing MapGet("/") handler body with this temporary, more-verbose version.
         var salesGroup = app.MapGroup("/api/sales").RequireAuthorization();
-        salesGroup.MapGet("/", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        salesGroup.MapGet("/", async (
+            [FromServices] PublishingTrackerDbContext db, 
+            HttpContext httpContext, 
+            [FromQuery] int? bookId,
+            [FromQuery] int? platformId,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromServices] ILoggerFactory loggerFactory) =>
         {
             var logger = loggerFactory.CreateLogger("SalesEndpoints");
             try
             {
                 if (!TryGetUserId(httpContext, out var userId))
                 {
-                    logger.LogWarning("Could not retrieve user ID from token.");
                     return Results.Unauthorized();
                 }
 
-                logger.LogInformation("Fetching sales for User {UserId}", userId);
-                var sales = await db.Sales
-                    .Include(s => s.Book)   
+                var query = db.Sales
+                    .Include(s => s.Book)
                     .Include(s => s.Platform)
-                    .Where(s => s.Book.UserId == userId)
+                    .Where(s => s.Book.UserId == userId);
+
+                // Apply Filters
+                if (bookId.HasValue) query = query.Where(s => s.BookId == bookId.Value);
+                if (platformId.HasValue) query = query.Where(s => s.PlatformId == platformId.Value);
+                if (startDate.HasValue) query = query.Where(s => s.SaleDate >= startDate.Value);
+                if (endDate.HasValue) query = query.Where(s => s.SaleDate <= endDate.Value);
+
+                var sales = await query
+                    .OrderByDescending(s => s.SaleDate)
                     .Select(s => new SaleDto
                     {
                         Id = s.Id,
@@ -45,15 +59,38 @@ public static class SalesEndpoints
                         Revenue = s.Revenue
                     })
                     .ToListAsync();
+
                 return Results.Ok(sales);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Unhandled exception while fetching sales for request. UserClaims: {Claims}",
-                    string.Join(", ", httpContext.User.Claims.Select(c => $"{c.Type}={c.Value}")));
-                // return a safe Problem response (do not expose internal exception to client in prod)
-                return Results.Problem(detail: "Failed to fetch sales. Check server logs for details.", statusCode: 500);
+                logger.LogError(ex, "Error fetching filtered sales.");
+                return Results.Problem("Failed to fetch sales.");
             }
+        });
+
+        salesGroup.MapGet("/summary", async (
+            [FromServices] PublishingTrackerDbContext db, 
+            HttpContext httpContext,
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate) =>
+        {
+            if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
+
+            var query = db.Sales.Where(s => s.Book.UserId == userId);
+
+            if (startDate.HasValue) query = query.Where(s => s.SaleDate >= startDate.Value);
+            if (endDate.HasValue) query = query.Where(s => s.SaleDate <= endDate.Value);
+
+            var summary = await query.GroupBy(s => 1).Select(g => new SalesSummaryDto
+            {
+                TotalRevenue = g.Sum(s => s.Revenue),
+                TotalUnitsSold = g.Sum(s => s.Quantity),
+                AverageRoyalty = g.Count() > 0 ? g.Sum(s => s.Royalty) / g.Count() : 0,
+                SalesCount = g.Count()
+            }).FirstOrDefaultAsync() ?? new SalesSummaryDto();
+
+            return Results.Ok(summary);
         });
         ///
         //var salesGroup = app.MapGroup("/api/sales").RequireAuthorization();
@@ -119,6 +156,7 @@ public static class SalesEndpoints
                 UnitPrice = createSaleDto.UnitPrice,
                 Royalty = createSaleDto.Royalty,
                 Revenue = createSaleDto.Quantity * createSaleDto.Royalty,
+                Currency = createSaleDto.Currency,
                 CreatedAt = DateTime.UtcNow
             };
 

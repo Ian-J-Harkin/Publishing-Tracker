@@ -2,26 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardService } from '../services/dashboardService';
 
 export const useDashboardData = () => {
-    const { data: summary, isLoading: isSummaryLoading, isError: isSummaryError } = useQuery({
-        queryKey: ['dashboardSummary'],
-        queryFn: dashboardService.getDashboardSummary
-    });
-
-    const { data: yoy, isLoading: isYoyLoading, isError: isYoyError } = useQuery({
-        queryKey: ['yoyComparison'],
-        queryFn: dashboardService.getYoYComparison
-    });
-
-    const { data: seasonal, isLoading: isSeasonalLoading, isError: isSeasonalError } = useQuery({
-        queryKey: ['seasonalPerformance'],
-        queryFn: dashboardService.getSeasonalPerformance
+    const { data, isLoading, isError } = useQuery({
+        queryKey: ['dashboardAll'],
+        queryFn: dashboardService.getDashboardData
     });
 
     return {
-        summary,
-        yoy,
-        seasonal,
-        loading: isSummaryLoading || isYoyLoading || isSeasonalLoading,
-        error: isSummaryError || isYoyError || isSeasonalError
+        summary: data?.summary,
+        yoy: data?.yoY,
+        seasonal: data?.seasonal,
+        loading: isLoading,
+        error: isError ? 'Inconsistent data received from analytics engine.' : null
     };
 };

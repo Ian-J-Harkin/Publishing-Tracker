@@ -39,5 +39,7 @@ namespace PublishingTracker.Api.Models.Dtos
         [Required]
         [Range(0.01, double.MaxValue)]
         public decimal Royalty { get; set; }
+
+        public string Currency { get; set; } = "USD";
     }
 }

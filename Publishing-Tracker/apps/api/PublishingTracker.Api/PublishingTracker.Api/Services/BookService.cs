@@ -118,10 +118,11 @@ public class BookService : IBookService
         _logger.LogInformation("Fetching performance data for BookId {BookId} for User {UserId}.", bookId, userId);
         var performanceData = await _context.Sales
             .Where(s => s.BookId == bookId)
-            .GroupBy(s => s.Platform.Name)
+            .GroupBy(s => new { s.Platform.Name, s.Currency })
             .Select(g => new BookPerformanceDto 
             { 
-                PlatformName = g.Key, 
+                PlatformName = g.Key.Name,
+                Currency = g.Key.Currency,
                 TotalRevenue = g.Sum(s => s.Revenue) 
             })
             .ToListAsync();

@@ -43,8 +43,8 @@ const BookPerformancePage = () => {
             </CSVLink>
             <ul>
                 {performanceData.map(p => (
-                    <li key={p.platformName}>
-                        {p.platformName}: ${p.totalRevenue.toFixed(2)}
+                    <li key={`${p.platformName}-${p.currency}`}>
+                        {p.platformName}: {p.currency} {p.totalRevenue.toFixed(2)}
                     </li>
                 ))}
             </ul>

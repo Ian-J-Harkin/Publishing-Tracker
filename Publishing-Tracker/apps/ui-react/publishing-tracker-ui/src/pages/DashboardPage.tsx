@@ -24,7 +24,15 @@ const DashboardPage = () => {
                     <div style={dashStyles.iconCircle}>💰</div>
                     <div>
                         <p style={dashStyles.label}>Total Revenue</p>
-                        <h2 style={dashStyles.value}>${summary?.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h2>
+                        {summary?.revenueByCurrency && summary.revenueByCurrency.length > 0 ? (
+                            summary.revenueByCurrency.map(r => (
+                                <h2 key={r.currency} style={dashStyles.value}>
+                                    {r.currency} {r.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </h2>
+                            ))
+                        ) : (
+                            <h2 style={dashStyles.value}>$0.00</h2>
+                        )}
                     </div>
                 </div>
                 <div className="card" style={dashStyles.statCard}>

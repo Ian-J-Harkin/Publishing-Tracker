@@ -56,5 +56,6 @@ namespace PublishingTracker.Api.Models.Dtos
     {
         public string PlatformName { get; set; } = string.Empty;
         public decimal TotalRevenue { get; set; }
+        public string Currency { get; set; } = "USD";
     }
 }
