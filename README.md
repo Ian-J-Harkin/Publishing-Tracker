@@ -184,7 +184,17 @@ ng test
 
 ---
 
-## Running All Services at Once
+### Monorepo Workspaces (Recommended)
+
+From the `Publishing-Tracker` root:
+
+```powershell
+# Run React
+npm run dev:react
+
+# Run Angular
+npm run dev:angular
+```
 
 ### Automated (Batch File - Windows)
 
@@ -196,7 +206,7 @@ From the root directory:
 
 This will launch:
 - Backend API in a new terminal
-- React UI in a new terminal
+- Frontends in their respective terminals
 
 ### Manual (Run Each Separately)
 
@@ -222,9 +232,8 @@ npm start
 
 ## CI/CD Configuration
 
-GitHub Actions workflows are configured for:
-- `.github/workflows/dotnet.yml` - .NET API build & test
-- `.github/workflows/cicd.yml` - Frontend build & Azure deployment
+GitHub Actions workflows are consolidated into a single master pipeline:
+- `.github/workflows/cicd.yml` - Unified pipeline for .NET API, React, and Angular apps.
 
 ---
 
