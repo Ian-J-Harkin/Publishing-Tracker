@@ -141,7 +141,7 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAntiforgery();
+// app.UseAntiforgery();
 
 app.MapAuthEndpoints();
 app.MapBookEndpoints();
