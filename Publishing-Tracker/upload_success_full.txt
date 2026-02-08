@@ -1,0 +1,14 @@
+{
+  "fileName": "sample_sales_import.csv",
+  "headers": [
+    "Sale Date",
+    "Book Title",
+    "Platform Name",
+    "Quantity",
+    "Unit Price",
+    "Royalty",
+    "Total Revenue",
+    "Currency",
+    "Transaction ID"
+  ]
+}

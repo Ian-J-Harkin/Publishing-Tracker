@@ -99,7 +99,7 @@ app.UseExceptionHandler(errorApp =>
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogError(error.Error, "Unhandled exception occurred.");
 
-            await context.Response.WriteAsJsonAsync(new { error = "An unexpected error occurred." });
+            await context.Response.WriteAsJsonAsync(new { error = error.Error.Message, details = error.Error.ToString() });
         }
     });
 });

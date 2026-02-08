@@ -68,6 +68,14 @@ public class CsvImportService : ICsvImportService
                     var orderId = !string.IsNullOrEmpty(mapping.OrderId) ? csv.GetField(mapping.OrderId) : null;
 
                     // 1. Resolve Book (Create if missing as per US-016)
+                    if (string.IsNullOrWhiteSpace(bookTitle))
+                    {
+                        job.RecordsFailed++;
+                        job.ErrorLog += $"Row {job.RecordsProcessed}: Book title is required but was empty or missing.\\n";
+                        _logger.LogWarning("Import row {RowNum} skipped: Book title is empty", job.RecordsProcessed);
+                        continue; // Skip this record
+                    }
+
                     var book = userBooks.FirstOrDefault(b => b.Title.Equals(bookTitle, StringComparison.OrdinalIgnoreCase));
                     if (book == null)
                     {
@@ -77,14 +85,14 @@ public class CsvImportService : ICsvImportService
                         userBooks.Add(book);
                     }
 
-                    // 2. Resolve Platform
+                    // 2. Resolve Platform - MUST exist (platforms are pre-configured)
                     var platform = platforms.FirstOrDefault(p => p.Name.Equals(platformName, StringComparison.OrdinalIgnoreCase));
                     if (platform == null)
                     {
-                        platform = new Platform { Name = platformName!, CreatedAt = DateTime.UtcNow };
-                        _db.Platforms.Add(platform);
-                        await _db.SaveChangesAsync();
-                        platforms.Add(platform);
+                        job.RecordsFailed++;
+                        job.ErrorLog += $"Row {job.RecordsProcessed}: Platform '{platformName}' not found. Please add this platform before importing, or correct the platform name in your CSV.\\n";
+                        _logger.LogWarning("Import row {RowNum} skipped: Platform '{PlatformName}' does not exist", job.RecordsProcessed, platformName);
+                        continue; // Skip this record
                     }
 
                     // 3. Deduplication (US-017 troubleshooting/reliability)

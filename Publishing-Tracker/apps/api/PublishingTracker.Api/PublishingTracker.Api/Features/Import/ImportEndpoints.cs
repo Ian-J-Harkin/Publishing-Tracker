@@ -11,41 +11,49 @@ public static class ImportEndpoints
 {
     public static void MapImportEndpoints(this WebApplication app)
     {
-        var importGroup = app.MapGroup("/api/import").RequireAuthorization();
+        var importGroup = app.MapGroup("/api/import").RequireAuthorization().DisableAntiforgery();
 
         importGroup.MapPost("/upload", async ([FromServices] PublishingTrackerDbContext db, IFormFile file, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
             var logger = loggerFactory.CreateLogger("ImportEndpoints");
-            if (!TryGetUserId(httpContext, out var userId))
+            try
             {
-                return Results.Unauthorized();
-            }
-
-            logger.LogInformation("User {UserId} uploaded file {FileName}.", userId, file.FileName);
-            
-            // Ensure temp directory exists
-            var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
-            if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
-
-            // Save file for processing step
-            var filePath = Path.Combine(tempDir, $"{userId}_{file.FileName}");
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream);
-            }
-
-            // Extract headers for mapping
-            var headers = new List<string>();
-            using (var reader = new StreamReader(file.OpenReadStream()))
-            {
-                var firstLine = await reader.ReadLineAsync();
-                if (!string.IsNullOrEmpty(firstLine))
+                if (!TryGetUserId(httpContext, out var userId))
                 {
-                    headers = firstLine.Split(',').Select(h => h.Trim('"', ' ')).ToList();
+                    return Results.Unauthorized();
                 }
-            }
 
-            return Results.Ok(new { fileName = file.FileName, headers });
+                logger.LogInformation("User {UserId} uploaded file {FileName}.", userId, file.FileName);
+                
+                // Ensure temp directory exists
+                var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
+                if (!Directory.Exists(tempDir)) Directory.CreateDirectory(tempDir);
+
+                // Save file for processing step
+                var filePath = Path.Combine(tempDir, $"{userId}_{file.FileName}");
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                // Extract headers for mapping from the saved file
+                var headers = new List<string>();
+                using (var reader = new StreamReader(filePath))
+                {
+                    var firstLine = await reader.ReadLineAsync();
+                    if (!string.IsNullOrEmpty(firstLine))
+                    {
+                        headers = firstLine.Split(',').Select(h => h.Trim('"', ' ')).ToList();
+                    }
+                }
+
+                return Results.Ok(new { fileName = file.FileName, headers });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error during file upload");
+                return Results.Problem(ex.Message);
+            }
         });
 
         importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext db, [FromServices] ICsvImportService importService, ProcessImportRequest request, HttpContext httpContext) =>
