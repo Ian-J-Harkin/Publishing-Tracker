@@ -1,0 +1,467 @@
+Node.js version v25.0.0 detected.
+Odd numbered Node.js versions will not enter LTS status and should not be used for production. For more information, please see https://nodejs.org/en/about/previous-releases/.
+[33mΓ¥»[39m Building...
+[32mΓ£ö[39m Building...
+[1mInitial chunk files[22m                    [2m | [22m[1mNames[22m                               [2m | [22m [1mRaw size[22m
+[32mchunk-ALWU4UEP.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m2.26 MB[39m[2m | [22m
+[32mpolyfills.js[39m                           [2m | [22m[2mpolyfills[22m                           [2m | [22m  [36m1.03 MB[39m[2m | [22m
+[32mchunk-GXDGXWXA.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m422.98 kB[39m[2m | [22m
+[32mchunk-UGGPW4Y6.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m262.06 kB[39m[2m | [22m
+[32mchunk-KSEHS2WL.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m260.60 kB[39m[2m | [22m
+[32mchunk-REOH3NZG.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m[36m243.00 kB[39m[2m | [22m
+[32mchunk-VPVFMTEX.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m [36m96.21 kB[39m[2m | [22m
+[32mjasmine-cleanup-1.js[39m                   [2m | [22m[2mjasmine-cleanup-1[22m                   [2m | [22m [36m67.20 kB[39m[2m | [22m
+[32mspec-request-platform.component.spec.js[39m[2m | [22m[2mspec-request-platform.component.spec[22m[2m | [22m [36m13.09 kB[39m[2m | [22m
+[32mspec-dashboard.component.spec.js[39m       [2m | [22m[2mspec-dashboard.component.spec[22m       [2m | [22m [36m11.48 kB[39m[2m | [22m
+[32mchunk-33R3OM4S.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m [36m11.20 kB[39m[2m | [22m
+[32mspec-edit-book.component.spec.js[39m       [2m | [22m[2mspec-edit-book.component.spec[22m       [2m | [22m  [36m7.87 kB[39m[2m | [22m
+[32mspec-add-book.component.spec.js[39m        [2m | [22m[2mspec-add-book.component.spec[22m        [2m | [22m  [36m7.01 kB[39m[2m | [22m
+[32mspec-register.component.spec.js[39m        [2m | [22m[2mspec-register.component.spec[22m        [2m | [22m  [36m7.00 kB[39m[2m | [22m
+[32mspec-login.component.spec.js[39m           [2m | [22m[2mspec-login.component.spec[22m           [2m | [22m  [36m6.02 kB[39m[2m | [22m
+[32mspec-book-performance.component.spec.js[39m[2m | [22m[2mspec-book-performance.component.spec[22m[2m | [22m  [36m4.60 kB[39m[2m | [22m
+[32mtest_main.js[39m                           [2m | [22m[2mtest_main[22m                           [2m | [22m  [36m4.35 kB[39m[2m | [22m
+[32mspec-book-list.component.spec.js[39m       [2m | [22m[2mspec-book-list.component.spec[22m       [2m | [22m  [36m4.24 kB[39m[2m | [22m
+[32mspec-platforms.component.spec.js[39m       [2m | [22m[2mspec-platforms.component.spec[22m       [2m | [22m  [36m3.95 kB[39m[2m | [22m
+[32mspec-book.service.spec.js[39m              [2m | [22m[2mspec-book.service.spec[22m              [2m | [22m  [36m3.49 kB[39m[2m | [22m
+[32mchunk-6TRXNEZQ.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m3.45 kB[39m[2m | [22m
+[32mspec-main-layout.component.spec.js[39m     [2m | [22m[2mspec-main-layout.component.spec[22m     [2m | [22m  [36m3.31 kB[39m[2m | [22m
+[32mspec-auth.service.spec.js[39m              [2m | [22m[2mspec-auth.service.spec[22m              [2m | [22m  [36m2.48 kB[39m[2m | [22m
+[32mspec-dashboard.service.spec.js[39m         [2m | [22m[2mspec-dashboard.service.spec[22m         [2m | [22m  [36m2.26 kB[39m[2m | [22m
+[32mspec-auth.guard.spec.js[39m                [2m | [22m[2mspec-auth.guard.spec[22m                [2m | [22m  [36m2.24 kB[39m[2m | [22m
+[32mspec-platform.service.spec.js[39m          [2m | [22m[2mspec-platform.service.spec[22m          [2m | [22m  [36m1.70 kB[39m[2m | [22m
+[32mchunk-OHUA7777.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.50 kB[39m[2m | [22m
+[32mchunk-H357RS67.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.37 kB[39m[2m | [22m
+[32mchunk-JUUMQRS6.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.18 kB[39m[2m | [22m
+[32mchunk-NDR3WD4V.js[39m                      [2m | [22m[2m-[22m                                   [2m | [22m  [36m1.08 kB[39m[2m | [22m
+[32mjasmine-cleanup-0.js[39m                   [2m | [22m[2mjasmine-cleanup-0[22m                   [2m | [22m[36m519 bytes[39m[2m | [22m
+[32mstyles.css[39m                             [2m | [22m[2mstyles[22m                              [2m | [22m[36m494 bytes[39m[2m | [22m
+
+[1m [22m                                      [2m | [22m[1mInitial total[22m                       [2m | [22m  [1m4.75 MB[22m
+
+Application bundle generation complete. [2.221 seconds]
+
+[32m09 02 2026 21:35:05.831:INFO [karma-server]: [39mKarma v6.4.4 server started at http://localhost:9876/
+[32m09 02 2026 21:35:05.835:INFO [launcher]: [39mLaunching browsers ChromeHeadless with concurrency unlimited
+[32m09 02 2026 21:35:05.858:INFO [launcher]: [39mStarting browser ChromeHeadless
+[32m09 02 2026 21:35:09.229:INFO [Chrome Headless 144.0.0.0 (Windows 10)]: [39mConnected on socket Z12niNzm_W-Wrk7pAAAB with id 68918407
+Chrome Headless 144.0.0.0 (Windows 10): Executed 0 of 41[32m SUCCESS[39m (0 secs / 0 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 1 of 41[32m SUCCESS[39m (0 secs / 0.015 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 2 of 41[32m SUCCESS[39m (0 secs / 0.019 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 3 of 41[32m SUCCESS[39m (0 secs / 0.022 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 4 of 41[32m SUCCESS[39m (0 secs / 0.025 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 5 of 41[32m SUCCESS[39m (0 secs / 0.037 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 6 of 41[32m SUCCESS[39m (0 secs / 0.044 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 7 of 41[32m SUCCESS[39m (0 secs / 0.045 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 8 of 41[32m SUCCESS[39m (0 secs / 0.504 secs)
+[1A[2K[31mChrome Headless 144.0.0.0 (Windows 10) BookPerformanceComponent should render book performance data FAILED[39m
+	TestingLibraryElementError: Unable to find an element with the text: 100.00. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+	
+	Ignored nodes: comments, script, style
+	<body>
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  <link
+	    crossorigin="anonymous"
+	    href="C:/Github/PublishingTracker/Publishing-Tracker/apps/ui-angular/publishing-tracker-ui-angular/node_modules/jasmine-core/lib/jasmine-core/jasmine.css"
+	    rel="stylesheet"
+	    type="text/css"
+	  />
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  
+	
+	  <link
+	    crossorigin="anonymous"
+	    href="styles.css"
+	    rel="stylesheet"
+	    type="text/css"
+	  />
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	
+	
+	
+	  <div
+	    class="jasmine_html-reporter"
+	  >
+	    <div
+	      class="jasmine-banner"
+	    >
+	      <a
+	        class="jasmine-title"
+	        href="http://jasmine.github.io/"
+	        target="_blank"
+	      />
+	      <span
+	        class="jasmine-version"
+	      >
+	        4.6.1
+	      </span>
+	    </div>
+	    <ul
+	      class="jasmine-symbol-summary"
+	    >
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec3"
+	        title="AuthGuard should return false and navigate to /login if token does not exist"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec2"
+	        title="AuthGuard should return true if token exists"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec1"
+	        title="AuthGuard should be created"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec4"
+	        title="AuthService should be created"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec6"
+	        title="AuthService login should send a POST request to the login endpoint and store the token"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec5"
+	        title="AuthService register should send a POST request to the register endpoint"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec7"
+	        title="AuthService logout should remove the token from localStorage and navigate to /login"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec34"
+	        title="PlatformsComponent should render platforms"
+	      />
+	    </ul>
+	    <div
+	      class="jasmine-alert"
+	    />
+	    <div
+	      class="jasmine-results"
+	    >
+	      <div
+	        class="jasmine-failures"
+	      />
+	    </div>
+	  </div>
+	  <div
+	    _nghost-a-c2355403385=""
+	    id="root1"
+	    ng-version="20.2.4"
+	  >
+	    <div
+	      _ngcontent-a-c2355403385=""
+	      class="form-container"
+	    >
+	      <h1
+	        _ngcontent-a-c2355403385=""
+	      >
+	        Book Performance
+	      </h1>
+	      <div
+	        _ngcontent-a-c2355403385=""
+	      >
+	        <ul
+	          _ngcontent-a-c2355403385=""
+	        >
+	          <li
+	            _ngcontent-a-c2355403385=""
+	          >
+	             Platform 1: 
+	            <span
+	              _ngcontent-a-c2355403385=""
+	              class="currency"
+	            >
+	              USD
+	            </span>
+	             100.00 
+	          </li>
+	        </ul>
+	      </div>
+	    </div>
+	  </div>
+	</body>...
+	TestingLibraryElementError: Unable to find an element with the text: 100.00. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+	Ignored nodes: comments, script, style
+	<body>
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  <link
+	    crossorigin="anonymous"
+	    rel="stylesheet"
+	    type="text/css"
+	  />
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  <link
+	    crossorigin="anonymous"
+	    href="styles.css"
+	    rel="stylesheet"
+	    type="text/css"
+	  />
+	  
+	  
+	  
+	  
+	  
+	  
+	  
+	  <div
+	    class="jasmine_html-reporter"
+	  >
+	    <div
+	      class="jasmine-banner"
+	    >
+	      <a
+	        class="jasmine-title"
+	        href="http://jasmine.github.io/"
+	        target="_blank"
+	      />
+	      <span
+	        class="jasmine-version"
+	      >
+	        4.6.1
+	      </span>
+	    </div>
+	    <ul
+	      class="jasmine-symbol-summary"
+	    >
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec3"
+	        title="AuthGuard should return false and navigate to /login if token does not exist"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec2"
+	        title="AuthGuard should return true if token exists"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec1"
+	        title="AuthGuard should be created"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec4"
+	        title="AuthService should be created"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec6"
+	        title="AuthService login should send a POST request to the login endpoint and store the token"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec5"
+	        title="AuthService register should send a POST request to the register endpoint"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec7"
+	        title="AuthService logout should remove the token from localStorage and navigate to /login"
+	      />
+	      <li
+	        class="jasmine-passed"
+	        id="spec_spec34"
+	        title="PlatformsComponent should render platforms"
+	      />
+	    </ul>
+	    <div
+	      class="jasmine-alert"
+	    />
+	    <div
+	      class="jasmine-results"
+	    >
+	      <div
+	        class="jasmine-failures"
+	      />
+	    </div>
+	  </div>
+	  <div
+	    _nghost-a-c2355403385=""
+	    id="root1"
+	    ng-version="20.2.4"
+	  >
+	    <div
+	      _ngcontent-a-c2355403385=""
+	      class="form-container"
+	    >
+	      <h1
+	        _ngcontent-a-c2355403385=""
+	      >
+	        Book Performance
+	      </h1>
+	      <div
+	        _ngcontent-a-c2355403385=""
+	      >
+	        <ul
+	          _ngcontent-a-c2355403385=""
+	        >
+	          <li
+	            _ngcontent-a-c2355403385=""
+	          >
+	             Platform 1: 
+	            <span
+	              _ngcontent-a-c2355403385=""
+	              class="currency"
+	            >
+	              USD
+	            </span>
+	             100.00 
+	          </li>
+	        </ul>
+	      </div>
+	    </div>
+	  </div>
+	</body>...
+	    at Object.getElementError (node_modules/@testing-library/dom/dist/@testing-library/dom.esm.js:339:19)
+	    at node_modules/@testing-library/dom/dist/@testing-library/dom.esm.js:1206:25
+	    at node_modules/@testing-library/dom/dist/@testing-library/dom.esm.js:1185:17
+	    at node_modules/@testing-library/dom/dist/@testing-library/dom.esm.js:1228:19
+	    at src/app/features/book/book-performance/book-performance.component.spec.ts:33:19
+	    at Generator.next (<anonymous>)
+	    at fulfilled (chunk-6TRXNEZQ.js:66:24)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:398:28)
+	    at _ProxyZoneSpec.onInvoke (node_modules/zone.js/fesm2015/zone-testing.js:2132:39)
+	    at _ZoneDelegate.invoke (node_modules/zone.js/fesm2015/zone.js:397:34)
+Chrome Headless 144.0.0.0 (Windows 10): Executed 9 of 41[31m (1 FAILED)[39m (0 secs / 0.601 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 10 of 41[31m (1 FAILED)[39m (0 secs / 0.631 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 11 of 41[31m (1 FAILED)[39m (0 secs / 0.632 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 12 of 41[31m (1 FAILED)[39m (0 secs / 0.634 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 13 of 41[31m (1 FAILED)[39m (0 secs / 0.635 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 14 of 41[31m (1 FAILED)[39m (0 secs / 0.636 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 15 of 41[31m (1 FAILED)[39m (0 secs / 0.664 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 16 of 41[31m (1 FAILED)[39m (0 secs / 0.669 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 17 of 41[31m (1 FAILED)[39m (0 secs / 0.673 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 18 of 41[31m (1 FAILED)[39m (0 secs / 0.68 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 19 of 41[31m (1 FAILED)[39m (0 secs / 0.683 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 20 of 41[31m (1 FAILED)[39m (0 secs / 0.684 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 21 of 41[31m (1 FAILED)[39m (0 secs / 0.686 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 22 of 41[31m (1 FAILED)[39m (0 secs / 0.688 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 23 of 41[31m (1 FAILED)[39m (0 secs / 0.69 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 24 of 41[31m (1 FAILED)[39m (0 secs / 0.691 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 25 of 41[31m (1 FAILED)[39m (0 secs / 0.692 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 26 of 41[31m (1 FAILED)[39m (0 secs / 0.693 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 27 of 41[31m (1 FAILED)[39m (0 secs / 0.7 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 28 of 41[31m (1 FAILED)[39m (0 secs / 0.701 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 29 of 41[31m (1 FAILED)[39m (0 secs / 0.702 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 30 of 41[31m (1 FAILED)[39m (0 secs / 0.703 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 31 of 41[31m (1 FAILED)[39m (0 secs / 0.719 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 32 of 41[31m (1 FAILED)[39m (0 secs / 0.74 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 33 of 41[31m (1 FAILED)[39m (0 secs / 0.752 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 34 of 41[31m (1 FAILED)[39m (0 secs / 0.759 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 35 of 41[31m (1 FAILED)[39m (0 secs / 0.767 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 36 of 41[31m (1 FAILED)[39m (0 secs / 0.789 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 37 of 41[31m (1 FAILED)[39m (0 secs / 0.797 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 38 of 41[31m (1 FAILED)[39m (0 secs / 0.803 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 39 of 41[31m (1 FAILED)[39m (0 secs / 0.808 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 40 of 41[31m (1 FAILED)[39m (0 secs / 0.814 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 41 of 41[31m (1 FAILED)[39m (0 secs / 0.817 secs)
+[1A[2KChrome Headless 144.0.0.0 (Windows 10): Executed 41 of 41[31m (1 FAILED)[39m (0.863 secs / 0.817 secs)
+[31mTOTAL: 1 FAILED, 40 SUCCESS[39m

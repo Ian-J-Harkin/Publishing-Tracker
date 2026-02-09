@@ -7,8 +7,8 @@ import { ActivatedRoute } from '@angular/router';
 
 describe('BookPerformanceComponent', () => {
   it('should render book performance data', async () => {
-    const performanceData = [{ platformName: 'Platform 1', totalRevenue: 100 }];
-    await render(BookPerformanceComponent, {
+    const performanceData = [{ platformName: 'Platform 1', totalRevenue: 100, currency: 'USD' }];
+    const { getByText } = await render(BookPerformanceComponent, {
       imports: [RouterTestingModule],
       providers: [
         {
@@ -28,6 +28,8 @@ describe('BookPerformanceComponent', () => {
       ],
     });
 
-    expect(screen.getByText('Platform 1: $100.00')).toBeTruthy();
+    expect(getByText(/Platform 1:/)).toBeTruthy();
+    expect(getByText('USD')).toBeTruthy();
+    expect(getByText('100.00')).toBeTruthy();
   });
 });

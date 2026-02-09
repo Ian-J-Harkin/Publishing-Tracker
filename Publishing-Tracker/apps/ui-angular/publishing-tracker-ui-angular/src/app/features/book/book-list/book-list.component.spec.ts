@@ -16,6 +16,6 @@ describe('BookListComponent', () => {
       ],
     });
 
-    expect(screen.getByRole('heading', { name: /my books/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /ip portfolio/i })).toBeTruthy();
   });
 });

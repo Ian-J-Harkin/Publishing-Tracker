@@ -77,7 +77,7 @@ describe('BookService', () => {
   });
 
   it('should get book performance', () => {
-    const mockPerformance: BookPerformance[] = [{ platformName: 'Amazon', totalRevenue: 1000 }];
+    const mockPerformance: BookPerformance[] = [{ platformName: 'Amazon', totalRevenue: 1000, currency: 'USD' }];
     service.getBookPerformance(1).subscribe(performance => {
       expect(performance).toEqual(mockPerformance);
     });
