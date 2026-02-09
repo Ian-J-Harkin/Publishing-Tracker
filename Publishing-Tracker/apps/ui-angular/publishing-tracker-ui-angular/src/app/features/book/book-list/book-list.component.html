@@ -1,5 +1,5 @@
 <div>
-  <h1>My Books</h1>
+  <h1>IP Portfolio</h1>
   <a routerLink="/books/add">Add New Book</a>
   <div *ngIf="error" class="error">{{ error }}</div>
   <div *ngIf="books$ | async as books; else loading">

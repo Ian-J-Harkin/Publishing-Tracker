@@ -1,34 +1,107 @@
 <div class="dashboard-container">
   <header class="dashboard-header">
-    <h2>Dashboard</h2>
+    <div>
+      <h1>Strategic Analytics</h1>
+      <p>Performance intelligence for your intellectual property.</p>
+    </div>
     <button (click)="logout()" class="logout-button">Logout</button>
   </header>
-  <div *ngIf="summary$ | async as summary; else loading">
-    <div class="summary-grid">
-      <div class="summary-card"><h3>Total Revenue</h3><p>{{ summary.totalRevenue | currency }}</p></div>
-      <div class="summary-card"><h3>Total Books Published</h3><p>{{ summary.totalBooksPublished }}</p></div>
-      <div class="summary-card"><h3>Total Sales Transactions</h3><p>{{ summary.totalSalesTransactions }}</p></div>
-      <div class="summary-card"><h3>Top Performing Book</h3><p>{{ summary.topPerformingBook }}</p></div>
-      <div class="summary-card"><h3>Top Performing Platform</h3><p>{{ summary.topPerformingPlatform }}</p></div>
+
+  <ng-container *ngIf="summary$ | async as summary; else loading">
+    <!-- Top Metrics Grid -->
+    <div class="grid-metrics">
+      
+      <!-- Revenue Card -->
+      <div class="card metric-card">
+        <div class="metric-icon revenue-icon">💰</div>
+        <div>
+          <p class="metric-label">Cumulative Revenue</p>
+          <div *ngFor="let rev of summary.revenueByCurrency">
+            <h2 class="metric-value">
+              <span class="currency-label">{{rev.currency}}</span>
+              {{rev.totalAmount | number:'1.2-2'}}
+            </h2>
+          </div>
+          <div *ngIf="summary.revenueByCurrency.length === 0">
+            <h2 class="metric-value">0.00</h2>
+          </div>
+        </div>
+      </div>
+
+      <!-- Portfolio Card -->
+      <div class="card metric-card">
+        <div class="metric-icon books-icon">📚</div>
+        <div>
+          <p class="metric-label">Active Portfolio</p>
+          <h2 class="metric-value">
+            {{summary.totalBooksPublished}}
+            <span class="unit-label">Titles</span>
+          </h2>
+        </div>
+      </div>
+
+      <!-- Market Volume Card -->
+      <div class="card metric-card">
+        <div class="metric-icon sales-icon">📈</div>
+        <div>
+          <p class="metric-label">Market Volume</p>
+          <h2 class="metric-value">
+            {{summary.totalSalesTransactions}}
+            <span class="unit-label">Sales</span>
+          </h2>
+        </div>
+      </div>
     </div>
-  </div>
-  <div *ngIf="yoy$ | async as yoy">
-    <div class="summary-card">
-      <h3>Year-Over-Year Growth</h3>
-      <p>Current Year Revenue: {{ yoy.currentYearRevenue | currency }}</p>
-      <p>Previous Year Revenue: {{ yoy.previousYearRevenue | currency }}</p>
-      <p>Growth: {{ yoy.growth | percent }}</p>
+
+    <!-- Detailed Analysis Grid -->
+    <div class="grid-details">
+      
+      <!-- YoY Growth Card -->
+      <div class="card growth-card" *ngIf="yoy$ | async as yoy">
+        <div class="card-header">
+          <h3>Year-over-Year Growth</h3>
+          <div class="growth-badge">
+            ↗ {{yoy.growth | percent:'1.1-1'}}
+          </div>
+        </div>
+        
+        <div class="growth-stats">
+          <div class="stat-row">
+            <div>
+              <div class="stat-label">Top Revenue Title</div>
+              <div class="stat-value">{{summary.topPerformingBook}}</div>
+            </div>
+            <span class="stat-icon">🥇</span>
+          </div>
+
+          <div class="stat-row">
+            <div>
+              <div class="stat-label">Dominant Sales Channel</div>
+              <div class="stat-value">{{summary.topPerformingPlatform}}</div>
+            </div>
+            <span class="stat-icon">🏛️</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seasonal Performance Card -->
+      <div class="card seasonal-card" *ngIf="seasonal$ | async as seasonal">
+        <h3>Monthly Revenue Trajectory</h3>
+        <div class="chart-container">
+            <!-- Simple visual representation for now -->
+            <div *ngFor="let s of seasonal" class="bar-group">
+                <div class="bar" [style.height.%]="(s.totalRevenue / 1000) * 100"></div> <!-- Placeholder scaling -->
+                <span class="month-label">M{{s.month}}</span>
+            </div>
+        </div>
+      </div>
+
     </div>
-  </div>
-  <div *ngIf="seasonal$ | async as seasonal">
-    <div class="summary-card">
-      <h3>Seasonal Performance</h3>
-      <ul>
-        <li *ngFor="let s of seasonal">Month {{ s.month }}: {{ s.totalRevenue | currency }}</li>
-      </ul>
-    </div>
-  </div>
+  </ng-container>
+
   <ng-template #loading>
-    <p>Loading...</p>
+    <div class="loading-state">
+      <p>Loading dashboard analytics...</p>
+    </div>
   </ng-template>
 </div>

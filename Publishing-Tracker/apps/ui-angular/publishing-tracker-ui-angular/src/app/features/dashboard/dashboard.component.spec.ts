@@ -8,7 +8,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 describe('DashboardComponent', () => {
   it('should render dashboard data', async () => {
     const summary = {
-      totalRevenue: 1000,
+      revenueByCurrency: [{ currency: 'USD', totalAmount: 1000 }],
       totalBooksPublished: 10,
       totalSalesTransactions: 100,
       topPerformingBook: 'Book 1',
@@ -30,12 +30,13 @@ describe('DashboardComponent', () => {
         },
         {
           provide: AuthService,
-          useValue: { logout: () => {} },
+          useValue: { logout: () => { } },
         },
       ],
     });
 
-    expect(screen.getByText('Total Revenue')).toBeTruthy();
-    expect(screen.getByText('$1,000.00')).toBeTruthy();
+    expect(screen.getByText('Cumulative Revenue')).toBeTruthy();
+    expect(screen.getByText('USD')).toBeTruthy();
+    expect(screen.getByText('1,000.00')).toBeTruthy();
   });
 });

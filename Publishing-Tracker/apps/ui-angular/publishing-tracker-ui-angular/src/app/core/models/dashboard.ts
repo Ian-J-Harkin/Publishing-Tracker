@@ -1,5 +1,10 @@
+export interface CurrencyTotal {
+    currency: string;
+    totalAmount: number;
+}
+
 export interface DashboardSummary {
-    totalRevenue: number;
+    revenueByCurrency: CurrencyTotal[];
     totalBooksPublished: number;
     totalSalesTransactions: number;
     topPerformingBook: string;

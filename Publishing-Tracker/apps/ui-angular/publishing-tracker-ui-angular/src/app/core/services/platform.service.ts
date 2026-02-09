@@ -16,6 +16,6 @@ export class PlatformService {
   }
 
   requestPlatform(platformRequest: PlatformRequest): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/requests`, platformRequest);
+    return this.http.post<void>(this.apiUrl, platformRequest);
   }
 }

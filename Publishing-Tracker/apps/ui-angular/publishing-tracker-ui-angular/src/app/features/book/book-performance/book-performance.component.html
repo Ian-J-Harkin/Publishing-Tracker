@@ -3,7 +3,7 @@
   <div *ngIf="performanceData$ | async as performanceData; else loading">
     <ul>
       <li *ngFor="let p of performanceData">
-        {{ p.platformName }}: {{ p.totalRevenue | currency }}
+        {{ p.platformName }}: <span class="currency">{{p.currency}}</span> {{ p.totalRevenue | number:'1.2-2' }}
       </li>
     </ul>
   </div>

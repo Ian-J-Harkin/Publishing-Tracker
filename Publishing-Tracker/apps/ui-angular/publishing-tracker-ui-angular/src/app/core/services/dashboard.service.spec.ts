@@ -27,7 +27,7 @@ describe('DashboardService', () => {
 
   it('should get dashboard summary', () => {
     const mockSummary: DashboardSummary = {
-      totalRevenue: 1000,
+      revenueByCurrency: [{ currency: 'USD', totalAmount: 1000 }],
       totalBooksPublished: 10,
       totalSalesTransactions: 100,
       topPerformingBook: 'Test Book',

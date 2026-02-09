@@ -1,19 +1,84 @@
-<div class="form-container">
-  <h1>Request New Platform</h1>
-  <p *ngIf="error" style="color: red">{{ error }}</p>
-  <form [formGroup]="requestPlatformForm" (ngSubmit)="onSubmit()">
-    <div class="input-group">
-      <label for="name">Name:</label>
-      <input id="name" type="text" formControlName="name" required />
+<div class="page-wrapper">
+
+  <!-- Success View -->
+  <div *ngIf="submissionStatus === 'success'" class="centered-view">
+    <div class="success-container animate-fade-in">
+      <div class="success-icon">✓</div>
+      <h2>Request Transmitted</h2>
+      <p style="color: var(--text-muted)">
+        Our data synchronization team has received your integration request.
+        Redirecting to the distribution index...
+      </p>
     </div>
-    <div class="input-group">
-      <label for="baseUrl">Base URL:</label>
-      <input id="baseUrl" type="text" formControlName="baseUrl" />
+  </div>
+
+  <!-- Form View -->
+  <div *ngIf="submissionStatus !== 'success'" class="form-wrapper animate-fade-in">
+    <div class="form-header">
+      <h1>Request Integration</h1>
+      <p>Expand your reach. Request new marketplace support for our analytics engine.</p>
     </div>
-    <div class="input-group">
-      <label for="commissionRate">Commission Rate:</label>
-      <input id="commissionRate" type="number" formControlName="commissionRate" required />
+
+    <div class="card form-card">
+
+      <div *ngIf="submissionStatus === 'error'" class="error-banner">
+        <strong>Network Failure:</strong> {{errorMessage}}
+      </div>
+
+      <form [formGroup]="requestPlatformForm" (ngSubmit)="onSubmit()">
+
+        <!-- Platform Identity -->
+        <div class="form-group">
+          <label for="name">Platform Identity</label>
+          <input id="name" type="text" formControlName="name" placeholder="e.g. Google Play Books, Kobo Writing Life"
+            [class.error-input]="requestPlatformForm.get('name')?.invalid && requestPlatformForm.get('name')?.touched" />
+          <div *ngIf="requestPlatformForm.get('name')?.invalid && requestPlatformForm.get('name')?.touched">
+            <small *ngIf="requestPlatformForm.get('name')?.errors?.['required']" class="error-text">Name is
+              required</small>
+            <small *ngIf="requestPlatformForm.get('name')?.errors?.['minlength']" class="error-text">Platform identity
+              must be at least 2 characters</small>
+          </div>
+        </div>
+
+        <!-- Base URL -->
+        <div class="form-group">
+          <label for="baseUrl">Base Distribution URL</label>
+          <input id="baseUrl" type="text" formControlName="baseUrl" placeholder="https://publish.example.com"
+            [class.error-input]="requestPlatformForm.get('baseUrl')?.invalid && requestPlatformForm.get('baseUrl')?.touched" />
+          <div *ngIf="requestPlatformForm.get('baseUrl')?.invalid && requestPlatformForm.get('baseUrl')?.touched">
+            <small *ngIf="requestPlatformForm.get('baseUrl')?.errors?.['pattern']" class="error-text">A valid
+              distribution URL is required</small>
+          </div>
+        </div>
+
+        <!-- Commission Rate -->
+        <div class="form-group">
+          <label for="commissionRate">Average Commission Rate (0.00 - 1.00)</label>
+          <input id="commissionRate" type="number" step="0.01" formControlName="commissionRate"
+            [class.error-input]="requestPlatformForm.get('commissionRate')?.invalid && requestPlatformForm.get('commissionRate')?.touched" />
+          <small class="helper-text">Input the decimal merchant fee (e.g., 0.30 represents a 30% flat fee).</small>
+          <div
+            *ngIf="requestPlatformForm.get('commissionRate')?.invalid && requestPlatformForm.get('commissionRate')?.touched">
+            <small class="error-text">Rate must be between 0.00 and 1.00</small>
+          </div>
+        </div>
+
+        <!-- Info Box -->
+        <div class="info-box">
+          <div style="font-size: 1.5rem">ℹ️</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted)">
+            Requests are reviewed for API compatibility and data structure alignment.
+            Approved platforms will appear for all users.
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" (click)="discard()" class="discard-btn">Discard Request</button>
+          <button type="submit" class="btn-primary" [disabled]="!requestPlatformForm.valid">Commit Request</button>
+        </div>
+
+      </form>
     </div>
-    <button type="submit" [disabled]="requestPlatformForm.invalid">Submit Request</button>
-  </form>
+  </div>
 </div>

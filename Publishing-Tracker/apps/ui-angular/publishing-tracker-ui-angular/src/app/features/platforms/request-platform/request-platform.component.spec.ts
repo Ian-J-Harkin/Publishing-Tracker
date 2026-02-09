@@ -34,14 +34,16 @@ describe('RequestPlatformComponent', () => {
 
   it('should submit a new platform request', () => {
     component.requestPlatformForm.controls['name'].setValue('New Platform');
-    component.requestPlatformForm.controls['baseUrl'].setValue('new-url');
+    component.requestPlatformForm.controls['baseUrl'].setValue('https://example.com');
     component.requestPlatformForm.controls['commissionRate'].setValue(0.2);
+
+    expect(component.requestPlatformForm.valid).toBeTrue();
 
     component.onSubmit();
 
     expect(platformService.requestPlatform).toHaveBeenCalledWith({
       name: 'New Platform',
-      baseUrl: 'new-url',
+      baseUrl: 'https://example.com',
       commissionRate: 0.2
     });
   });

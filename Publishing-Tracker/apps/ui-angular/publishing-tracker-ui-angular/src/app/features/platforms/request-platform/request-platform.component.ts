@@ -14,7 +14,8 @@ import { PlatformRequest } from '../../../core/models/platform';
 })
 export class RequestPlatformComponent {
   requestPlatformForm: FormGroup;
-  error: string | null = null;
+  submissionStatus: 'idle' | 'success' | 'error' = 'idle';
+  errorMessage: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -22,23 +23,31 @@ export class RequestPlatformComponent {
     private router: Router
   ) {
     this.requestPlatformForm = this.fb.group({
-      name: ['', Validators.required],
-      baseUrl: [''],
-      commissionRate: [0, Validators.required]
+      name: ['', [Validators.required, Validators.minLength(2)]],
+      baseUrl: ['', [Validators.pattern('https?://.+')]],
+      commissionRate: [0.30, [Validators.required, Validators.min(0), Validators.max(1)]]
     });
   }
 
   onSubmit(): void {
     if (this.requestPlatformForm.valid) {
+      this.submissionStatus = 'idle';
       const newPlatformRequest: PlatformRequest = this.requestPlatformForm.value;
+
       this.platformService.requestPlatform(newPlatformRequest).subscribe({
         next: () => {
-          this.router.navigate(['/platforms']);
+          this.submissionStatus = 'success';
+          setTimeout(() => this.router.navigate(['/platforms']), 2000);
         },
         error: (err) => {
-          this.error = 'Failed to submit request.';
+          this.submissionStatus = 'error';
+          this.errorMessage = 'Network Failure: Unable to secure the request at this time.';
         }
       });
     }
+  }
+
+  discard(): void {
+    this.router.navigate(['/platforms']);
   }
 }

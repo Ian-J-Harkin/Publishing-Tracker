@@ -38,7 +38,7 @@ describe('PlatformService', () => {
   it('should request a platform', () => {
     const newPlatformRequest: PlatformRequest = { name: 'New Platform', baseUrl: 'https://newplatform.com', commissionRate: 0.4 };
     service.requestPlatform(newPlatformRequest).subscribe();
-    const req = httpMock.expectOne(`${apiUrl}/requests`);
+    const req = httpMock.expectOne(apiUrl);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(newPlatformRequest);
     req.flush({});
