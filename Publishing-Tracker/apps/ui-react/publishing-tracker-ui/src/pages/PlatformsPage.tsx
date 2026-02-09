@@ -8,7 +8,7 @@ const PlatformsPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const debounceTimer = useRef<any>(null);
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const fetchPlatforms = async (search?: string) => {
         try {

@@ -12,7 +12,7 @@ describe('DashboardPage', () => {
     it('should render dashboard data', async () => {
         mockedUseDashboardData.mockReturnValue({
             summary: {
-                totalRevenue: 1000,
+                revenueByCurrency: [{ currency: 'USD', totalAmount: 1000 }],
                 totalBooksPublished: 10,
                 totalSalesTransactions: 100,
                 topPerformingBook: 'Book 1',
@@ -21,7 +21,7 @@ describe('DashboardPage', () => {
             yoy: { currentYearRevenue: 1000, lastYearRevenue: 800, growth: 0.25 },
             seasonal: [{ month: 1, totalRevenue: 100 }],
             loading: false,
-            error: false
+            error: null
         });
 
         render(
@@ -33,7 +33,7 @@ describe('DashboardPage', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+            expect(screen.getByText('Cumulative Revenue')).toBeInTheDocument();
             expect(screen.getByText(/1,000\.00/)).toBeInTheDocument();
         });
     });

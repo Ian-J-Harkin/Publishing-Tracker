@@ -16,15 +16,15 @@ describe('RequestPlatformPage', () => {
             </BrowserRouter>
         );
 
-        fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'New Platform' } });
-        fireEvent.change(screen.getByLabelText(/platform website/i), { target: { value: 'new-url' } });
-        fireEvent.change(screen.getByLabelText(/commission rate/i), { target: { value: '0.2' } });
-        fireEvent.submit(screen.getByRole('button', { name: /submit request/i }));
+        fireEvent.change(screen.getByLabelText(/Platform Identity/i), { target: { value: 'New Platform' } });
+        fireEvent.change(screen.getByLabelText(/Base Distribution URL/i), { target: { value: 'https://example.com' } });
+        fireEvent.change(screen.getByLabelText(/Average Commission Rate/i), { target: { value: '0.2' } });
+        fireEvent.submit(screen.getByRole('button', { name: /Commit Request/i }));
 
         await waitFor(() => {
             expect(mockedPlatformService.requestPlatform).toHaveBeenCalledWith({
                 name: 'New Platform',
-                baseUrl: 'new-url',
+                baseUrl: 'https://example.com',
                 commissionRate: 0.2
             });
         });

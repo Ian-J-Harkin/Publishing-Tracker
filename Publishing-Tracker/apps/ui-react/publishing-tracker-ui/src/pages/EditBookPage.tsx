@@ -22,7 +22,7 @@ const EditBookPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<UpdateBook>({
+    const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<z.infer<typeof schema>>({
         resolver: zodResolver(schema)
     });
 
@@ -50,10 +50,10 @@ const EditBookPage = () => {
         fetchBook();
     }, [id, reset]);
 
-    const onSubmit = async (data: UpdateBook) => {
+    const onSubmit = async (data: z.infer<typeof schema>) => {
         if (!id) return;
         try {
-            await bookService.updateBook(parseInt(id, 10), data);
+            await bookService.updateBook(parseInt(id, 10), data as unknown as UpdateBook);
             navigate('/books');
         } catch {
             setError('Failed to update book details. Please check your inputs.');

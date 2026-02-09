@@ -19,7 +19,7 @@ describe('ImportPage', () => {
             </BrowserRouter>
         );
 
-        expect(screen.getByText(/Upload Sales Data/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/Upload Sales Data/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/Step 1: Upload Data/i)).toBeInTheDocument();
     });
 
@@ -88,7 +88,7 @@ describe('ImportPage', () => {
             // Check for labels
             expect(screen.getByText(/Successful/i)).toBeInTheDocument();
             expect(screen.getByText(/Failed/i)).toBeInTheDocument();
-            expect(screen.getByText(/Accuracy/i)).toBeInTheDocument();
+            expect(screen.getByText(/Success Rate/i)).toBeInTheDocument();
 
             // Check for accuracy calculation (13/15 = 86.67% -> rounds to 87%)
             expect(screen.getByText(/87%/)).toBeInTheDocument();

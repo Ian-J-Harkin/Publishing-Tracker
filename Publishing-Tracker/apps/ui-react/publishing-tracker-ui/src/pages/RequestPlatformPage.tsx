@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { platformService } from '../services/platformService';
+import { PlatformRequest } from '../types/platform';
 
 const requestSchema = z.object({
     name: z.string().min(2, 'Platform identity must be at least 2 characters'),
@@ -33,7 +34,7 @@ const RequestPlatformPage = () => {
     const onSubmit = async (data: RequestFormData) => {
         try {
             setSubmissionStatus('idle');
-            await platformService.requestPlatform(data);
+            await platformService.requestPlatform(data as PlatformRequest);
             setSubmissionStatus('success');
             setTimeout(() => navigate('/platforms'), 2000);
         } catch {
@@ -74,8 +75,9 @@ const RequestPlatformPage = () => {
 
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className="form-group">
-                        <label>Platform Identity</label>
+                        <label htmlFor="name">Platform Identity</label>
                         <input
+                            id="name"
                             {...register('name')}
                             placeholder="e.g. Google Play Books, Kobo Writing Life"
                             style={errors.name ? { borderColor: 'var(--danger)' } : {}}
@@ -84,8 +86,9 @@ const RequestPlatformPage = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Base Distribution URL</label>
+                        <label htmlFor="baseUrl">Base Distribution URL</label>
                         <input
+                            id="baseUrl"
                             {...register('baseUrl')}
                             placeholder="https://publish.example.com"
                             style={errors.baseUrl ? { borderColor: 'var(--danger)' } : {}}
@@ -94,8 +97,9 @@ const RequestPlatformPage = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Average Commission Rate (0.00 - 1.00)</label>
+                        <label htmlFor="commissionRate">Average Commission Rate (0.00 - 1.00)</label>
                         <input
+                            id="commissionRate"
                             type="number"
                             step="0.01"
                             {...register('commissionRate', { valueAsNumber: true })}

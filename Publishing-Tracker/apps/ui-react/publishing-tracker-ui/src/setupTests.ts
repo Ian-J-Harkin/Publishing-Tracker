@@ -1,10 +1,11 @@
 import '@testing-library/jest-dom';
 
-// Use dynamic require and globalThis to avoid TS compilation issues in the test environment
-// @ts-ignore
-const { TextEncoder: TE, TextDecoder: TD } = require('util');
-(globalThis as any).TextEncoder = TE;
-(globalThis as any).TextDecoder = TD;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { TextEncoder, TextDecoder } = require('util');
+
+globalThis.TextEncoder = TextEncoder;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+globalThis.TextDecoder = TextDecoder as any;
 
 jest.mock('./api/axiosClient', () => ({
     __esModule: true,

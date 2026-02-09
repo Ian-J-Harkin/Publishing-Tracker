@@ -44,7 +44,7 @@ const SalesPage = () => {
             setLoading(true);
             try {
                 const cleanFilters = Object.fromEntries(
-                    Object.entries(filters).filter(([_, v]) => v !== '' && v !== undefined)
+                    Object.entries(filters).filter(([, v]) => v !== '' && v !== undefined)
                 );
 
                 const [salesData, summaryData] = await Promise.all([
@@ -95,6 +95,8 @@ const SalesPage = () => {
                     <span style={{ fontSize: '1.2rem' }}>+</span> Add Manual Entry
                 </Link>
             </div>
+
+            {error && <div style={pageStyles.errorBanner}>{error}</div>}
 
             <div style={pageStyles.summaryRibbon}>
                 <div className="card metric-card" style={pageStyles.summaryCard}>
@@ -248,7 +250,8 @@ const pageStyles = {
         letterSpacing: '0.05em',
         border: '1px solid rgba(56, 189, 248, 0.2)'
     },
-    centered: { padding: '5rem', textAlign: 'center' as const }
+    centered: { padding: '5rem', textAlign: 'center' as const },
+    errorBanner: { padding: '2rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '16px', border: '1px solid var(--danger)', marginBottom: '2rem' }
 };
 
 export default SalesPage;

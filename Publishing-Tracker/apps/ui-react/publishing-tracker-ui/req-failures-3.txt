@@ -1,0 +1,160 @@
+
+> @publishing-tracker/ui-react@0.0.0 test
+> jest src/pages/RequestPlatformPage.test.tsx
+
+FAIL src/pages/RequestPlatformPage.test.tsx
+  RequestPlatformPage
+    ├ù should submit a new platform request (1135 ms)
+
+  ΓùÅ RequestPlatformPage ΓÇ║ should submit a new platform request
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    Expected: {"baseUrl": "new-url", "commissionRate": 0.2, "name": "New Platform"}
+
+    Number of calls: 0
+
+    Ignored nodes: comments, script, style
+    <html>
+      <head />
+      <body>
+        <div>
+          <div
+            style="max-width: 750px; margin: 0px auto; animation: fadeIn 0.5s ease;"
+          >
+            <div
+              style="margin-bottom: 3rem;"
+            >
+              <h1
+                style="color: rgb(30, 41, 59);"
+              >
+                Request Integration
+              </h1>
+              <p
+                style="color: var(--text-muted); font-size: 1.1rem;"
+              >
+                Expand your reach. Request new marketplace support for our analytics engine.
+              </p>
+            </div>
+            <div
+              class="card"
+              style="padding: 3rem; border: 1px solid rgba(255, 255, 255, 0.05);"
+            >
+              <form>
+                <div
+                  class="form-group"
+                >
+                  <label
+                    for="name"
+                  >
+                    Platform Identity
+                  </label>
+                  <input
+                    id="name"
+                    name="name"
+                    placeholder="e.g. Google Play Books, Kobo Writing Life"
+                  />
+                </div>
+                <div
+                  class="form-group"
+                >
+                  <label
+                    for="baseUrl"
+                  >
+                    Base Distribution URL
+                  </label>
+                  <input
+                    id="baseUrl"
+                    name="baseUrl"
+                    placeholder="https://publish.example.com"
+                    style="border-color: var(--danger);"
+                  />
+                  <small
+                    style="color: var(--danger); font-size: 0.8rem; font-weight: 600; margin-top: 4px;"
+                  >
+                    A valid distribution URL is required
+                  </small>
+                </div>
+                <div
+                  class="form-group"
+                >
+                  <label
+                    for="commissionRate"
+                  >
+                    Average Commission Rate (0.00 - 1.00)
+                  </label>
+                  <input
+                    id="commissionRate"
+                    name="commissionRate"
+                    step="0.01"
+                    type="number"
+                  />
+                  <small
+                    style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; font-weight: 500;"
+                  >
+                    Input the decimal merchant fee (e.g., 0.30 represents a 30% flat fee).
+                  </small>
+                </div>
+                <div
+                  style="padding: 1.25rem; background-color: rgba(56, 189, 248, 0.05); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.1); display: flex; gap: 1rem; align-items: center; margin-top: 2rem;"
+                >
+                  <div
+                    style="font-size: 1.5rem;"
+                  >
+                    Γä╣∩╕Å
+                  </div>
+                  <div
+                    style="font-size: 0.85rem; color: var(--text-muted);"
+                  >
+                    Requests are reviewed for API compatibility and data structure alignment. Approved platforms will appear for all users.
+                  </div>
+                </div>
+                <div
+                  style="display: flex; justify-content: flex-end; gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); align-items: center;"
+                >
+                  <button
+                    style="background-color: transparent; color: var(--text-muted); font-weight: 700; cursor: pointer; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.1em;"
+                    type="button"
+                  >
+                    Discard Request
+                  </button>
+                  <button
+                    class="btn-primary"
+                    type="submit"
+                  >
+                    Commit Request
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </body>
+    </html>
+
+      23 |
+      24 |         await waitFor(() => {
+    > 25 |             expect(mockedPlatformService.requestPlatform).toHaveBeenCalledWith({
+         |                                                           ^
+      26 |                 name: 'New Platform',
+      27 |                 baseUrl: 'new-url',
+      28 |                 commissionRate: 0.2
+
+      at src/pages/RequestPlatformPage.test.tsx:25:59
+      at runWithExpensiveErrorDiagnosticsDisabled (node_modules/@testing-library/dom/dist/config.js:47:12)
+      at checkCallback (node_modules/@testing-library/dom/dist/wait-for.js:124:77)
+      at checkRealTimersCallback (node_modules/@testing-library/dom/dist/wait-for.js:118:16)
+      at Timeout.task [as _onTimeout] (node_modules/jsdom/lib/jsdom/browser/Window.js:579:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        2.948 s, estimated 5 s
+Ran all test suites matching src/pages/RequestPlatformPage.test.tsx.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest src/pages/RequestPlatformPage.test.tsx

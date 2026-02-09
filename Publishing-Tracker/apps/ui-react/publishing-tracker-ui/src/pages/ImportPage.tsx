@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { importService } from '../services/importService';
 import { ImportJob, ColumnMapping } from '../types/import';
+import axios from 'axios';
 
 const ImportPage = () => {
     const navigate = useNavigate();
@@ -77,15 +78,16 @@ const ImportPage = () => {
                 console.log("Records processed:", result.recordsProcessed);
                 setSummary(result);
                 setStep('summary');
-            } catch (err: any) {
-                const msg = err.response?.data?.title || err.response?.data?.message || err.message || 'Unknown processing error';
-                console.error("Process debug:", err);
-                alert(`DEBUG (REACT): ${msg}\n\nCheck console for details.`);
-                if (err.response) {
-                    setError(`Processing failed: ${msg}`);
-                } else {
-                    setError(`Processing failed: ${msg}`);
+            } catch (err) {
+                let msg = 'Unknown processing error';
+                if (axios.isAxiosError(err)) {
+                    msg = err.response?.data?.title || err.response?.data?.message || err.message || msg;
+                } else if (err instanceof Error) {
+                    msg = err.message;
                 }
+
+                console.error("Process error:", err);
+                setError(`Processing failed: ${msg}`);
             }
         }
     };

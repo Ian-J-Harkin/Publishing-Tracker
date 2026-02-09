@@ -1,0 +1,442 @@
+npm warn Unknown cli config "--watchAll". This will stop working in the next major version of npm.
+
+> @publishing-tracker/ui-react@0.0.0 test
+> jest
+
+PASS src/services/platformService.test.ts
+PASS src/services/dashboardService.test.ts
+PASS src/components/ProtectedRoute.test.tsx
+FAIL src/pages/RequestPlatformPage.test.tsx
+  ΓùÅ RequestPlatformPage ΓÇ║ should submit a new platform request
+
+    TestingLibraryElementError: Unable to find a label with the text of: /name/i
+
+    Ignored nodes: comments, script, style
+    <body>
+      <div>
+        <div
+          style="max-width: 750px; margin: 0px auto; animation: fadeIn 0.5s ease;"
+        >
+          <div
+            style="margin-bottom: 3rem;"
+          >
+            <h1
+              style="color: rgb(30, 41, 59);"
+            >
+              Request Integration
+            </h1>
+            <p
+              style="color: var(--text-muted); font-size: 1.1rem;"
+            >
+              Expand your reach. Request new marketplace support for our analytics engine.
+            </p>
+          </div>
+          <div
+            class="card"
+            style="padding: 3rem; border: 1px solid rgba(255, 255, 255, 0.05);"
+          >
+            <form>
+              <div
+                class="form-group"
+              >
+                <label>
+                  Platform Identity
+                </label>
+                <input
+                  name="name"
+                  placeholder="e.g. Google Play Books, Kobo Writing Life"
+                />
+              </div>
+              <div
+                class="form-group"
+              >
+                <label>
+                  Base Distribution URL
+                </label>
+                <input
+                  name="baseUrl"
+                  placeholder="https://publish.example.com"
+                />
+              </div>
+              <div
+                class="form-group"
+              >
+                <label>
+                  Average Commission Rate (0.00 - 1.00)
+                </label>
+                <input
+                  name="commissionRate"
+                  step="0.01"
+                  type="number"
+                />
+                <small
+                  style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; font-weight: 500;"
+                >
+                  Input the decimal merchant fee (e.g., 0.30 represents a 30% flat fee).
+                </small>
+              </div>
+              <div
+                style="padding: 1.25rem; background-color: rgba(56, 189, 248, 0.05); border-radius: 12px; border: 1px solid rgba(56, 189, 248, 0.1); display: flex; gap: 1rem; align-items: center; margin-top: 2rem;"
+              >
+                <div
+                  style="font-size: 1.5rem;"
+                >
+                  Γä╣∩╕Å
+                </div>
+                <div
+                  style="font-size: 0.85rem; color: var(--text-muted);"
+                >
+                  Requests are reviewed for API compatibility and data structure alignment. Approved platforms will appear for all users.
+                </div>
+              </div>
+              <div
+                style="display: flex; justify-content: flex-end; gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); align-items: center;"
+              >
+                <button
+                  style="background-color: transparent; color: var(--text-muted); font-weight: 700; cursor: pointer; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.1em;"
+                  type="button"
+                >
+                  Discard Request
+                </button>
+                <button
+                  class="btn-primary"
+                  type="submit"
+                >
+                  Commit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </body>
+
+      17 |         );
+      18 |
+    > 19 |         fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'New Platform' } });
+         |                                 ^
+      20 |         fireEvent.change(screen.getByLabelText(/platform website/i), { target: { value: 'new-url' } });
+      21 |         fireEvent.change(screen.getByLabelText(/commission rate/i), { target: { value: '0.2' } });
+      22 |         fireEvent.submit(screen.getByRole('button', { name: /submit request/i }));
+
+      at Object.getElementError (node_modules/@testing-library/dom/dist/config.js:37:19)
+      at getAllByLabelText (node_modules/@testing-library/dom/dist/queries/label-text.js:111:38)
+      at node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+      at Object.<anonymous> (src/pages/RequestPlatformPage.test.tsx:19:33)
+
+PASS src/pages/BookPerformancePage.test.tsx
+PASS src/pages/PlatformsPage.test.tsx
+PASS src/pages/BookListPage.test.tsx
+PASS src/pages/ImportPage.test.tsx
+  ΓùÅ Console
+
+    console.log
+      Import result from API: {
+        id: 1,
+        fileName: 'test.csv',
+        status: 'Completed',
+        startedAt: 2024-01-01T00:00:00.000Z,
+        completedAt: 2024-01-01T00:00:00.000Z,
+        recordsProcessed: 15,
+        recordsSuccessful: 13,
+        recordsFailed: 2,
+        errorLog: 'Row 5: Duplicate order ID\nRow 8: Invalid quantity'
+      }
+
+      at handleProcess (src/pages/ImportPage.tsx:75:25)
+
+    console.log
+      Records successful: 13
+
+      at handleProcess (src/pages/ImportPage.tsx:76:25)
+
+    console.log
+      Records failed: 2
+
+      at handleProcess (src/pages/ImportPage.tsx:77:25)
+
+    console.log
+      Records processed: 15
+
+      at handleProcess (src/pages/ImportPage.tsx:78:25)
+
+    console.log
+      Import result from API: {
+        id: 2,
+        fileName: 'test.csv',
+        status: 'Completed',
+        startedAt: 2024-01-01T00:00:00.000Z,
+        completedAt: 2024-01-01T00:00:00.000Z,
+        recordsProcessed: 5,
+        recordsSuccessful: 0,
+        recordsFailed: 5,
+        errorLog: 'All records had duplicate order IDs'
+      }
+
+      at handleProcess (src/pages/ImportPage.tsx:75:25)
+
+    console.log
+      Records successful: 0
+
+      at handleProcess (src/pages/ImportPage.tsx:76:25)
+
+    console.log
+      Records failed: 5
+
+      at handleProcess (src/pages/ImportPage.tsx:77:25)
+
+    console.log
+      Records processed: 5
+
+      at handleProcess (src/pages/ImportPage.tsx:78:25)
+
+FAIL src/pages/DashboardPage.test.tsx
+  ΓùÅ DashboardPage ΓÇ║ should render dashboard data
+
+    Unable to find an element with the text: Total Revenue. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+    Ignored nodes: comments, script, style
+    <body>
+      <div>
+        <div
+          style="animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);"
+        >
+          <div
+            style="margin-bottom: 3rem;"
+          >
+            <h1
+              style="margin-bottom: 0.5rem; color: rgb(30, 41, 59);"
+            >
+              Strategic Analytics
+            </h1>
+            <p
+              style="color: var(--text-muted); font-size: 1.1rem;"
+            >
+              Performance intelligence for your intellectual property.
+            </p>
+          </div>
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 2.5rem;"
+          >
+            <div
+              class="card metric-card"
+              style="display: flex; align-items: center; gap: 1.5rem; padding: 2rem;"
+            >
+              <div
+                style="width: 64px; height: 64px; border-radius: 16px; background-color: rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);"
+              >
+                ≡ƒÆ░
+              </div>
+              <div
+                style="flex: 1 1 0%;"
+              >
+                <p
+                  style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;"
+                >
+                  Cumulative Revenue
+                </p>
+                <h2
+                  style="font-size: 2rem; font-weight: 800; color: rgb(30, 41, 59); margin: 0px; letter-spacing: -0.02em;"
+                >
+                  <span
+                    style="color: var(--primary); margin-right: 8px;"
+                  >
+                    USD
+                  </span>
+                  1,000.00
+                </h2>
+              </div>
+            </div>
+            <div
+              class="card metric-card"
+              style="display: flex; align-items: center; gap: 1.5rem; padding: 2rem;"
+            >
+              <div
+                style="width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); background: rgba(129, 140, 248, 0.1);"
+              >
+                ≡ƒôÜ
+              </div>
+              <div>
+                <p
+                  style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;"
+                >
+                  Active Portfolio
+                </p>
+                <h2
+                  style="font-size: 2rem; font-weight: 800; color: rgb(30, 41, 59); margin: 0px; letter-spacing: -0.02em;"
+                >
+                  10
+                   
+                  <span
+                    style="font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: 4px;"
+                  >
+                    Titles
+                  </span>
+                </h2>
+              </div>
+            </div>
+            <div
+              class="card metric-card"
+              style="display: flex; align-items: center; gap: 1.5rem; padding: 2rem;"
+            >
+              <div
+                style="width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); background: rgba(244, 114, 182, 0.1);"
+              >
+                ≡ƒôê
+              </div>
+              <div>
+                <p
+                  style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;"
+                >
+                  Market Volume
+                </p>
+                <h2
+                  style="font-size: 2rem; font-weight: 800; color: rgb(30, 41, 59); margin: 0px; letter-spacing: -0.02em;"
+                >
+                  100
+                   
+                  <span
+                    style="font-size: 1rem; font-weight: 500; color: var(--text-muted); margin-left: 4px;"
+                  >
+                    Sales
+                  </span>
+                </h2>
+              </div>
+            </div>
+          </div>
+          <div
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 2rem;"
+          >
+            <div
+              class="card"
+              style="padding: 2.5rem;"
+            >
+              <div
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;"
+              >
+                <h3
+                  style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; color: rgb(30, 41, 59);"
+                >
+                  Year-over-Year Growth
+                </h3>
+                <div
+                  style="padding: 0.5rem 1rem; border-radius: 12px; font-size: 1rem; font-weight: 800; display: flex; align-items: center; background-color: rgba(16, 185, 129, 0.1); color: var(--success);"
+                >
+                  Γåæ
+                   
+                  25.0
+                  %
+                </div>
+              </div>
+              <div
+                style="display: flex; flex-direction: column; gap: 1.25rem;"
+              >
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; background-color: rgba(255, 255, 255, 0.02); border-radius: 16px; border: 1px solid var(--border);"
+                >
+                  <div
+                    style="display: flex; flex-direction: column; gap: 2px;"
+                  >
+                    <div
+                      style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;"
+                    >
+                      Top Revenue Title
+                    </div>
+                    <div
+                      style="font-size: 1rem; font-weight: 700; color: rgb(30, 41, 59);"
+                    >
+                      Book 1
+                    </div>
+                  </div>
+                  <span
+                    style="font-size: 1.5rem;"
+                  >
+                    ≡ƒÑç
+                  </span>
+                </div>
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; background-color: rgba(255, 255, 255, 0.02); border-radius: 16px; border: 1px solid var(--border);"
+                >
+                  <div
+                    style="display: flex; flex-direction: column; gap: 2px;"
+                  >
+                    <div
+                      style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;"
+                    >
+                      Dominant Sales Channel
+                    </div>
+                    <div
+                      style="font-size: 1rem; font-weight: 700; color: rgb(30, 41, 59);"
+                    >
+                      Platform 1
+                    </div>
+                  </div>
+                  <span
+                    style="font-size: 1.5rem;"
+                  >
+                    ≡ƒÅ¢∩╕Å
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card"
+              style="padding: 2.5rem; display: flex; flex-direction: column;"
+            >
+              <h3
+                style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1.5rem; color: rgb(30, 41, 59);"
+              >
+                Monthly Revenue Trajectory
+              </h3>
+              <div
+                style="display: flex; align-items: flex-end; justify-content: space-between; flex: 1 1 0%; gap: 10px; min-height: 240px;"
+              >
+                <div
+                  style="display: flex; flex-direction: column; align-items: center; flex: 1 1 0%; gap: 12px;"
+                >
+                  <div
+                    style="width: 100%; flex: 1 1 0%; position: relative; display: flex; align-items: flex-end; justify-content: center;"
+                  >
+                    <div
+                      style="width: 100%; max-width: 30px; border-radius: 6px 6px 2px 2px; transition: height 1s cubic-bezier(0.34, 1.56, 0.64, 1); height: 100%; background: linear-gradient(to top, var(--primary), var(--secondary));"
+                    />
+                  </div>
+                  <span
+                    style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;"
+                  >
+                    Jan
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </body>
+
+      33 |         );
+      34 |
+    > 35 |         await waitFor(() => {
+         |                      ^
+      36 |             expect(screen.getByText('Total Revenue')).toBeInTheDocument();
+      37 |             expect(screen.getByText(/1,000\.00/)).toBeInTheDocument();
+      38 |         });
+
+      at waitForWrapper (node_modules/@testing-library/dom/dist/wait-for.js:163:27)
+      at Object.<anonymous> (src/pages/DashboardPage.test.tsx:35:22)
+
+PASS src/pages/AddBookPage.test.tsx
+
+Test Suites: 2 failed, 8 passed, 10 total
+Tests:       2 failed, 14 passed, 16 total
+Snapshots:   0 total
+Time:        5.268 s, estimated 8 s
+Ran all test suites.
+npm error Lifecycle script `test` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c jest

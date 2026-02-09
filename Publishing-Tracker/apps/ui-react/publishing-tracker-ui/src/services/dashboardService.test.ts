@@ -12,7 +12,7 @@ describe('dashboardService', () => {
 
     it('should fetch dashboard summary', async () => {
         const summary: DashboardSummary = {
-            totalRevenue: 1000,
+            revenueByCurrency: [{ currency: 'USD', totalAmount: 1000 }],
             totalBooksPublished: 10,
             totalSalesTransactions: 100,
             topPerformingBook: 'Book 1',

@@ -18,7 +18,7 @@ describe('BookListPage', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByRole('heading', { name: /my books/i })).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: /IP Portfolio/i })).toBeInTheDocument();
         });
     });
 });

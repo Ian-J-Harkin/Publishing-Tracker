@@ -1,0 +1,24 @@
+
+> @publishing-tracker/ui-react@0.0.0 lint
+> eslint .
+
+
+C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui\src\api\axiosClient.ts
+  4:5   error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  5:30  error  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui\src\setupTests.ts
+  4:1   error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  5:46  error  A `require()` style import is forbidden                                                                              @typescript-eslint/no-require-imports
+  6:16  error  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  7:16  error  Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+Γ£û 6 problems (6 errors, 0 warnings)
+
+npm error Lifecycle script `lint` failed with error:
+npm error code 1
+npm error path C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error workspace @publishing-tracker/ui-react@0.0.0
+npm error location C:\Github\PublishingTracker\Publishing-Tracker\apps\ui-react\publishing-tracker-ui
+npm error command failed
+npm error command C:\Windows\system32\cmd.exe /d /s /c eslint .
