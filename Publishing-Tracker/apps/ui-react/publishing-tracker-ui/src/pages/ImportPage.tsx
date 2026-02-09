@@ -101,7 +101,7 @@ const ImportPage = () => {
 
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <h1>Import Sales Data</h1>
+            <h1 style={{ color: '#1e293b', background: 'none', WebkitTextFillColor: 'initial', opacity: 1, marginBottom: '2rem' }}>Import Sales Data</h1>
             {renderStepper()}
 
             <div className="card" style={{ padding: '2.5rem' }}>
@@ -109,20 +109,41 @@ const ImportPage = () => {
 
                 {step === 'upload' && (
                     <div style={pageStyles.stepContainer}>
-                        <h3>Step 1: Upload CSV File</h3>
-                        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                            Upload the sales export from your publishing platform (KDP, IngramSpark, etc.)
+                        <h3>Step 1: Upload Data</h3>
+                        <p style={{ color: 'var(--text-main)', fontSize: '1.2rem', margin: '1rem 0 2rem 0', opacity: 0.9 }}>
+                            Upload sales data from your publishing platform (KDP, IngramSpark, etc.)
                         </p>
 
-                        <div style={pageStyles.dropZone}>
+                        <div style={{ ...pageStyles.dropZone, padding: '3rem 2rem' }}>
                             <input type="file" onChange={handleFileChange} accept=".csv,.txt" style={pageStyles.fileInput} id="file-upload" />
                             <label htmlFor="file-upload" style={pageStyles.fileLabel}>
-                                {file ? <strong>Selected: {file.name}</strong> : "Click to browse or drag your CSV here"}
+                                {file ? (
+                                    <>
+                                        <div style={{ fontSize: '3rem' }}>📄</div>
+                                        <strong>{file.name}</strong>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Ready to upload</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div style={{ fontSize: '3rem', marginBottom: '0.5rem', opacity: 1, color: 'var(--primary)' }}>📂</div>
+                                        <span className="btn-primary" style={{ display: 'inline-block', padding: '0.8rem 2rem', pointerEvents: 'none', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                                            Browse Files
+                                        </span>
+                                        <p style={{ marginTop: '0.5rem', fontSize: '1.2rem', color: 'var(--text-main)', opacity: 0.9, fontWeight: 500 }}>
+                                            Upload sales data from your publishing platform
+                                        </p>
+                                    </>
+                                )}
                             </label>
                         </div>
 
                         <div style={pageStyles.actions}>
-                            <button className="btn-primary" onClick={handleUpload} disabled={!file}>
+                            <button
+                                className="btn-primary"
+                                onClick={handleUpload}
+                                disabled={!file}
+                                style={{ opacity: !file ? 0.5 : 1, cursor: !file ? 'not-allowed' : 'pointer' }}
+                            >
                                 Next: Map Columns
                             </button>
                         </div>
@@ -216,21 +237,22 @@ const pageStyles = {
     dropZone: {
         border: '2px dashed var(--border)',
         borderRadius: '12px',
-        padding: '3rem',
+        padding: '4rem 2rem',
         textAlign: 'center' as const,
-        backgroundColor: '#f8fafc',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)', // Dark glass effect
         cursor: 'pointer',
-        position: 'relative' as const
+        position: 'relative' as const,
+        transition: 'all 0.3s ease'
     },
-    fileInput: { position: 'absolute' as const, width: '100%', height: '100%', top: 0, left: 0, opacity: 0, cursor: 'pointer' },
-    fileLabel: { color: 'var(--text-main)', fontSize: '1rem' },
+    fileInput: { position: 'absolute' as const, width: '100%', height: '100%', top: 0, left: 0, opacity: 0, cursor: 'pointer', zIndex: 10 },
+    fileLabel: { color: 'var(--text-main)', fontSize: '1.1rem', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '1rem' },
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
-    summaryBox: { padding: '2rem', backgroundColor: '#f0fdf4', borderRadius: '12px', margin: '1.5rem 0', color: '#166534', border: '1px solid #bbf7d0' },
+    summaryBox: { padding: '2rem', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', margin: '1.5rem 0', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.2)' },
     successIcon: { width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#10b981', color: 'white', fontSize: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' },
     actions: { display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' },
     cancelBtn: { background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: '600' },
     errorBanner: { backgroundColor: '#fef2f2', color: 'var(--danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' },
-    select: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'white', color: 'var(--text-main)', appearance: 'none' as const },
+    select: { width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: '#1e293b', color: 'var(--text-main)', appearance: 'none' as const },
     summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', margin: '2rem 0' },
     summaryStat: { padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
     statLabel: { fontSize: '0.875rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },

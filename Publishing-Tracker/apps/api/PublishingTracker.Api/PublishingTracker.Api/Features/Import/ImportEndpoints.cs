@@ -36,18 +36,34 @@ public static class ImportEndpoints
                     await file.CopyToAsync(stream);
                 }
 
-                // Extract headers for mapping from the saved file
-                var headers = new List<string>();
+                // Extract headers and data preview
+                var previewData = new PreviewDataDto { FileName = file.FileName };
+                
                 using (var reader = new StreamReader(filePath))
+                using (var csv = new CsvHelper.CsvReader(reader, new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { HasHeaderRecord = true }))
                 {
-                    var firstLine = await reader.ReadLineAsync();
-                    if (!string.IsNullOrEmpty(firstLine))
+                    await csv.ReadAsync();
+                    csv.ReadHeader();
+                    if (csv.HeaderRecord != null)
                     {
-                        headers = firstLine.Split(',').Select(h => h.Trim('"', ' ')).ToList();
+                        previewData.Headers = csv.HeaderRecord.ToList();
+                    }
+
+                    // Read first 5 rows for preview
+                    int previewCount = 0;
+                    while (await csv.ReadAsync() && previewCount < 5)
+                    {
+                        var row = new Dictionary<string, string>();
+                        foreach (var header in previewData.Headers)
+                        {
+                            row[header] = csv.GetField(header) ?? string.Empty;
+                        }
+                        previewData.PreviewRows.Add(row);
+                        previewCount++;
                     }
                 }
 
-                return Results.Ok(new { fileName = file.FileName, headers });
+                return Results.Ok(previewData);
             }
             catch (Exception ex)
             {

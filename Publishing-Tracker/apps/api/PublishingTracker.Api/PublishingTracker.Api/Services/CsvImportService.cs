@@ -85,14 +85,24 @@ public class CsvImportService : ICsvImportService
                         userBooks.Add(book);
                     }
 
-                    // 2. Resolve Platform - MUST exist (platforms are pre-configured)
+                    // 2. Resolve Platform - Create if missing (Smart Resolve)
                     var platform = platforms.FirstOrDefault(p => p.Name.Equals(platformName, StringComparison.OrdinalIgnoreCase));
                     if (platform == null)
                     {
-                        job.RecordsFailed++;
-                        job.ErrorLog += $"Row {job.RecordsProcessed}: Platform '{platformName}' not found. Please add this platform before importing, or correct the platform name in your CSV.\\n";
-                        _logger.LogWarning("Import row {RowNum} skipped: Platform '{PlatformName}' does not exist", job.RecordsProcessed, platformName);
-                        continue; // Skip this record
+                        if (string.IsNullOrWhiteSpace(platformName))
+                        {
+                           // Fallback to "Unknown" or skip? Let's skip empty platforms for now but log it.
+                           job.RecordsFailed++;
+                           job.ErrorLog += $"Row {job.RecordsProcessed}: Platform name is empty.\n";
+                           continue;
+                        }
+
+                        // Create new platform on the fly
+                        platform = new Platform { Name = platformName };
+                        _db.Platforms.Add(platform);
+                        await _db.SaveChangesAsync();
+                        platforms.Add(platform);
+                        _logger.LogInformation("Auto-created new platform '{PlatformName}' during import.", platformName);
                     }
 
                     // 3. Deduplication (US-017 troubleshooting/reliability)

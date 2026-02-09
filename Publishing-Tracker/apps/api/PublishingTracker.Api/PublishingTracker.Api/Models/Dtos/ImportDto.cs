@@ -34,4 +34,11 @@ namespace PublishingTracker.Api.Models.Dtos
         public string Currency { get; set; } = string.Empty;
         public string OrderId { get; set; } = string.Empty;
     }
+
+    public class PreviewDataDto
+    {
+        public string FileName { get; set; } = string.Empty;
+        public List<string> Headers { get; set; } = new();
+        public List<Dictionary<string, string>> PreviewRows { get; set; } = new();
+    }
 }

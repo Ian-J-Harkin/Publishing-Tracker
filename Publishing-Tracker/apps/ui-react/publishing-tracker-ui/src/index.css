@@ -92,6 +92,13 @@ body {
   transform: translateY(0);
 }
 
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* Metrics & Gradients */
 .metric-card {
   position: relative;
