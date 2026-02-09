@@ -20,7 +20,7 @@ const DashboardPage = () => {
     return (
         <div style={dashStyles.container}>
             <div style={dashStyles.header}>
-                <h1 style={{ marginBottom: '0.5rem' }}>Strategic Analytics</h1>
+                <h1 style={{ marginBottom: '0.5rem', color: '#1e293b' }}>Strategic Analytics</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Performance intelligence for your intellectual property.</p>
             </div>
 
@@ -139,7 +139,7 @@ const dashStyles = {
         boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.05)'
     },
     label: { color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-    value: { fontSize: '2rem', fontWeight: '800', color: '#fff', margin: 0, letterSpacing: '-0.02em' },
+    value: { fontSize: '2rem', fontWeight: '800', color: '#1e293b', margin: 0, letterSpacing: '-0.02em' },
     unit: { fontSize: '1rem', fontWeight: '500', color: 'var(--text-muted)', marginLeft: '4px' },
     bottomGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' },
     growthCard: { padding: '2.5rem' },
@@ -151,7 +151,7 @@ const dashStyles = {
         display: 'flex',
         alignItems: 'center'
     },
-    sectionTitle: { fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#fff' },
+    sectionTitle: { fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1e293b' },
     miniList: { display: 'flex', flexDirection: 'column' as const, gap: '1.25rem' },
     listItem: {
         display: 'flex',
@@ -164,7 +164,7 @@ const dashStyles = {
     },
     listInfo: { display: 'flex', flexDirection: 'column' as const, gap: '2px' },
     listLabel: { fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' as const },
-    listValue: { fontSize: '1rem', fontWeight: '700', color: '#fff' },
+    listValue: { fontSize: '1rem', fontWeight: '700', color: '#1e293b' },
     listIcon: { fontSize: '1.5rem' },
     trendCard: { padding: '2.5rem', display: 'flex', flexDirection: 'column' as const },
     tableWrapper: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flex: 1, gap: '10px', minHeight: '240px' },

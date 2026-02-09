@@ -64,7 +64,9 @@ public class CsvImportService : ICsvImportService
                     var unitPriceStr = csv.GetField(mapping.UnitPrice);
                     var royaltyStr = csv.GetField(mapping.Royalty);
                     var revenueStr = !string.IsNullOrEmpty(mapping.Revenue) ? csv.GetField(mapping.Revenue) : null;
-                    var currency = !string.IsNullOrEmpty(mapping.Currency) ? csv.GetField(mapping.Currency) : "USD";
+                    var currency = (!string.IsNullOrEmpty(mapping.Currency) && !string.IsNullOrEmpty(csv.GetField(mapping.Currency))) 
+                        ? csv.GetField(mapping.Currency) 
+                        : mapping.DefaultCurrency;
                     var orderId = !string.IsNullOrEmpty(mapping.OrderId) ? csv.GetField(mapping.OrderId) : null;
 
                     // 1. Resolve Book (Create if missing as per US-016)
@@ -111,6 +113,8 @@ public class CsvImportService : ICsvImportService
                         var exists = await _db.Sales.AnyAsync(s => s.OrderId == orderId && s.BookId == book.Id);
                         if (exists)
                         {
+                            job.RecordsFailed++;
+                            job.ErrorLog += $"Row {job.RecordsProcessed}: Duplicate order ID '{orderId}' for book '{bookTitle}' - record already exists in database.\n";
                             _logger.LogInformation("Skipping duplicate OrderId: {OrderId}", orderId);
                             continue; 
                         }
@@ -126,7 +130,7 @@ public class CsvImportService : ICsvImportService
                         UnitPrice = decimal.TryParse(unitPriceStr, out var up) ? up : 0m,
                         Royalty = decimal.TryParse(royaltyStr, out var r) ? r : 0m,
                         Revenue = decimal.TryParse(revenueStr, out var rev) ? rev : (decimal.TryParse(unitPriceStr, out var up2) ? up2 * (int.TryParse(quantityStr, out var q2) ? q2 : 0) : 0m),
-                        Currency = string.IsNullOrEmpty(currency) ? "USD" : currency,
+                        Currency = string.IsNullOrEmpty(currency) ? mapping.DefaultCurrency : currency,
                         OrderId = orderId,
                         CreatedAt = DateTime.UtcNow
                     };

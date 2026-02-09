@@ -35,7 +35,7 @@ const AddBookPage = () => {
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Add New Book</h1>
+                <h1 style={{ color: '#1e293b' }}>Add New Book</h1>
                 <p style={{ color: 'var(--text-muted)' }}>Fill in the details to add a new title to your library.</p>
             </div>
 

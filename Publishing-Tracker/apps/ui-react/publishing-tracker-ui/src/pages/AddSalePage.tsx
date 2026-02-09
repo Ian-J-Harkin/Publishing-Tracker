@@ -67,7 +67,7 @@ const AddSalePage = () => {
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Manual Entry</h1>
+                <h1 style={{ color: '#1e293b' }}>Manual Entry</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Log direct-to-consumer sales or platform-specific manual entries.</p>
             </div>
 
@@ -218,7 +218,7 @@ const pageStyles = {
         animation: 'glowPulse 3s infinite ease-in-out'
     },
     projectionMeta: { display: 'flex', flexDirection: 'column' as const, gap: '4px' },
-    projectionLabel: { fontWeight: '800', color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.01em' },
+    projectionLabel: { fontWeight: '800', color: '#1e293b', fontSize: '1.2rem', letterSpacing: '-0.01em' },
     projectionSub: { fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
     projectionValue: {
         fontSize: '2rem',

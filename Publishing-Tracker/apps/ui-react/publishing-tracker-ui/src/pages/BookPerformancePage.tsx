@@ -37,7 +37,7 @@ const BookPerformancePage = () => {
 
     return (
         <div className="form-container">
-            <h1>Book Performance</h1>
+            <h1 style={{ color: '#1e293b' }}>Book Performance</h1>
             <CSVLink data={performanceData} filename={"book-performance.csv"}>
                 Export to CSV
             </CSVLink>

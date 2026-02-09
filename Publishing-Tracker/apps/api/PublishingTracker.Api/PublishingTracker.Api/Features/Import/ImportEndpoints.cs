@@ -87,6 +87,12 @@ public static class ImportEndpoints
 
             try
             {
+                // DIAGNOSTIC DB CHECK
+                if (!await db.Database.CanConnectAsync())
+                {
+                     return Results.Problem("Database connection failed. Please ensure SQL Server is running.");
+                }
+
                 // We need to wrap the file back into an IFormFile-like structure for the service or just pass the stream
                 // To keep the service interface clean and reusable, let's use a physical file stream
                 using var stream = File.OpenRead(filePath);
@@ -95,6 +101,8 @@ public static class ImportEndpoints
                 var result = await importService.ProcessImportAsync(userId, formFile, request.Mapping);
 
                 // Cleanup
+                // Force close stream before delete? using block handles it.
+                stream.Close();
                 File.Delete(filePath);
 
                 return Results.Ok(result);

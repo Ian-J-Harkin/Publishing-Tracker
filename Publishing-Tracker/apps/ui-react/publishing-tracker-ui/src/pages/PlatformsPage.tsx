@@ -47,7 +47,7 @@ const PlatformsPage = () => {
         <div style={pageStyles.container}>
             <div style={pageStyles.header}>
                 <div>
-                    <h1>Sales Channels</h1>
+                    <h1 style={{ color: '#1e293b' }}>Sales Channels</h1>
                     <p style={pageStyles.subtitle}>Manage integrated publishing platforms and merchant identities.</p>
                 </div>
                 <Link to="/platforms/request" className="btn-primary animate-pulse">

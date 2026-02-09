@@ -33,6 +33,7 @@ namespace PublishingTracker.Api.Models.Dtos
         public string Revenue { get; set; } = string.Empty;
         public string Currency { get; set; } = string.Empty;
         public string OrderId { get; set; } = string.Empty;
+        public string DefaultCurrency { get; set; } = "USD";
     }
 
     public class PreviewDataDto

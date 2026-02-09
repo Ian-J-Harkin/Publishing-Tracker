@@ -20,4 +20,11 @@ export interface ColumnMapping {
     revenue: string;
     currency: string;
     orderId: string;
+    defaultCurrency?: string;
+}
+
+export interface PreviewData {
+    fileName: string;
+    headers: string[];
+    previewRows: Record<string, string>[];
 }

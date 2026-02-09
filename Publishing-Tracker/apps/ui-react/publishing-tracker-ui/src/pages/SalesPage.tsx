@@ -88,7 +88,7 @@ const SalesPage = () => {
         <div style={pageStyles.container}>
             <div style={pageStyles.headerRow}>
                 <div>
-                    <h1 style={{ marginBottom: '0.25rem' }}>Sales Ledger</h1>
+                    <h1 style={{ marginBottom: '0.25rem', color: '#1e293b' }}>Sales Ledger</h1>
                     <p style={{ color: 'var(--text-muted)' }}>Manage your verified royalty streams and transactions.</p>
                 </div>
                 <Link to="/sales/add" className="btn-primary animate-pulse">
@@ -170,7 +170,7 @@ const SalesPage = () => {
                                         <div style={{ flex: 1, color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'bold' }}>
                                             {new Date(sale.saleDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                                         </div>
-                                        <div style={{ flex: 2, fontWeight: '700', fontSize: '1rem', color: '#fff' }}>
+                                        <div style={{ flex: 2, fontWeight: '700', fontSize: '1rem', color: '#1e293b' }}>
                                             {sale.bookTitle}
                                         </div>
                                         <div style={{ flex: 1.5 }}>
@@ -213,7 +213,7 @@ const pageStyles = {
     summaryRibbon: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' },
     summaryCard: { padding: '2rem', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
     summaryLabel: { fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '800', textTransform: 'uppercase' as const, letterSpacing: '0.1em' },
-    summaryValue: { fontSize: '2.25rem', fontWeight: '900', color: '#fff', letterSpacing: '-0.02em' },
+    summaryValue: { fontSize: '2.25rem', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' },
     filterBar: { display: 'flex', gap: '2rem', padding: '2rem', marginBottom: '2rem', flexWrap: 'wrap' as const, alignItems: 'center' },
     filterGroup: { display: 'flex', flexDirection: 'column' as const, gap: '0.65rem', flex: 1, minWidth: '200px' },
     tableHead: {

@@ -68,7 +68,7 @@ const BookListPage = () => {
         <div style={pageStyles.container}>
             <div style={pageStyles.header}>
                 <div>
-                    <h1>IP Portfolio</h1>
+                    <h1 style={{ color: '#1e293b' }}>IP Portfolio</h1>
                     <p style={pageStyles.subtitle}>High-level management of your intellectual property assets.</p>
                 </div>
                 <Link to="/books/add" className="btn-primary animate-pulse" style={pageStyles.addBtn}>

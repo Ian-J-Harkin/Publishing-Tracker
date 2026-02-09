@@ -59,7 +59,7 @@ const RequestPlatformPage = () => {
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Request Integration</h1>
+                <h1 style={{ color: '#1e293b' }}>Request Integration</h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
                     Expand your reach. Request new marketplace support for our analytics engine.
                 </p>

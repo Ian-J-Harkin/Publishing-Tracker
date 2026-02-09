@@ -143,7 +143,7 @@ const getStatusStyle = (status: string) => {
 const pageStyles = {
     container: { animation: 'fadeIn 0.4s ease' },
     header: { marginBottom: '2.5rem' },
-    title: { fontSize: '1.875rem', fontWeight: '800', marginBottom: '0.25rem' },
+    title: { fontSize: '1.875rem', fontWeight: '800', marginBottom: '0.25rem', color: '#1e293b' },
     subtitle: { color: 'var(--text-muted)' },
     tableCard: { padding: 0, overflow: 'hidden' },
     table: { width: '100%', borderCollapse: 'collapse' as const },

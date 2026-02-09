@@ -65,7 +65,7 @@ const EditBookPage = () => {
     return (
         <div style={pageStyles.wrapper}>
             <div style={pageStyles.header}>
-                <h1>Edit Publication</h1>
+                <h1 style={{ color: '#1e293b' }}>Edit Publication</h1>
                 <p style={{ color: 'var(--text-muted)' }}>Update metadata for your work.</p>
             </div>
 

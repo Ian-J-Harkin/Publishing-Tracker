@@ -1,13 +1,13 @@
 import axiosClient from '../api/axiosClient';
-import { ImportJob, ColumnMapping } from '../types/import';
+import { ImportJob, ColumnMapping, PreviewData } from '../types/import';
 
 const API_URL = '/api/import';
 
-const uploadFile = async (file: File): Promise<{ fileName: string, headers: string[] }> => {
+const uploadFile = async (file: File): Promise<PreviewData> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await axiosClient.post(`${API_URL}/upload`, formData, {
+    const response = await axiosClient.post<PreviewData>(`${API_URL}/upload`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data'
         }

@@ -40,9 +40,10 @@ if (!builder.Environment.IsEnvironment("Testing"))
     else
     {
         Console.WriteLine("Running in Local/Development environment.");
-        // Use PostgreSQL for local development
+        // Use SQL Server for local development (Requires running SQL Server instance)
         builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+                sqlOptions => sqlOptions.EnableRetryOnFailure()));
     }
 }
 
@@ -94,19 +95,32 @@ app.UseExceptionHandler(errorApp =>
     {
         context.Response.StatusCode = 500;
         context.Response.ContentType = "application/json";
-        var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
-        if (error != null)
+        var errorFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>();
+        if (errorFeature != null)
         {
-            // Log the exception using the built-in logger
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
-            logger.LogError(error.Error, "Unhandled exception occurred.");
+            logger.LogError(errorFeature.Error, "Unhandled exception occurred.");
 
-            await context.Response.WriteAsJsonAsync(new { error = error.Error.Message, details = error.Error.ToString() });
+            if (app.Environment.IsDevelopment())
+            {
+                 // In Development, return detailed error info
+                 await context.Response.WriteAsJsonAsync(new 
+                 { 
+                     error = "Internal Server Error", 
+                     message = errorFeature.Error.Message, 
+                     stackTrace = errorFeature.Error.StackTrace 
+                 });
+            }
+            else
+            {
+                 // In Production, return generic message for security
+                 await context.Response.WriteAsJsonAsync(new { error = "An error occurred. Please contact support." });
+            }
         }
     });
 });
 
-if (app.Environment.IsEnvironment("Testing"))
+if (app.Environment.IsEnvironment("Testing") || app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();

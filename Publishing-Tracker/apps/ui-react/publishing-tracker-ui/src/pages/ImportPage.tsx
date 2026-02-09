@@ -15,12 +15,14 @@ const ImportPage = () => {
         royalty: '',
         revenue: '',
         currency: '',
-        orderId: ''
+        orderId: '',
+        defaultCurrency: 'USD'
     });
     const [headers, setHeaders] = useState<string[]>([]);
     const [step, setStep] = useState<'upload' | 'mapping' | 'summary'>('upload');
     const [error, setError] = useState<string | null>(null);
     const [summary, setSummary] = useState<ImportJob | null>(null);
+    const [previewData, setPreviewData] = useState<import('../types/import').PreviewData | null>(null);
 
     const autoMapHeaders = (availableHeaders: string[]) => {
         const newMapping = { ...mapping };
@@ -51,6 +53,7 @@ const ImportPage = () => {
             try {
                 const data = await importService.uploadFile(file);
                 setHeaders(data.headers);
+                setPreviewData(data);
                 autoMapHeaders(data.headers);
                 setStep('mapping');
             } catch {
@@ -68,10 +71,21 @@ const ImportPage = () => {
         if (file) {
             try {
                 const result = await importService.processFile(file.name, mapping);
+                console.log("Import result from API:", result);
+                console.log("Records successful:", result.recordsSuccessful);
+                console.log("Records failed:", result.recordsFailed);
+                console.log("Records processed:", result.recordsProcessed);
                 setSummary(result);
                 setStep('summary');
-            } catch {
-                setError('Processing failed. Please check your column mappings.');
+            } catch (err: any) {
+                const msg = err.response?.data?.title || err.response?.data?.message || err.message || 'Unknown processing error';
+                console.error("Process debug:", err);
+                alert(`DEBUG (REACT): ${msg}\n\nCheck console for details.`);
+                if (err.response) {
+                    setError(`Processing failed: ${msg}`);
+                } else {
+                    setError(`Processing failed: ${msg}`);
+                }
             }
         }
     };
@@ -101,7 +115,7 @@ const ImportPage = () => {
 
     return (
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <h1 style={{ color: '#1e293b', background: 'none', WebkitTextFillColor: 'initial', opacity: 1, marginBottom: '2rem' }}>Import Sales Data</h1>
+            <h1 style={{ color: '#1e293b', background: 'none', WebkitTextFillColor: 'initial', opacity: 1, marginBottom: '2rem' }}>Import Sales Data (v2.1)</h1>
             {renderStepper()}
 
             <div className="card" style={{ padding: '2.5rem' }}>
@@ -154,26 +168,86 @@ const ImportPage = () => {
                     <div style={pageStyles.stepContainer}>
                         <h3>Step 2: Map Columns</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                            Tell us which column header in your CSV matches our required fields.
+                            Match your file's columns to our fields. Check the preview to ensure data looks correct.
                         </p>
 
-                        <div style={pageStyles.grid}>
-                            {(Object.keys(mapping) as Array<keyof ColumnMapping>).map((key) => (
-                                <div className="form-group" key={key}>
-                                    <label style={{ textTransform: 'capitalize' }}>{key.replace(/([A-Z])/g, ' $1')}</label>
-                                    <select
-                                        name={key}
-                                        value={mapping[key]}
-                                        onChange={handleMappingChange}
-                                        style={pageStyles.select}
-                                    >
-                                        <option value="">Select CSV Column</option>
-                                        {headers.map(h => (
-                                            <option key={h} value={h}>{h}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            ))}
+                        <div style={{ marginBottom: '1rem', padding: '1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <label style={{ fontWeight: '600', color: 'var(--text-main)' }}>Default Currency:</label>
+                                <select
+                                    style={{ ...pageStyles.select, width: 'auto', display: 'inline-block' }}
+                                    value={mapping.currency || 'USD'}
+                                    onChange={(e) => setMapping(prev => ({ ...prev, currency: e.target.value }))}
+                                >
+                                    <option value="USD">USD ($)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="CAD">CAD ($)</option>
+                                    <option value="AUD">AUD ($)</option>
+                                </select>
+                                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Used if no currency column is mapped.</span>
+                            </div>
+
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                                <span style={{ color: 'var(--danger)', fontWeight: 'bold', marginRight: '5px' }}>*</span>
+                                <strong style={{ color: 'var(--text-main)' }}>Required Fields:</strong> These columns must be mapped for the import to work.
+                            </p>
+                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                                <span style={{ display: 'inline-block', width: '10px', height: '10px', marginRight: '5px' }}></span>
+                                <strong style={{ color: 'var(--text-main)' }}>Optional Fields:</strong> Can be left blank if your file doesn't have this data.
+                            </p>
+                        </div>
+
+                        <div style={{ overflowX: 'auto', marginBottom: '2rem' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
+                                        <th style={pageStyles.th}>Target Field</th>
+                                        <th style={pageStyles.th}>Your CSV Column</th>
+                                        <th style={pageStyles.th}>Preview (First 3 Rows)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(Object.keys(mapping) as Array<keyof ColumnMapping>).filter(k => k !== 'defaultCurrency').map((key) => {
+                                        const selectedHeader = mapping[key] as string;
+                                        let previewSamples = '';
+                                        if (key === 'currency' && !selectedHeader) {
+                                            previewSamples = `(Using Default: ${mapping[key] || 'USD'})`;
+                                        } else {
+                                            previewSamples = previewData?.previewRows.slice(0, 3).map(r => r[selectedHeader]).filter(Boolean).join(', ') || '';
+                                        }
+
+                                        return (
+                                            <tr key={key} style={{ borderBottom: '1px solid var(--border)' }}>
+                                                <td style={{ ...pageStyles.td, fontWeight: '600', width: '25%' }}>
+                                                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                                    {['bookTitle', 'platform', 'saleDate', 'quantity', 'unitPrice'].includes(key) ? (
+                                                        <span style={{ color: 'var(--danger)', marginLeft: '4px', fontWeight: 'bold' }}>*</span>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'normal', marginLeft: '6px' }}>(Optional)</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ ...pageStyles.td, width: '35%' }}>
+                                                    <select
+                                                        name={key}
+                                                        value={mapping[key]}
+                                                        onChange={handleMappingChange}
+                                                        style={pageStyles.select}
+                                                    >
+                                                        <option value="">-- Select Column --</option>
+                                                        {headers.map(h => (
+                                                            <option key={h} value={h}>{h}</option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td style={{ ...pageStyles.td, width: '40%', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                                    {previewSamples || <span style={{ opacity: 0.5 }}>Select a column to preview...</span>}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
 
                         <div style={pageStyles.actions}>
@@ -186,19 +260,22 @@ const ImportPage = () => {
                 {step === 'summary' && summary && (
                     <div style={{ ...pageStyles.stepContainer, textAlign: 'center' }}>
                         <div style={pageStyles.successIcon}>✓</div>
-                        <h3 style={{ marginBottom: '1.5rem' }}>Import Synchronized</h3>
+                        <h3 style={{ marginBottom: '0.5rem' }}>Import Synchronized</h3>
+                        <p style={{ fontSize: '1rem', color: '#64748b', marginBottom: '2rem' }}>
+                            Processed {summary.recordsProcessed} {summary.recordsProcessed === 1 ? 'record' : 'records'} from <strong>{summary.fileName}</strong>
+                        </p>
 
                         <div style={pageStyles.summaryGrid}>
                             <div style={pageStyles.summaryStat}>
-                                <span style={pageStyles.statLabel}>Successful</span>
+                                <span style={pageStyles.statLabel}>Records Successful</span>
                                 <span style={pageStyles.statValue} className="text-success">{summary.recordsSuccessful}</span>
                             </div>
                             <div style={pageStyles.summaryStat}>
-                                <span style={pageStyles.statLabel}>Failed</span>
+                                <span style={pageStyles.statLabel}>Records Failed</span>
                                 <span style={pageStyles.statValue} className={summary.recordsFailed > 0 ? "text-danger" : ""}>{summary.recordsFailed}</span>
                             </div>
                             <div style={pageStyles.summaryStat}>
-                                <span style={pageStyles.statLabel}>Accuracy</span>
+                                <span style={pageStyles.statLabel}>Success Rate</span>
                                 <span style={pageStyles.statValue}>
                                     {summary.recordsProcessed > 0 ? Math.round((summary.recordsSuccessful / summary.recordsProcessed) * 100) : 0}%
                                 </span>
@@ -256,12 +333,14 @@ const pageStyles = {
     summaryGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', margin: '2rem 0' },
     summaryStat: { padding: '1.5rem', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' as const, gap: '0.5rem' },
     statLabel: { fontSize: '0.875rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
-    statValue: { fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-main)' },
+    statValue: { fontSize: '1.5rem', fontWeight: '700', color: '#1e293b' },
     performanceBarBase: { height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', margin: '2rem 0', overflow: 'hidden' },
     performanceBarFill: { height: '100%', backgroundColor: '#10b981', transition: 'width 1s ease-out' },
     diagnosticHeader: { fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' as const, color: '#991b1b', marginBottom: '0.75rem', letterSpacing: '0.05em' },
     errorLogBox: { textAlign: 'left' as const, marginTop: '2.5rem', padding: '1.5rem', backgroundColor: '#fff1f2', borderRadius: '12px', border: '1px solid #fecaca' },
-    errorPre: { whiteSpace: 'pre-wrap' as const, fontSize: '0.85rem', color: '#991b1b', marginTop: '0.5rem', maxHeight: '150px', overflowY: 'auto' as const }
+    errorPre: { whiteSpace: 'pre-wrap' as const, fontSize: '0.85rem', color: '#991b1b', marginTop: '0.5rem', maxHeight: '150px', overflowY: 'auto' as const },
+    th: { textAlign: 'left' as const, padding: '1rem', color: 'var(--text-muted)', borderBottom: '2px solid var(--border)', fontSize: '0.9rem', textTransform: 'uppercase' as const, letterSpacing: '0.05em' },
+    td: { padding: '1rem', borderBottom: '1px solid var(--border)', color: 'var(--text-main)' }
 };
 
 export default ImportPage;
