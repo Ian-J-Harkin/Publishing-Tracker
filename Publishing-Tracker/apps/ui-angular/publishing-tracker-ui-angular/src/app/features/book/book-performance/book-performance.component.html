@@ -1,5 +1,6 @@
 <div class="form-container">
   <h1>Book Performance</h1>
+  <a class="export-link" (click)="exportToCsv()" role="button">Export to CSV</a>
   <div *ngIf="performanceData$ | async as performanceData; else loading">
     <ul>
       <li *ngFor="let p of performanceData">

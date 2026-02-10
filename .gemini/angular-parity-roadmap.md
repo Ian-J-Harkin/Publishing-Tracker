@@ -1,7 +1,10 @@
 # Angular ↔ React Parity Roadmap
 
 **Created:** 2026-02-10
+**Last Updated:** 2026-02-10
 **Goal:** Bring the Angular frontend to full feature and UI parity with the React version.
+
+### Progress: 5 / 19 tasks completed · 52 / 52 tests passing ✅
 
 ---
 
@@ -23,48 +26,27 @@ The work is organised into **3 phases**, ordered by dependency and complexity:
 
 These tasks create the Angular services, models, and routing scaffolding that Phase 2 and Phase 3 depend on. They have no UI and can be done quickly.
 
-### Task 1.1 — Create `sale.ts` model
+### Task 1.1 — Create `sale.ts` model ✅ COMPLETED (2026-02-10)
 - **Location:** `src/app/core/models/sale.ts`
 - **Port from:** `ui-react/src/types/sale.ts`
-- **Interfaces to create:**
-  - `Sale` (id, bookId, bookTitle, platformId, platformName, saleDate, quantity, unitPrice, royalty, revenue)
-  - `CreateSale` (bookId, platformId, saleDate, quantity, unitPrice, royalty, currency)
-  - `SalesSummary` (totalRevenue, totalUnitsSold, averageRoyalty, salesCount)
-  - `SalesFilter` (bookId?, platformId?, startDate?, endDate?)
+- **Interfaces created:** `Sale`, `CreateSale`, `SalesSummary`, `SalesFilter`
 - **Tests:** None (pure type definitions)
-- **Blocked by:** Nothing
 
-### Task 1.2 — Create `import.ts` model
+### Task 1.2 — Create `import.ts` model ✅ COMPLETED (2026-02-10)
 - **Location:** `src/app/core/models/import.ts`
 - **Port from:** `ui-react/src/types/import.ts`
-- **Interfaces to create:**
-  - `ImportJob` (id, fileName, status, startedAt, completedAt?, recordsProcessed, recordsSuccessful, recordsFailed, errorLog?)
-  - `ColumnMapping` (bookTitle, platform, saleDate, quantity, unitPrice, royalty, revenue, currency, orderId, defaultCurrency?)
-  - `PreviewData` (fileName, headers, previewRows)
+- **Interfaces created:** `ImportJob`, `ColumnMapping`, `PreviewData`
 - **Tests:** None (pure type definitions)
-- **Blocked by:** Nothing
 
-### Task 1.3 — Create `sale.service.ts`
+### Task 1.3 — Create `sale.service.ts` ✅ COMPLETED (2026-02-10)
 - **Location:** `src/app/core/services/sale.service.ts`
-- **Port from:** `ui-react/src/services/saleService.ts`
-- **API endpoints to call:**
-  - `GET /api/sales` (with query params from `SalesFilter`)
-  - `GET /api/sales/summary` (with date range params)
-  - `POST /api/sales` (body: `CreateSale`)
-- **Methods:** `getSales(filters)`, `getSummary(filters)`, `createSale(sale)`
-- **Tests:** Create `sale.service.spec.ts` with HttpClientTestingModule mocks
-- **Blocked by:** Task 1.1
+- **Methods:** `getSales(filters)`, `getSummary(filters)`, `createSale(sale)` + private `buildParams` helper
+- **Tests:** `sale.service.spec.ts` — 6 tests (creation, get with/without filters, param stripping, summary, create)
 
-### Task 1.4 — Create `import.service.ts`
+### Task 1.4 — Create `import.service.ts` ✅ COMPLETED (2026-02-10)
 - **Location:** `src/app/core/services/import.service.ts`
-- **Port from:** `ui-react/src/services/importService.ts`
-- **API endpoints to call:**
-  - `POST /api/import/upload` (multipart/form-data with file)
-  - `POST /api/import/process` (body: `{ fileName, mapping }`)
-  - `GET /api/import/history`
 - **Methods:** `uploadFile(file)`, `processFile(fileName, mapping)`, `getHistory()`
-- **Tests:** Create `import.service.spec.ts` with HttpClientTestingModule mocks
-- **Blocked by:** Task 1.2
+- **Tests:** `import.service.spec.ts` — 4 tests (creation, upload with FormData, process with mapping, history)
 
 ### Task 1.5 — Register routes for Sales & Import
 - **Location:** `src/app/app.routes.ts`
@@ -127,17 +109,16 @@ These tasks bring already-ported Angular components up to feature and UI parity 
 - **Update spec:** Update `platforms.component.spec.ts` to verify search, card rendering
 - **Blocked by:** Nothing
 
-### Task 2.3 — Add CSV Export to `BookPerformanceComponent`
+### Task 2.3 — Add CSV Export to `BookPerformanceComponent` ✅ COMPLETED (2026-02-10)
 - **Location:** `src/app/features/book/book-performance/`
-- **Reference:** `ui-react/src/pages/BookPerformancePage.tsx` (55 lines)
-- **Current state (Angular):** Renders performance list but has no export functionality.
-- **Changes required:**
-  - [ ] Add **"Export to CSV"** button/link
-  - [ ] Implement CSV generation logic (no external library needed — use `Blob` + `URL.createObjectURL` + `<a download>` pattern)
-  - [ ] CSV columns: `Platform Name`, `Currency`, `Total Revenue`
-  - [ ] Style the export button to match app theme
-- **Update spec:** Add test verifying the export button renders
-- **Blocked by:** Nothing
+- **Changes made:**
+  - [x] Added **"Export to CSV"** link with `exportToCsv()` method
+  - [x] Implemented CSV generation using native `Blob` + `URL.createObjectURL` + `<a download>` pattern
+  - [x] CSV columns: `Platform Name`, `Currency`, `Total Revenue`
+  - [x] Styled export link to match app theme
+  - [x] Typed `performanceData$` as `Observable<BookPerformance[]>` (was `any[]`)
+  - [x] Cached data via RxJS `tap` for synchronous export access
+- **Tests:** Added 1 test verifying export button renders (52/52 total)
 
 ### Task 2.4 — Verify `AddBookComponent` parity
 - **Location:** `src/app/features/book/add-book/`
@@ -289,29 +270,29 @@ These are entirely new feature modules that must be built from scratch in Angula
 
 ```
 Phase 1 (Infrastructure)
-├── Task 1.1  Create sale.ts model
-├── Task 1.2  Create import.ts model
-├── Task 1.3  Create sale.service.ts         (depends on 1.1)
-├── Task 1.4  Create import.service.ts       (depends on 1.2)
-├── Task 1.5  Register routes                (incremental, as components are built)
-└── Task 1.6  Update nav links               (trivial)
+├── ✅ Task 1.1  Create sale.ts model
+├── ✅ Task 1.2  Create import.ts model
+├── ✅ Task 1.3  Create sale.service.ts         (depends on 1.1)
+├── ✅ Task 1.4  Create import.service.ts       (depends on 1.2)
+├── ⬜ Task 1.5  Register routes                (incremental, as components are built)
+└── ⬜ Task 1.6  Update nav links               (trivial)
 
 Phase 2 (Update Existing) — can run in parallel with Phase 1
-├── Task 2.1  Enhance BookListComponent
-├── Task 2.2  Enhance PlatformsComponent
-├── Task 2.3  Add CSV Export to BookPerformance
-├── Task 2.4  Verify AddBookComponent
-└── Task 2.5  Verify EditBookComponent
+├── ⬜ Task 2.1  Enhance BookListComponent       ← NEXT
+├── ⬜ Task 2.2  Enhance PlatformsComponent
+├── ✅ Task 2.3  Add CSV Export to BookPerformance
+├── ⬜ Task 2.4  Verify AddBookComponent
+└── ⬜ Task 2.5  Verify EditBookComponent
 
 Phase 3 (New Features) — depends on Phase 1
-├── Task 3.1  Create SalesListComponent      (depends on 1.1, 1.3)
-├── Task 3.2  Create AddSaleComponent        (depends on 1.1, 1.3)
-├── Task 3.3  Create ImportComponent         (depends on 1.2, 1.4)
-├── Task 3.4  Create ImportHistoryComponent  (depends on 1.2, 1.4)
-├── Task 3.5  Tests for SalesList            (depends on 3.1)
-├── Task 3.6  Tests for AddSale              (depends on 3.2)
-├── Task 3.7  Tests for Import               (depends on 3.3)
-└── Task 3.8  Tests for ImportHistory        (depends on 3.4)
+├── ⬜ Task 3.1  Create SalesListComponent      (depends on 1.1, 1.3)
+├── ⬜ Task 3.2  Create AddSaleComponent        (depends on 1.1, 1.3)
+├── ⬜ Task 3.3  Create ImportComponent         (depends on 1.2, 1.4)
+├── ⬜ Task 3.4  Create ImportHistoryComponent  (depends on 1.2, 1.4)
+├── ⬜ Task 3.5  Tests for SalesList            (depends on 3.1)
+├── ⬜ Task 3.6  Tests for AddSale              (depends on 3.2)
+├── ⬜ Task 3.7  Tests for Import               (depends on 3.3)
+└── ⬜ Task 3.8  Tests for ImportHistory        (depends on 3.4)
 ```
 
 ---

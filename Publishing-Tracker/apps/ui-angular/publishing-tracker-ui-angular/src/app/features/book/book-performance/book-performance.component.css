@@ -1,1 +1,15 @@
-/* Add your styles here */
+.export-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--primary, #38bdf8);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.export-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
