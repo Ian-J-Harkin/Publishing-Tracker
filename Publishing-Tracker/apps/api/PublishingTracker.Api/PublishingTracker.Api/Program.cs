@@ -1,6 +1,9 @@
+using System.Threading.Channels;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using PublishingTracker.Api.Data;
@@ -10,10 +13,10 @@ using PublishingTracker.Api.Features.Dashboard;
 using PublishingTracker.Api.Features.Import;
 using PublishingTracker.Api.Features.Platforms;
 using PublishingTracker.Api.Features.Sales;
+using PublishingTracker.Api.Middleware;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using PublishingTracker.Api.Services;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +83,27 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ICsvImportService, CsvImportService>();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+
+// ── Background Import Service (Channel + BackgroundService) ──────
+// Bounded channel prevents unbounded memory growth if imports queue up.
+builder.Services.AddSingleton(Channel.CreateBounded<ImportRequest>(new BoundedChannelOptions(100)
+{
+    FullMode = BoundedChannelFullMode.Wait
+}));
+builder.Services.AddSingleton<ImportBackgroundService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ImportBackgroundService>());
+
+// ── Health Checks ─────────────────────────────────────────────────
+// NOTE: Planned migration to Application Insights for production telemetry.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<PublishingTrackerDbContext>("database")
+    .AddCheck("temp-storage", () =>
+    {
+        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
+        return Directory.Exists(tempDir)
+            ? HealthCheckResult.Healthy("temp_uploads directory exists.")
+            : HealthCheckResult.Degraded("temp_uploads directory is missing.");
+    });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -151,6 +175,9 @@ if (app.Environment.IsEnvironment("Testing") || app.Environment.IsDevelopment())
     }
 }
 
+// ── Request Timing Middleware (monitoring) ─────────────────────────
+app.UseRequestTiming();
+
 app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
@@ -165,6 +192,10 @@ app.MapSalesEndpoints();
 app.MapPlatformEndpoints();
 app.MapDashboardEndpoints();
 app.MapImportEndpoints();
+
+// ── Health Check Endpoint ─────────────────────────────────────────
+app.MapHealthChecks("/health");
+
 // fix for azure port
 //app.Urls.Add("http://*:8080");
 app.Run();

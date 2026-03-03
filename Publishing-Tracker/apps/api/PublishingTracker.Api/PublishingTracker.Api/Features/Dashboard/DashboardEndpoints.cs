@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
+using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models.Dtos;
-using System.Security.Claims;
 
 namespace PublishingTracker.Api.Features.Dashboard;
 
@@ -14,27 +14,28 @@ public static class DashboardEndpoints
 
         dashboardGroup.MapGet("/all", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
         {
-            if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
+            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                return errorResult!;
 
             // 1. Summary with Currency Grouping
             var revenueByCurrency = await db.Sales
-                .Where(s => s.Book.UserId == userId)
+                .ForUser(userId)
                 .GroupBy(s => s.Currency)
                 .Select(g => new CurrencyTotalDto { Currency = g.Key, TotalAmount = g.Sum(s => s.Revenue) })
                 .ToListAsync();
 
-            var totalBooksPublished = await db.Books.CountAsync(b => b.UserId == userId);
-            var totalSalesTransactions = await db.Sales.CountAsync(s => s.Book.UserId == userId);
+            var totalBooksPublished = await db.Books.ForUser(userId).CountAsync();
+            var totalSalesTransactions = await db.Sales.ForUser(userId).CountAsync();
 
             var topBook = await db.Sales
-                .Where(s => s.Book.UserId == userId)
+                .ForUser(userId)
                 .GroupBy(s => s.Book.Title)
                 .Select(g => new { Title = g.Key, Revenue = g.Sum(s => s.Revenue) })
                 .OrderByDescending(x => x.Revenue)
                 .FirstOrDefaultAsync();
 
             var topPlatform = await db.Sales
-                .Where(s => s.Book.UserId == userId)
+                .ForUser(userId)
                 .GroupBy(s => s.Platform.Name)
                 .Select(g => new { Name = g.Key, Revenue = g.Sum(s => s.Revenue) })
                 .OrderByDescending(x => x.Revenue)
@@ -49,14 +50,10 @@ public static class DashboardEndpoints
                 TopPerformingPlatform = topPlatform?.Name ?? "N/A"
             };
 
-            // 2. YOY (Filtering to current year by default for simplicity)
+            // 2. YOY
             var currentYear = DateTime.UtcNow.Year;
-            var currentYearRevenue = await db.Sales
-                .Where(s => s.Book.UserId == userId && s.SaleDate.Year == currentYear)
-                .SumAsync(s => s.Revenue);
-            var lastYearRevenue = await db.Sales
-                .Where(s => s.Book.UserId == userId && s.SaleDate.Year == currentYear - 1)
-                .SumAsync(s => s.Revenue);
+            var currentYearRevenue = await db.Sales.ForUser(userId).InYear(currentYear).SumAsync(s => s.Revenue);
+            var lastYearRevenue = await db.Sales.ForUser(userId).InYear(currentYear - 1).SumAsync(s => s.Revenue);
 
             var yoy = new
             {
@@ -67,7 +64,8 @@ public static class DashboardEndpoints
 
             // 3. Seasonal
             var seasonal = await db.Sales
-                .Where(s => s.Book.UserId == userId && s.SaleDate.Year == currentYear)
+                .ForUser(userId)
+                .InYear(currentYear)
                 .GroupBy(s => s.SaleDate.Month)
                 .Select(g => new { Month = g.Key, TotalRevenue = g.Sum(s => s.Revenue) })
                 .OrderBy(x => x.Month)
@@ -81,33 +79,23 @@ public static class DashboardEndpoints
             });
         });
 
-        // Maintain legacy endpoints for compatibility but point to shared logic if needed
+        // Maintain legacy endpoints for compatibility
         dashboardGroup.MapGet("/summary", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
         {
-            if (!TryGetUserId(httpContext, out var userId)) return Results.Unauthorized();
+            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                return errorResult!;
+
             var revenueByCurrency = await db.Sales
-                .Where(s => s.Book.UserId == userId)
+                .ForUser(userId)
                 .GroupBy(s => s.Currency)
                 .Select(g => new CurrencyTotalDto { Currency = g.Key, TotalAmount = g.Sum(s => s.Revenue) })
                 .ToListAsync();
             
             return Results.Ok(new DashboardSummaryDto { 
                 RevenueByCurrency = revenueByCurrency,
-                TotalBooksPublished = await db.Books.CountAsync(b => b.UserId == userId),
-                TotalSalesTransactions = await db.Sales.CountAsync(s => s.Book.UserId == userId)
+                TotalBooksPublished = await db.Books.ForUser(userId).CountAsync(),
+                TotalSalesTransactions = await db.Sales.ForUser(userId).CountAsync()
             });
         });
-    }
-
-    private static bool TryGetUserId(HttpContext httpContext, out int userId)
-    {
-        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out userId))
-        {
-            return true;
-        }
-
-        userId = 0;
-        return false;
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
+using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 
@@ -26,15 +27,9 @@ public class BookService : IBookService
         var userId = _currentUserService.UserId;
         _logger.LogInformation("Fetching books for user {UserId}.", userId);
 
-        var query = _context.Books.Where(b => b.UserId == userId);
-
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-        {
-            var term = searchTerm.ToLower();
-            query = query.Where(b => b.Title.ToLower().Contains(term) || b.Author.ToLower().Contains(term));
-        }
-
-        return await query
+        return await _context.Books
+            .ForUser(userId!.Value)
+            .Search(searchTerm)
             .OrderByDescending(b => b.PublicationDate)
             .ThenBy(b => b.Title)
             .ToListAsync();

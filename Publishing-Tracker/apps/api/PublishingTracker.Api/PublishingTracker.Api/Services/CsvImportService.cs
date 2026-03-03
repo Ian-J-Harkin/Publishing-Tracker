@@ -2,6 +2,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
+using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using System.Globalization;
@@ -163,17 +164,6 @@ public class CsvImportService : ICsvImportService
 
         await _db.SaveChangesAsync();
 
-        return new ImportJobDto
-        {
-            Id = job.Id,
-            FileName = job.FileName,
-            Status = job.Status,
-            StartedAt = job.StartedAt,
-            CompletedAt = job.CompletedAt,
-            RecordsProcessed = job.RecordsProcessed,
-            RecordsSuccessful = job.RecordsSuccessful,
-            RecordsFailed = job.RecordsFailed,
-            ErrorLog = job.ErrorLog
-        };
+        return job.ToDto();
     }
 }

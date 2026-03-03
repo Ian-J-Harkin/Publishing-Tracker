@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
+using PublishingTracker.Api.Extensions;
+using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using PublishingTracker.Api.Services;
-using System.Security.Claims;
 
 namespace PublishingTracker.Api.Features.Import;
 
@@ -13,15 +14,14 @@ public static class ImportEndpoints
     {
         var importGroup = app.MapGroup("/api/import").RequireAuthorization().DisableAntiforgery();
 
+        // ── Upload: saves file & returns preview (unchanged) ──────
         importGroup.MapPost("/upload", async ([FromServices] PublishingTrackerDbContext db, IFormFile file, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
             var logger = loggerFactory.CreateLogger("ImportEndpoints");
             try
             {
-                if (!TryGetUserId(httpContext, out var userId))
-                {
-                    return Results.Unauthorized();
-                }
+                if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                    return errorResult!;
 
                 logger.LogInformation("User {UserId} uploaded file {FileName}.", userId, file.FileName);
                 
@@ -49,7 +49,6 @@ public static class ImportEndpoints
                         previewData.Headers = csv.HeaderRecord.ToList();
                     }
 
-                    // Read first 5 rows for preview
                     int previewCount = 0;
                     while (await csv.ReadAsync() && previewCount < 5)
                     {
@@ -72,12 +71,15 @@ public static class ImportEndpoints
             }
         });
 
-        importGroup.MapPost("/process", async ([FromServices] PublishingTrackerDbContext db, [FromServices] ICsvImportService importService, ProcessImportRequest request, HttpContext httpContext) =>
+        // ── Process: enqueues to background service, returns 202 ──
+        importGroup.MapPost("/process", async (
+            [FromServices] PublishingTrackerDbContext db,
+            [FromServices] ImportBackgroundService backgroundService,
+            ProcessImportRequest request,
+            HttpContext httpContext) =>
         {
-            if (!TryGetUserId(httpContext, out var userId))
-            {
-                return Results.Unauthorized();
-            }
+            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                return errorResult!;
 
             var filePath = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads", $"{userId}_{request.FileName}");
             if (!File.Exists(filePath))
@@ -85,46 +87,63 @@ public static class ImportEndpoints
                 return Results.BadRequest(new { message = "Uploaded file not found. Please upload again." });
             }
 
-            try
+            // Create the job record immediately so the client has an ID to poll
+            var job = new ImportJob
             {
-                // DIAGNOSTIC DB CHECK
-                if (!await db.Database.CanConnectAsync())
-                {
-                     return Results.Problem("Database connection failed. Please ensure SQL Server is running.");
-                }
+                UserId = userId,
+                FileName = request.FileName,
+                Status = "Queued",
+                StartedAt = DateTime.UtcNow,
+                RecordsProcessed = 0,
+                RecordsSuccessful = 0,
+                RecordsFailed = 0
+            };
 
-                // We need to wrap the file back into an IFormFile-like structure for the service or just pass the stream
-                // To keep the service interface clean and reusable, let's use a physical file stream
-                using var stream = File.OpenRead(filePath);
-                var formFile = new FormFile(stream, 0, stream.Length, "file", request.FileName);
-                
-                var result = await importService.ProcessImportAsync(userId, formFile, request.Mapping);
+            db.ImportJobs.Add(job);
+            await db.SaveChangesAsync();
 
-                // Cleanup
-                // Force close stream before delete? using block handles it.
-                stream.Close();
-                File.Delete(filePath);
-
-                return Results.Ok(result);
-            }
-            catch (Exception ex)
+            // Enqueue for background processing (non-blocking)
+            await backgroundService.EnqueueAsync(new ImportRequest
             {
-                return Results.Problem(ex.Message);
-            }
+                UserId = userId,
+                JobId = job.Id,
+                FilePath = filePath,
+                FileName = request.FileName,
+                Mapping = request.Mapping
+            });
+
+            // Return 202 Accepted with the job ID for status polling
+            return Results.Accepted($"/api/import/status/{job.Id}", job.ToDto());
         });
 
+        // ── Status: poll a specific import job by ID ──────────────
+        importGroup.MapGet("/status/{jobId}", async (
+            [FromServices] PublishingTrackerDbContext db,
+            HttpContext httpContext,
+            int jobId) =>
+        {
+            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                return errorResult!;
+
+            var job = await db.ImportJobs
+                .FirstOrDefaultAsync(j => j.Id == jobId && j.UserId == userId);
+
+            if (job == null)
+                return Results.NotFound("Import job not found.");
+
+            return Results.Ok(job.ToDto());
+        });
+
+        // ── History: all import jobs for the user ─────────────────
         importGroup.MapGet("/history", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
         {
             var logger = loggerFactory.CreateLogger("ImportEndpoints");
-            if (!TryGetUserId(httpContext, out var userId))
-            {
-                logger.LogWarning("Could not retrieve user ID from token when fetching import history.");
-                return Results.Unauthorized();
-            }
+            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
+                return errorResult!;
 
             logger.LogInformation("Fetching import history for User {UserId}.", userId);
             var history = await db.ImportJobs
-                .Where(j => j.UserId == userId)
+                .ForUser(userId)
                 .OrderByDescending(j => j.StartedAt)
                 .ToListAsync();
             return Results.Ok(history);
@@ -132,16 +151,4 @@ public static class ImportEndpoints
     }
 
     public record ProcessImportRequest(string FileName, ColumnMappingDto Mapping);
-
-    private static bool TryGetUserId(HttpContext httpContext, out int userId)
-    {
-        var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-        if (userIdClaim != null && int.TryParse(userIdClaim.Value, out userId))
-        {
-            return true;
-        }
-
-        userId = 0;
-        return false;
-    }
 }
