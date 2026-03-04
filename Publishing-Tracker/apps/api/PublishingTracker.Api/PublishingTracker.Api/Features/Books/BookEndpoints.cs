@@ -13,54 +13,65 @@ public static class BookEndpoints
 
         booksGroup.MapGet("/", async ([FromServices] IBookService bookService, [FromQuery] string? search) =>
         {
-            var books = await bookService.GetAllAsync(search);
-            return Results.Ok(books);
+            var result = await bookService.GetAllAsync(search);
+            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.ErrorMessage);
         });
 
         booksGroup.MapGet("/{id}", async ([FromServices] IBookService bookService, int id) =>
         {
-            var book = await bookService.GetByIdAsync(id);
-            return book == null ? Results.NotFound() : Results.Ok(book);
+            var result = await bookService.GetByIdAsync(id);
+            if (!result.IsSuccess)
+            {
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
+                    return Results.Forbid();
+                return Results.NotFound(result.ErrorMessage);
+            }
+            return Results.Ok(result.Value);
         });
 
         booksGroup.MapPost("/", async ([FromServices] IBookService bookService, CreateBookDto createBookDto) =>
         {
-            try
-            {
-                var book = await bookService.CreateAsync(createBookDto);
-                return Results.Created($"/api/books/{book.Id}", book);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Results.Unauthorized();
-            }
+            var result = await bookService.CreateAsync(createBookDto);
+            if (!result.IsSuccess)
+                return result.ErrorMessage == "User is not authenticated." ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+
+            return Results.Created($"/api/books/{result.Value!.Id}", result.Value);
         });
 
         booksGroup.MapPut("/{id}", async ([FromServices] IBookService bookService, int id, UpdateBookDto updateBookDto) =>
         {
-            var book = await bookService.UpdateAsync(id, updateBookDto);
-            return book == null ? Results.NotFound() : Results.Ok(book);
+            var result = await bookService.UpdateAsync(id, updateBookDto);
+            if (!result.IsSuccess)
+            {
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
+                    return Results.Forbid();
+                return Results.NotFound(result.ErrorMessage);
+            }
+            return Results.Ok(result.Value);
         });
 
         booksGroup.MapDelete("/{id}", async ([FromServices] IBookService bookService, int id) =>
         {
-            await bookService.DeleteAsync(id);
+            var result = await bookService.DeleteAsync(id);
+            if (!result.IsSuccess)
+            {
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
+                    return Results.Forbid();
+                return Results.NotFound(result.ErrorMessage);
+            }
             return Results.NoContent();
         });
 
         booksGroup.MapGet("/{id}/performance", async ([FromServices] IBookService bookService, int id) =>
         {
-            var performanceData = await bookService.GetPerformanceAsync(id);
-            
-            if (performanceData == null)
+            var result = await bookService.GetPerformanceAsync(id);
+            if (!result.IsSuccess)
             {
-                // This could mean book not found OR user unauthorized for book. 
-                // To keep it simple and secure, we can return NotFound or generic 'Access Denied'.
-                // Since service handles logic, null implies "cannot retrieve data".
-                return Results.NotFound("Book not found or access denied.");
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("access denied"))
+                    return Results.Forbid();
+                return Results.NotFound(result.ErrorMessage);
             }
-
-            return Results.Ok(performanceData);
+            return Results.Ok(result.Value);
         });
     }
 }

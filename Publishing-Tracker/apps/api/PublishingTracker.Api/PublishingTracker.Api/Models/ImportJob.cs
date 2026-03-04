@@ -2,7 +2,7 @@ using System;
 
 namespace PublishingTracker.Api.Models
 {
-    public class ImportJob
+    public class ImportJob : IEntity
     {
         public int Id { get; set; }
         public int UserId { get; set; }

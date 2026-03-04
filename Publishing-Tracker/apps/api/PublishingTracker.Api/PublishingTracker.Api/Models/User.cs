@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PublishingTracker.Api.Models
 {
-    public class User
+    public class User : IEntity
     {
         public int Id { get; set; }
 
@@ -19,8 +19,10 @@ namespace PublishingTracker.Api.Models
         [Required]
         public string LastName { get; set; } = string.Empty;
 
+        [Auditable(isCreationTime: true)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        [Auditable]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

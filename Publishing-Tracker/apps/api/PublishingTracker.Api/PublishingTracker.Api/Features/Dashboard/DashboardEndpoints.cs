@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models.Dtos;
@@ -12,10 +13,16 @@ public static class DashboardEndpoints
     {
         var dashboardGroup = app.MapGroup("/api/dashboard").RequireAuthorization();
 
-        dashboardGroup.MapGet("/all", async ([FromServices] PublishingTrackerDbContext db, HttpContext httpContext) =>
+        dashboardGroup.MapGet("/all", async ([FromServices] PublishingTrackerDbContext db, [FromServices] IMemoryCache cache, HttpContext httpContext) =>
         {
             if (!httpContext.TryGetUserId(out var userId, out var errorResult))
                 return errorResult!;
+
+            var cacheKey = $"dashboard_all_{userId}";
+
+            var result = await cache.GetOrCreateAsync(cacheKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
             // 1. Summary with Currency Grouping
             var revenueByCurrency = await db.Sales
@@ -71,12 +78,15 @@ public static class DashboardEndpoints
                 .OrderBy(x => x.Month)
                 .ToListAsync();
 
-            return Results.Ok(new DashboardDataDto
-            {
-                Summary = summary,
-                YoY = yoy,
-                Seasonal = seasonal
+                return new DashboardDataDto
+                {
+                    Summary = summary,
+                    YoY = yoy,
+                    Seasonal = seasonal
+                };
             });
+
+            return Results.Ok(result);
         });
 
         // Maintain legacy endpoints for compatibility

@@ -2,7 +2,7 @@ using System;
 
 namespace PublishingTracker.Api.Models
 {
-    public class Sale
+    public class Sale : IEntity
     {
         public int Id { get; set; }
         public int BookId { get; set; }
@@ -14,6 +14,7 @@ namespace PublishingTracker.Api.Models
         public decimal Revenue { get; set; }
         public string Currency { get; set; } = "USD";
         public string? OrderId { get; set; }
+        [Auditable(isCreationTime: true)]
         public DateTime CreatedAt { get; set; }
 
         // Navigation properties

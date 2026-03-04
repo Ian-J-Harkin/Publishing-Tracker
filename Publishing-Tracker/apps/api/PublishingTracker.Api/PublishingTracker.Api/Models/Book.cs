@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace PublishingTracker.Api.Models
 {
-    public class Book
+    public class Book : IEntity
     {
         public int Id { get; set; }
         public int UserId { get; set; }
@@ -14,7 +14,10 @@ namespace PublishingTracker.Api.Models
         public decimal? BasePrice { get; set; }
         public string? Genre { get; set; }
         public string? Description { get; set; }
+        [Auditable(isCreationTime: true)]
         public DateTime CreatedAt { get; set; }
+
+        [Auditable]
         public DateTime UpdatedAt { get; set; }
 
         // Navigation properties

@@ -5,10 +5,10 @@ namespace PublishingTracker.Api.Services;
 
 public interface IBookService
 {
-    Task<List<Book>> GetAllAsync(string? searchTerm = null);
-    Task<Book?> GetByIdAsync(int id);
-    Task<Book> CreateAsync(CreateBookDto dto);
-    Task<Book?> UpdateAsync(int id, UpdateBookDto dto);
-    Task DeleteAsync(int id);
-    Task<List<BookPerformanceDto>?> GetPerformanceAsync(int bookId);
+    Task<Result<List<Book>>> GetAllAsync(string? searchTerm = null);
+    Task<Result<Book>> GetByIdAsync(int id);
+    Task<Result<Book>> CreateAsync(CreateBookDto dto);
+    Task<Result<Book>> UpdateAsync(int id, UpdateBookDto dto);
+    Task<Result> DeleteAsync(int id);
+    Task<Result<List<BookPerformanceDto>>> GetPerformanceAsync(int bookId);
 }

@@ -82,6 +82,8 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ICsvImportService, CsvImportService>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 
 // ── Background Import Service (Channel + BackgroundService) ──────

@@ -8,46 +8,60 @@ namespace PublishingTracker.Api.Services;
 
 public class BookService : IBookService
 {
-    private readonly PublishingTrackerDbContext _context;
+    private readonly IRepository<Book> _bookRepository;
+    private readonly IRepository<Sale> _saleRepository;
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<BookService> _logger;
 
     public BookService(
-        PublishingTrackerDbContext context,
+        IRepository<Book> bookRepository,
+        IRepository<Sale> saleRepository,
         ICurrentUserService currentUserService,
         ILogger<BookService> logger)
     {
-        _context = context;
+        _bookRepository = bookRepository;
+        _saleRepository = saleRepository;
         _currentUserService = currentUserService;
         _logger = logger;
     }
 
-    public async Task<List<Book>> GetAllAsync(string? searchTerm = null)
+    public async Task<Result<List<Book>>> GetAllAsync(string? searchTerm = null)
     {
         var userId = _currentUserService.UserId;
+        if (userId == null) return Result<List<Book>>.Failure("User is not authenticated.");
+
         _logger.LogInformation("Fetching books for user {UserId}.", userId);
 
-        return await _context.Books
-            .ForUser(userId!.Value)
+        var books = await _bookRepository.Query()
+            .ForUser(userId.Value)
             .Search(searchTerm)
             .OrderByDescending(b => b.PublicationDate)
             .ThenBy(b => b.Title)
             .ToListAsync();
+
+        return Result<List<Book>>.Success(books);
     }
 
-    public async Task<Book?> GetByIdAsync(int id)
+    public async Task<Result<Book>> GetByIdAsync(int id)
     {
         _logger.LogInformation("Fetching book with ID {BookId}.", id);
-        return await _context.Books.FindAsync(id);
+        var book = await _bookRepository.GetByIdAsync(id);
+
+        if (book == null)
+            return Result<Book>.Failure($"Book with ID {id} not found.");
+
+        // Implicit authorization check
+        if (book.UserId != _currentUserService.UserId)
+            return Result<Book>.Failure("Access denied.");
+
+        return Result<Book>.Success(book);
     }
 
-    public async Task<Book> CreateAsync(CreateBookDto dto)
+    public async Task<Result<Book>> CreateAsync(CreateBookDto dto)
     {
         var userId = _currentUserService.UserId;
         if (userId == null)
-        {
-            throw new UnauthorizedAccessException("User is not authenticated.");
-        }
+            return Result<Book>.Failure("User is not authenticated.");
 
         var book = new Book
         {
@@ -58,26 +72,27 @@ public class BookService : IBookService
             BasePrice = dto.BasePrice,
             Genre = dto.Genre,
             Description = dto.Description,
-            UserId = userId.Value,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            UserId = userId.Value
+            // CreatedAt and UpdatedAt are now handled automatically by the DbContext via [Auditable] attributes!
         };
 
-        _context.Books.Add(book);
-        await _context.SaveChangesAsync();
+        var newBook = await _bookRepository.AddAsync(book);
+        _logger.LogInformation("User {UserId} created a new book (BookId: {BookId}).", userId, newBook.Id);
 
-        _logger.LogInformation("User {UserId} created a new book (BookId: {BookId}).", userId, book.Id);
-        return book;
+        return Result<Book>.Success(newBook);
     }
 
-    public async Task<Book?> UpdateAsync(int id, UpdateBookDto dto)
+    public async Task<Result<Book>> UpdateAsync(int id, UpdateBookDto dto)
     {
-        var book = await _context.Books.FindAsync(id);
+        var book = await _bookRepository.GetByIdAsync(id);
         if (book == null)
         {
             _logger.LogWarning("Book with ID {BookId} not found for update.", id);
-            return null;
+            return Result<Book>.Failure($"Book with ID {id} not found.");
         }
+
+        if (book.UserId != _currentUserService.UserId)
+            return Result<Book>.Failure("Access denied.");
 
         if (dto.Title != null) book.Title = dto.Title;
         if (dto.Author != null) book.Author = dto.Author;
@@ -86,45 +101,48 @@ public class BookService : IBookService
         if (dto.BasePrice.HasValue) book.BasePrice = dto.BasePrice;
         if (dto.Genre != null) book.Genre = dto.Genre;
         if (dto.Description != null) book.Description = dto.Description;
-        book.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await _bookRepository.UpdateAsync(book);
         _logger.LogInformation("Book with ID {BookId} was updated.", id);
-        return book;
+
+        return Result<Book>.Success(book);
     }
 
-    public async Task DeleteAsync(int id)
+    public async Task<Result> DeleteAsync(int id)
     {
-        var book = await _context.Books.FindAsync(id);
+        var book = await _bookRepository.GetByIdAsync(id);
         if (book == null)
         {
             _logger.LogWarning("Book with ID {BookId} not found for deletion.", id);
-            return;
+            return Result.Failure($"Book with ID {id} not found.");
         }
 
-        _context.Books.Remove(book);
-        await _context.SaveChangesAsync();
+        if (book.UserId != _currentUserService.UserId)
+            return Result.Failure("Access denied.");
 
+        await _bookRepository.DeleteAsync(book);
         _logger.LogInformation("Book with ID {BookId} was deleted.", id);
+
+        return Result.Success();
     }
 
-    public async Task<List<BookPerformanceDto>?> GetPerformanceAsync(int bookId)
+    public async Task<Result<List<BookPerformanceDto>>> GetPerformanceAsync(int bookId)
     {
         var userId = _currentUserService.UserId;
         if (userId == null)
-        {
-            return null; // Implicit authorization failure
-        }
+            return Result<List<BookPerformanceDto>>.Failure("User is not authenticated.");
 
-        var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == bookId && b.UserId == userId);
-        if (book == null)
+        var book = await _bookRepository.GetByIdAsync(bookId);
+        if (book == null || book.UserId != userId)
         {
             _logger.LogWarning("User {UserId} tried to access performance data for a book they do not own (BookId: {BookId}).", userId, bookId);
-            return null; // Not found or not owned
+            return Result<List<BookPerformanceDto>>.Failure("Book not found or access denied.");
         }
 
         _logger.LogInformation("Fetching performance data for BookId {BookId} for User {UserId}.", bookId, userId);
-        var performanceData = await _context.Sales
+        
+        var performanceData = await _saleRepository.Query()
+            .Include(s => s.Platform)
             .Where(s => s.BookId == bookId)
             .GroupBy(s => new { s.Platform.Name, s.Currency })
             .Select(g => new BookPerformanceDto 
@@ -135,6 +153,6 @@ public class BookService : IBookService
             })
             .ToListAsync();
 
-        return performanceData;
+        return Result<List<BookPerformanceDto>>.Success(performanceData);
     }
 }

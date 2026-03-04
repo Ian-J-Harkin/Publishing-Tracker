@@ -1,6 +1,6 @@
 namespace PublishingTracker.Api.Models;
 
-public class Platform
+public class Platform : IEntity
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -8,6 +8,7 @@ public class Platform
     public decimal CommissionRate { get; set; }
     public string? ContactEmail { get; set; }
     public bool IsActive { get; set; } = true;
+    [Auditable(isCreationTime: true)]
     public DateTime CreatedAt { get; set; }
     public List<Sale> Sales { get; set; } = new();
 }

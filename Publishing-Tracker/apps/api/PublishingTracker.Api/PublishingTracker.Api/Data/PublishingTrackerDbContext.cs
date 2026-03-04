@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Models.Dtos;
+using System.Reflection;
+using PublishingTracker.Api.Models;
 
 namespace PublishingTracker.Api.Data;
 
@@ -35,7 +37,37 @@ public class PublishingTrackerDbContext : DbContext
         {
             entity.Property(e => e.CommissionRate).HasPrecision(5, 4);
         });
+    }
 
-       
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
+
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in entries)
+        {
+            var properties = entry.Entity.GetType().GetProperties()
+                .Where(p => p.IsDefined(typeof(AuditableAttribute), inherit: true));
+
+            foreach (var property in properties)
+            {
+                var attr = property.GetCustomAttribute<AuditableAttribute>(inherit: true);
+                if (attr != null)
+                {
+                    if (entry.State == EntityState.Added)
+                    {
+                        property.SetValue(entry.Entity, now);
+                    }
+                    else if (entry.State == EntityState.Modified && !attr.IsCreationTime)
+                    {
+                        property.SetValue(entry.Entity, now);
+                    }
+                }
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
     }
 }
