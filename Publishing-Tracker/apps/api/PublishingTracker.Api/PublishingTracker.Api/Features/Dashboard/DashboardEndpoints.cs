@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 
 namespace PublishingTracker.Api.Features.Dashboard;
 

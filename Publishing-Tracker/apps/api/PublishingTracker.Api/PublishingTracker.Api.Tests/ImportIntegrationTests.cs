@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Testing;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 using Xunit;
 using PublishingTracker.Api.Data;
 using Microsoft.Extensions.DependencyInjection;

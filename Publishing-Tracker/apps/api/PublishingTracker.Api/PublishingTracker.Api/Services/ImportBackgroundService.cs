@@ -6,6 +6,9 @@ using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using System.Globalization;
+using PublishingTracker.Domain.Entities;
+using PublishingTracker.Domain;
+using PublishingTracker.Domain.Dtos;
 
 namespace PublishingTracker.Api.Services;
 
@@ -30,10 +33,10 @@ public class ImportBackgroundService : BackgroundService
 
     // ── Generic Delegate ───────────────────────────────────────────
     /// <summary>
-    /// A generic delegate for transforming an import row before persistence.
+    /// A generic delegate for transforming an import row before persistence.   
     /// Can be replaced or extended without modifying this class.
     /// </summary>
-    public delegate Sale RowTransformer(CsvReader csv, Models.Dtos.ColumnMappingDto mapping, Book book, Platform platform);
+    public delegate Sale RowTransformer(CsvReader csv, ColumnMappingDto mapping, Book book, Platform platform);
 
     public ImportBackgroundService(
         Channel<ImportRequest> channel,
@@ -131,7 +134,8 @@ public class ImportBackgroundService : BackgroundService
                     var book = userBooks.FirstOrDefault(b => b.Title.Equals(bookTitle, StringComparison.OrdinalIgnoreCase));
                     if (book == null)
                     {
-                        book = new Book { UserId = request.UserId, Title = bookTitle!, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                        // Use the domain constructor which enforces invariants instead of setting private setters
+                        book = new Book(request.UserId, bookTitle!, string.Empty);
                         db.Books.Add(book);
                         await db.SaveChangesAsync(ct);
                         userBooks.Add(book);

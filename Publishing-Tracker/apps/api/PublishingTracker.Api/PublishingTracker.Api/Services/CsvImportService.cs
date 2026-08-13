@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 using System.Globalization;
 
 namespace PublishingTracker.Api.Services;
@@ -82,7 +82,8 @@ public class CsvImportService : ICsvImportService
                     var book = userBooks.FirstOrDefault(b => b.Title.Equals(bookTitle, StringComparison.OrdinalIgnoreCase));
                     if (book == null)
                     {
-                        book = new Book { UserId = userId, Title = bookTitle!, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+                        // Use domain constructor to set required fields; author unknown in import so provide empty string
+                        book = new Book(userId, bookTitle!, string.Empty);
                         _db.Books.Add(book);
                         await _db.SaveChangesAsync(); // Save to get ID
                         userBooks.Add(book);

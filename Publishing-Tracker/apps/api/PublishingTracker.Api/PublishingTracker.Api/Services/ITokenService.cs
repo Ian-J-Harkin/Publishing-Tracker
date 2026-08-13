@@ -1,4 +1,4 @@
-using PublishingTracker.Api.Models;
+using PublishingTracker.Api.Domain.Entities;
 
 namespace PublishingTracker.Api.Services
 {

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using PublishingTracker.Api.Models;
-
+using PublishingTracker.Domain;
 namespace PublishingTracker.Api.Data;
 
 /// <summary>

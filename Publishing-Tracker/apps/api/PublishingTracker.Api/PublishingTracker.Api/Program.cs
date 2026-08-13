@@ -1,11 +1,10 @@
-using System.Threading.Channels;
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using PublishingTracker.Api.Application.Interfaces;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Features.Auth;
 using PublishingTracker.Api.Features.Books;
@@ -15,13 +14,27 @@ using PublishingTracker.Api.Features.Platforms;
 using PublishingTracker.Api.Features.Sales;
 using PublishingTracker.Api.Middleware;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Api.Persistence.Repositories;
 using PublishingTracker.Api.Services;
+using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Persistence.Repositories;
+using System.Text;
+using System.Threading.Channels;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 
+// Register the Repository (Infrastructure)
+builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+builder.Services.AddScoped<IJwtGenerator, JwtGenerator>(); // wrapper around TokenService
+
+// Register MediatR (Application)
+// This scans the current assembly to find your CreateBookCommandHandler automatically
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -79,8 +92,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IBookService, BookService>();
+//builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+//builder.Services.AddScoped<IBookService, BookService>();
 builder.Services.AddScoped<ICsvImportService, CsvImportService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddMemoryCache();

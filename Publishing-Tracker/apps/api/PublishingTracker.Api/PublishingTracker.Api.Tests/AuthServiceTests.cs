@@ -1,7 +1,7 @@
 using Moq;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Api.Services;
 using Xunit;
 using Microsoft.EntityFrameworkCore;

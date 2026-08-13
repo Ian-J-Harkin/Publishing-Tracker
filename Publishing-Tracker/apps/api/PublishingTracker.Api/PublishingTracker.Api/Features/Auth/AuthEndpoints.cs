@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Api.Services;
 
 namespace PublishingTracker.Api.Features.Auth;

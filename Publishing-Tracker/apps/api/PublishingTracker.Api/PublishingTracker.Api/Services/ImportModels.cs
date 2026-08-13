@@ -1,3 +1,5 @@
+using PublishingTracker.Domain.Dtos;
+
 namespace PublishingTracker.Api.Services;
 
 /// <summary>
@@ -24,5 +26,5 @@ public class ImportRequest
     public int JobId { get; init; }
     public string FilePath { get; init; } = string.Empty;
     public string FileName { get; init; } = string.Empty;
-    public Models.Dtos.ColumnMappingDto Mapping { get; init; } = null!;
+    public ColumnMappingDto Mapping { get; init; } = null!;
 }

@@ -1,4 +1,4 @@
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 
 namespace PublishingTracker.Api.Services;
 

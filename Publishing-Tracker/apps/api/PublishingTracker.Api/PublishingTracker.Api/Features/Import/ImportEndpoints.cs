@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Api.Services;
 
 namespace PublishingTracker.Api.Features.Import;

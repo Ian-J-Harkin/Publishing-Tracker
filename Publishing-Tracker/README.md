@@ -2,6 +2,8 @@
 
 A full-stack application for managing book publications and sales tracking. Built with .NET Web API backend and dual frontend options (React and Angular).
 
+> **Note:** The backend API is currently undergoing a Phase 2 refactor to migrate from a legacy layered architecture to **Clean Architecture** with **CQRS/MediatR**. Some legacy services (like `AuthService`) are actively being dismantled into Commands and Queries. See `Docs_gemini/clean_architecture_phase2_walkthrough.md` for details.
+
 **Tech Stack:**
 - Backend: .NET 8 Web API
 - Frontend (Primary): React with Vite

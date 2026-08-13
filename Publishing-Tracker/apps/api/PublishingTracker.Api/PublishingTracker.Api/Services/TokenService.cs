@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using PublishingTracker.Api.Models;
+using PublishingTracker.Api.Domain.Entities;
 
 namespace PublishingTracker.Api.Services
 {

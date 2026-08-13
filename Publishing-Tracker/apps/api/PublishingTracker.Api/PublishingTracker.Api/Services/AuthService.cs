@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
+using PublishingTracker.Api.Domain.Entities;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
 
 namespace PublishingTracker.Api.Services
 {

@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
-using PublishingTracker.Api.Services;
-
+using PublishingTracker.Domain.Dtos;
+using MediatR;
+using PublishingTracker.Application.Books.Commands;
+using PublishingTracker.Application.Books.Queries; 
 namespace PublishingTracker.Api.Features.Books;
 
 public static class BookEndpoints
@@ -11,15 +12,34 @@ public static class BookEndpoints
     {
         var booksGroup = app.MapGroup("/api/books").RequireAuthorization();
 
-        booksGroup.MapGet("/", async ([FromServices] IBookService bookService, [FromQuery] string? search) =>
+        booksGroup.MapPost("/", async ([FromServices] IMediator mediator, CreateBookDto createBookDto) =>
         {
-            var result = await bookService.GetAllAsync(search);
+            // 1. Create the command from the incoming DTO
+            var command = new CreateBookCommand(createBookDto.Title, createBookDto.Author, createBookDto.ISBN);
+
+            // 2. Send the command through MediatR. 
+            // MediatR will automatically find your CreateBookCommandHandler and execute it!
+            var result = await mediator.Send(command);
+
+            if (!result.IsSuccess)
+                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+
+            return Results.Created($"/api/books/{result.Value}", result.Value);
+        });
+
+        booksGroup.MapGet("/", async ([FromServices] IMediator mediator, [FromQuery] string? search) =>
+        {
+            // TODO: adjust pagination parameters as needed
+            var query = new GetBooksQuery(search, null, null, 1, 10);
+            var result = await mediator.Send(query);
             return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.ErrorMessage);
         });
 
-        booksGroup.MapGet("/{id}", async ([FromServices] IBookService bookService, int id) =>
+        booksGroup.MapGet("/{id}", async ([FromServices] IMediator mediator, int id) =>
         {
-            var result = await bookService.GetByIdAsync(id);
+            // TODO: implement GetBookByIdQuery and its handler
+            var query = new GetBookByIdQuery(id);
+            var result = await mediator.Send(query);
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
@@ -29,18 +49,12 @@ public static class BookEndpoints
             return Results.Ok(result.Value);
         });
 
-        booksGroup.MapPost("/", async ([FromServices] IBookService bookService, CreateBookDto createBookDto) =>
-        {
-            var result = await bookService.CreateAsync(createBookDto);
-            if (!result.IsSuccess)
-                return result.ErrorMessage == "User is not authenticated." ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+        // Deprecated endpoint – creation now handled by the MediatR command at the top of the file (line 15‑28).
 
-            return Results.Created($"/api/books/{result.Value!.Id}", result.Value);
-        });
-
-        booksGroup.MapPut("/{id}", async ([FromServices] IBookService bookService, int id, UpdateBookDto updateBookDto) =>
+        booksGroup.MapPut("/{id}", async ([FromServices] IMediator mediator, int id, UpdateBookDto updateBookDto) =>
         {
-            var result = await bookService.UpdateAsync(id, updateBookDto);
+            var command = new UpdateBookCommand(id, updateBookDto.Title, updateBookDto.Author, updateBookDto.ISBN);
+            var result = await mediator.Send(command);
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
@@ -50,9 +64,10 @@ public static class BookEndpoints
             return Results.Ok(result.Value);
         });
 
-        booksGroup.MapDelete("/{id}", async ([FromServices] IBookService bookService, int id) =>
+        booksGroup.MapDelete("/{id}", async ([FromServices] IMediator mediator, int id) =>
         {
-            var result = await bookService.DeleteAsync(id);
+            var command = new DeleteBookCommand(id);
+            var result = await mediator.Send(command);
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
@@ -62,9 +77,10 @@ public static class BookEndpoints
             return Results.NoContent();
         });
 
-        booksGroup.MapGet("/{id}/performance", async ([FromServices] IBookService bookService, int id) =>
+        booksGroup.MapGet("/{id}/performance", async ([FromServices] IMediator mediator, int id) =>
         {
-            var result = await bookService.GetPerformanceAsync(id);
+            var query = new GetBookPerformanceQuery(id);
+            var result = await mediator.Send(query);
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("access denied"))

@@ -2,7 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Models.Dtos;
+using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Domain;
+
+using PublishingTracker.Domain.Entities;
 
 namespace PublishingTracker.Api.Services;
 
@@ -57,56 +61,56 @@ public class BookService : IBookService
         return Result<Book>.Success(book);
     }
 
-    public async Task<Result<Book>> CreateAsync(CreateBookDto dto)
-    {
-        var userId = _currentUserService.UserId;
-        if (userId == null)
-            return Result<Book>.Failure("User is not authenticated.");
+    //public async Task<Result<Book>> CreateAsync(CreateBookDto dto)
+    //{
+    //    var userId = _currentUserService.UserId;
+    //    if (userId == null)
+    //        return Result<Book>.Failure("User is not authenticated.");
 
-        var book = new Book
-        {
-            Title = dto.Title,
-            Author = dto.Author,
-            ISBN = dto.ISBN,
-            PublicationDate = dto.PublicationDate,
-            BasePrice = dto.BasePrice,
-            Genre = dto.Genre,
-            Description = dto.Description,
-            UserId = userId.Value
-            // CreatedAt and UpdatedAt are now handled automatically by the DbContext via [Auditable] attributes!
-        };
+    //    var book = new Book
+    //    {
+    //        Title = dto.Title,
+    //        Author = dto.Author,
+    //        ISBN = dto.ISBN,
+    //        PublicationDate = dto.PublicationDate,
+    //        BasePrice = dto.BasePrice,
+    //        Genre = dto.Genre,
+    //        Description = dto.Description,
+    //        UserId = userId.Value
+    //        // CreatedAt and UpdatedAt are now handled automatically by the DbContext via [Auditable] attributes!
+    //    };
 
-        var newBook = await _bookRepository.AddAsync(book);
-        _logger.LogInformation("User {UserId} created a new book (BookId: {BookId}).", userId, newBook.Id);
+    //    var newBook = await _bookRepository.AddAsync(book);
+    //    _logger.LogInformation("User {UserId} created a new book (BookId: {BookId}).", userId, newBook.Id);
 
-        return Result<Book>.Success(newBook);
-    }
+    //    return Result<Book>.Success(newBook);
+    //}
 
-    public async Task<Result<Book>> UpdateAsync(int id, UpdateBookDto dto)
-    {
-        var book = await _bookRepository.GetByIdAsync(id);
-        if (book == null)
-        {
-            _logger.LogWarning("Book with ID {BookId} not found for update.", id);
-            return Result<Book>.Failure($"Book with ID {id} not found.");
-        }
+    //public async Task<Result<Book>> UpdateAsync(int id, UpdateBookDto dto)
+    //{
+    //    var book = await _bookRepository.GetByIdAsync(id);
+    //    if (book == null)
+    //    {
+    //        _logger.LogWarning("Book with ID {BookId} not found for update.", id);
+    //        return Result<Book>.Failure($"Book with ID {id} not found.");
+    //    }
 
-        if (book.UserId != _currentUserService.UserId)
-            return Result<Book>.Failure("Access denied.");
+    //    if (book.UserId != _currentUserService.UserId)
+    //        return Result<Book>.Failure("Access denied.");
 
-        if (dto.Title != null) book.Title = dto.Title;
-        if (dto.Author != null) book.Author = dto.Author;
-        if (dto.ISBN != null) book.ISBN = dto.ISBN;
-        if (dto.PublicationDate.HasValue) book.PublicationDate = dto.PublicationDate;
-        if (dto.BasePrice.HasValue) book.BasePrice = dto.BasePrice;
-        if (dto.Genre != null) book.Genre = dto.Genre;
-        if (dto.Description != null) book.Description = dto.Description;
+    //    if (dto.Title != null) book.Title = dto.Title;
+    //    if (dto.Author != null) book.Author = dto.Author;
+    //    if (dto.ISBN != null) book.ISBN = dto.ISBN;
+    //    if (dto.PublicationDate.HasValue) book.PublicationDate = dto.PublicationDate;
+    //    if (dto.BasePrice.HasValue) book.BasePrice = dto.BasePrice;
+    //    if (dto.Genre != null) book.Genre = dto.Genre;
+    //    if (dto.Description != null) book.Description = dto.Description;
 
-        await _bookRepository.UpdateAsync(book);
-        _logger.LogInformation("Book with ID {BookId} was updated.", id);
+    //    await _bookRepository.UpdateAsync(book);
+    //    _logger.LogInformation("Book with ID {BookId} was updated.", id);
 
-        return Result<Book>.Success(book);
-    }
+    //    return Result<Book>.Success(book);
+    //}
 
     public async Task<Result> DeleteAsync(int id)
     {
