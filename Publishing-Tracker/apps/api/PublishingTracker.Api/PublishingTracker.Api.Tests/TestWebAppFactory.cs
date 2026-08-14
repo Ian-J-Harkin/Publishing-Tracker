@@ -68,7 +68,8 @@ namespace PublishingTracker.Api.Tests
                     dbContext.Database.EnsureCreated();
                     if (!dbContext.Users.Any(u => u.Email == "test@test.com"))
                     {
-                        dbContext.Users.Add(new User { Email = "test@test.com", PasswordHash = BCrypt.Net.BCrypt.HashPassword("password123", BCrypt.Net.BCrypt.GenerateSalt(), false, BCrypt.Net.HashType.SHA256) });
+                        var passHash = BCrypt.Net.BCrypt.HashPassword("password123", BCrypt.Net.BCrypt.GenerateSalt(), false, BCrypt.Net.HashType.SHA256);
+                        dbContext.Users.Add(User.Create("test@test.com", passHash, "Test", "User"));
                         dbContext.SaveChanges();
                     }
                 }

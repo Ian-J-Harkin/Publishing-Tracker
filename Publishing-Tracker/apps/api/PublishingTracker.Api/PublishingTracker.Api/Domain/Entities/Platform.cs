@@ -1,7 +1,8 @@
-namespace PublishingTracker.Domain;
+namespace PublishingTracker.Api.Domain.Entities;
 
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Domain;
+
 public class Platform : IEntity
 {
     public int Id { get; set; }

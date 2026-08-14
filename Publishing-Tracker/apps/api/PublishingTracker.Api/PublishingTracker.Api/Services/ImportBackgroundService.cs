@@ -7,8 +7,8 @@ using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using System.Globalization;
 using PublishingTracker.Domain.Entities;
-using PublishingTracker.Domain;
 using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Api.Domain.Entities;
 
 namespace PublishingTracker.Api.Services;
 

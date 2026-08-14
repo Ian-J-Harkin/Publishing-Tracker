@@ -4,9 +4,9 @@ using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Domain;
 
 using PublishingTracker.Domain.Entities;
+using PublishingTracker.Api.Domain.Entities;
 
 namespace PublishingTracker.Api.Services;
 

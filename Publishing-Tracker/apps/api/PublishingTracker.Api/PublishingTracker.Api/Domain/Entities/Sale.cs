@@ -1,6 +1,7 @@
 using System;
+using PublishingTracker.Domain;
 using PublishingTracker.Domain.Entities;
-namespace  PublishingTracker.Domain
+namespace  PublishingTracker.Api.Domain.Entities
 {
     public class Sale : IEntity
     {

@@ -53,7 +53,7 @@ namespace PublishingTracker.Api.Tests
         {
             // Arrange
             var request = new LoginRequest { Email = "test@example.com", Password = "Password123" };
-            var user = new User { Email = request.Email, PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password), FirstName = "Test", LastName = "User" };
+            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword(request.Password), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             _mockTokenService.Setup(s => s.CreateToken(It.IsAny<User>())).Returns("test_token");
@@ -72,7 +72,7 @@ namespace PublishingTracker.Api.Tests
         {
             // Arrange
             var request = new RegisterRequest { Email = "test@example.com", Password = "Password123", FirstName = "Test", LastName = "User" };
-            var user = new User { Email = request.Email, PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password), FirstName = "Test", LastName = "User" };
+            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword(request.Password), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
@@ -88,7 +88,7 @@ namespace PublishingTracker.Api.Tests
         {
             // Arrange
             var request = new LoginRequest { Email = "test@example.com", Password = "Password123" };
-            var user = new User { Email = request.Email, PasswordHash = BCrypt.Net.BCrypt.HashPassword("WrongPassword"), FirstName = "Test", LastName = "User" };
+            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword("WrongPassword"), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
