@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using PublishingTracker.Application.Common.Interfaces; 
-namespace PublishingTracker.Api.Services;
+using PublishingTracker.Application.Common.Interfaces;
+namespace PublishingTracker.Api.Infrastructure.Authentication;
 
 public class CurrentUserService : ICurrentUserService
 {

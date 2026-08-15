@@ -9,7 +9,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Api.Services;
+using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Domain.Entities;
+using PublishingTracker.Api.Domain.Entities;
 using Microsoft.Extensions.Hosting;
 
 namespace PublishingTracker.Api.Tests

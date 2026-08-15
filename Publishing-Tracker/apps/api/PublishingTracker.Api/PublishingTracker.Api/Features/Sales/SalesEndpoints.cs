@@ -1,10 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Api.Data;
-using PublishingTracker.Api.Extensions;
-using PublishingTracker.Api.Models;
-using PublishingTracker.Domain;
 using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Sales.Queries;
+using PublishingTracker.Application.Sales.Commands;
+using MediatR;
 
 namespace PublishingTracker.Api.Features.Sales;
 
@@ -15,103 +13,58 @@ public static class SalesEndpoints
         var salesGroup = app.MapGroup("/api/sales").RequireAuthorization();
 
         salesGroup.MapGet("/", async (
-            [FromServices] PublishingTrackerDbContext db, 
-            HttpContext httpContext, 
+            [FromServices] IMediator mediator,             
             [FromQuery] int? bookId,
             [FromQuery] int? platformId,
             [FromQuery] DateTime? startDate,
-            [FromQuery] DateTime? endDate,
-            [FromServices] ILoggerFactory loggerFactory) =>
+            [FromQuery] DateTime? endDate) =>
         {
-            var logger = loggerFactory.CreateLogger("SalesEndpoints");
-            try
-            {
-                if (!httpContext.TryGetUserId(out var userId, out var errorResult))
-                    return errorResult!;
-
-                var sales = await db.Sales
-                    .Include(s => s.Book)
-                    .Include(s => s.Platform)
-                    .ForUser(userId)
-                    .FilterByBook(bookId)
-                    .FilterByPlatform(platformId)
-                    .InDateRange(startDate, endDate)
-                    .OrderByDescending(s => s.SaleDate)
-                    .Select(s => s.ToDto())
-                    .ToListAsync();
-
-                return Results.Ok(sales);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching filtered sales.");
-                return Results.Problem("Failed to fetch sales.");
-            }
+            var query = new GetSalesQuery(bookId, platformId, startDate, endDate);
+            var result = await mediator.Send(query);      
+            
+            if (!result.IsSuccess)            
+                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+            
+            return Results.Ok(result.Value);
         });
 
         salesGroup.MapGet("/summary", async (
-            [FromServices] PublishingTrackerDbContext db, 
-            HttpContext httpContext,
+            [FromServices] IMediator mediator, 
             [FromQuery] DateTime? startDate,
             [FromQuery] DateTime? endDate) =>
         {
-            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
-                return errorResult!;
-
-            var summary = await db.Sales
-                .ForUser(userId)
-                .InDateRange(startDate, endDate)
-                .GroupBy(s => 1)
-                .Select(g => new SalesSummaryDto
-                {
-                    TotalRevenue = g.Sum(s => s.Revenue),
-                    TotalUnitsSold = g.Sum(s => s.Quantity),
-                    AverageRoyalty = g.Count() > 0 ? g.Sum(s => s.Royalty) / g.Count() : 0,
-                    SalesCount = g.Count()
-                }).FirstOrDefaultAsync() ?? new SalesSummaryDto();
-
-            return Results.Ok(summary);
+            var query = new GetSalesSummaryQuery(startDate, endDate);
+            var result = await mediator.Send(query);
+            
+            if (!result.IsSuccess)
+                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                
+            return Results.Ok(result.Value);
         });
 
-        salesGroup.MapPost("/", async ([FromServices] PublishingTrackerDbContext db, CreateSaleDto createSaleDto, HttpContext httpContext, [FromServices] ILoggerFactory loggerFactory) =>
+        salesGroup.MapPost("/", async ([FromServices] IMediator mediator, CreateSaleDto createSaleDto) =>
         {
-            var logger = loggerFactory.CreateLogger("SalesEndpoints");
-            if (!httpContext.TryGetUserId(out var userId, out var errorResult))
-                return errorResult!;
-
-            var book = await db.Books.FirstOrDefaultAsync(b => b.Id == createSaleDto.BookId && b.UserId == userId);
-            if (book == null)
+            var command = new CreateSaleCommand(
+                createSaleDto.BookId,
+                createSaleDto.PlatformId,
+                createSaleDto.SaleDate,
+                createSaleDto.Quantity > 0 ? createSaleDto.Quantity : 1,
+                createSaleDto.UnitPrice,
+                createSaleDto.Royalty,
+                createSaleDto.Currency
+            );
+            
+            var result = await mediator.Send(command);
+            
+            if (!result.IsSuccess)
             {
-                logger.LogWarning("User {UserId} tried to create a sale for a book they do not own (BookId: {BookId})", userId, createSaleDto.BookId);
-                return Results.NotFound("Book not found or does not belong to the user.");
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("not found"))
+                    return Results.NotFound(result.ErrorMessage);
+                    
+                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
             }
-
-            var platform = await db.Platforms.FirstOrDefaultAsync(p => p.Id == createSaleDto.PlatformId);
-            if (platform == null)
-            {
-                logger.LogWarning("Platform with ID {PlatformId} not found", createSaleDto.PlatformId);
-                return Results.NotFound("Platform not found.");
-            }
-
-            var sale = new Sale
-            {
-                BookId = createSaleDto.BookId,
-                PlatformId = createSaleDto.PlatformId,
-                SaleDate = createSaleDto.SaleDate,
-                Quantity = createSaleDto.Quantity,
-                UnitPrice = createSaleDto.UnitPrice,
-                Royalty = createSaleDto.Royalty,
-                Revenue = createSaleDto.Quantity * createSaleDto.Royalty,
-                Currency = createSaleDto.Currency,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            db.Sales.Add(sale);
-            await db.SaveChangesAsync();
-
-            logger.LogInformation("User {UserId} created a sale (SaleId: {SaleId}) for BookId {BookId}", userId, sale.Id, sale.BookId);
-
-            return Results.Created($"/api/sales/{sale.Id}", sale.ToDto(book.Title, platform.Name));
+                
+            return Results.Created($"/api/sales/{result.Value?.Id}", result.Value);
         });
     }
 }

@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
-using Npgsql;
-using PublishingTracker.Api.Application.Interfaces;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Features.Auth;
 using PublishingTracker.Api.Features.Books;
@@ -12,12 +9,13 @@ using PublishingTracker.Api.Features.Dashboard;
 using PublishingTracker.Api.Features.Import;
 using PublishingTracker.Api.Features.Platforms;
 using PublishingTracker.Api.Features.Sales;
+using PublishingTracker.Api.Infrastructure.Authentication;
 using PublishingTracker.Api.Middleware;
-using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Persistence.Repositories;
 using PublishingTracker.Api.Services;
+using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Infrastructure.Authentication;
 using PublishingTracker.Persistence.Repositories;
 using System.Text;
 using System.Threading.Channels;
@@ -29,8 +27,6 @@ var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get
 // Register the Repository (Infrastructure)
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
-builder.Services.AddScoped<IJwtGenerator, JwtGenerator>(); // wrapper around TokenService
 
 // Register MediatR (Application)
 // This scans the current assembly to find your CreateBookCommandHandler automatically
@@ -90,11 +86,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<ITokenService, TokenService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
+// builder.Services.AddScoped<IAuthService, AuthService>(); // Replaced by MediatR handlers
 builder.Services.AddHttpContextAccessor();
-//builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 //builder.Services.AddScoped<IBookService, BookService>();
-builder.Services.AddScoped<ICsvImportService, CsvImportService>();
+builder.Services.AddScoped<ICsvReader, CsvReaderService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");

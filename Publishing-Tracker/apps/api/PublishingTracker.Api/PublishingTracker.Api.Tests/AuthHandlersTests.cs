@@ -1,29 +1,38 @@
 using Moq;
 using PublishingTracker.Api.Data;
 using PublishingTracker.Api.Models;
+using PublishingTracker.Domain.Entities;
+using PublishingTracker.Api.Domain.Entities;
 using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Api.Services;
+using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Api.Features.Auth.Commands;
+using PublishingTracker.Api.Features.Auth.Queries;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 using System;
+using System.Threading;
 
 namespace PublishingTracker.Api.Tests
 {
-    public class AuthServiceTests : IDisposable
+    public class AuthHandlersTests : IDisposable
     {
         private readonly PublishingTrackerDbContext _context;
         private readonly Mock<ITokenService> _mockTokenService;
-        private readonly AuthService _authService;
+        private readonly RegisterUserCommandHandler _registerHandler;
+        private readonly LoginUserQueryHandler _loginHandler;
 
-        public AuthServiceTests()
+        public AuthHandlersTests()
         {
             var options = new DbContextOptionsBuilder<PublishingTrackerDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
             _context = new PublishingTrackerDbContext(options);
             _mockTokenService = new Mock<ITokenService>();
-            _authService = new AuthService(_context, _mockTokenService.Object);
+            
+            _registerHandler = new RegisterUserCommandHandler(_context, _mockTokenService.Object);
+            _loginHandler = new LoginUserQueryHandler(_context, _mockTokenService.Object);
         }
 
         public void Dispose()
@@ -33,33 +42,33 @@ namespace PublishingTracker.Api.Tests
         }
 
         [Fact]
-        public async Task RegisterAsync_WithValidUser_ReturnsAuthResponse()
+        public async Task RegisterUserCommand_WithValidUser_ReturnsAuthResponse()
         {
             // Arrange
-            var request = new RegisterRequest { Email = "test@example.com", Password = "Password123", FirstName = "Test", LastName = "User" };
+            var command = new RegisterUserCommand("test@example.com", "Password123", "Test", "User");
             _mockTokenService.Setup(s => s.CreateToken(It.IsAny<User>())).Returns("test_token");
 
             // Act
-            var result = await _authService.RegisterAsync(request);
+            var result = await _registerHandler.Handle(command, CancellationToken.None);
 
             // Assert
             Assert.NotNull(result);
             Assert.Equal("test_token", result.Token);
-            Assert.Equal(request.Email, result.Email);
+            Assert.Equal(command.Email, result.Email);
         }
 
         [Fact]
-        public async Task LoginAsync_WithValidCredentials_ReturnsAuthResponse()
+        public async Task LoginUserQuery_WithValidCredentials_ReturnsAuthResponse()
         {
             // Arrange
-            var request = new LoginRequest { Email = "test@example.com", Password = "Password123" };
-            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword(request.Password), "Test", "User");
+            var query = new LoginUserQuery("test@example.com", "Password123");
+            var user = User.Create(query.Email, BCrypt.Net.BCrypt.HashPassword(query.Password), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             _mockTokenService.Setup(s => s.CreateToken(It.IsAny<User>())).Returns("test_token");
 
             // Act
-            var result = await _authService.LoginAsync(request);
+            var result = await _loginHandler.Handle(query, CancellationToken.None);
 
             // Assert
             Assert.NotNull(result);
@@ -68,36 +77,37 @@ namespace PublishingTracker.Api.Tests
         }
 
         [Fact]
-        public async Task RegisterAsync_WithExistingUser_ReturnsNull()
+        public async Task RegisterUserCommand_WithExistingUser_ReturnsNull()
         {
             // Arrange
-            var request = new RegisterRequest { Email = "test@example.com", Password = "Password123", FirstName = "Test", LastName = "User" };
-            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword(request.Password), "Test", "User");
+            var command = new RegisterUserCommand("test@example.com", "Password123", "Test", "User");
+            var user = User.Create(command.Email, BCrypt.Net.BCrypt.HashPassword(command.Password), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.RegisterAsync(request);
+            var result = await _registerHandler.Handle(command, CancellationToken.None);
 
             // Assert
             Assert.Null(result);
         }
 
         [Fact]
-        public async Task LoginAsync_WithInvalidCredentials_ReturnsNull()
+        public async Task LoginUserQuery_WithInvalidCredentials_ReturnsNull()
         {
             // Arrange
-            var request = new LoginRequest { Email = "test@example.com", Password = "Password123" };
-            var user = User.Create(request.Email, BCrypt.Net.BCrypt.HashPassword("WrongPassword"), "Test", "User");
+            var query = new LoginUserQuery("test@example.com", "Password123");
+            var user = User.Create(query.Email, BCrypt.Net.BCrypt.HashPassword("WrongPassword"), "Test", "User");
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             // Act
-            var result = await _authService.LoginAsync(request);
+            var result = await _loginHandler.Handle(query, CancellationToken.None);
 
             // Assert
             Assert.Null(result);
         }
+
         [Fact]
         public void VerifyPassword_WithCorrectPasswordAndHashType_ReturnsTrue()
         {

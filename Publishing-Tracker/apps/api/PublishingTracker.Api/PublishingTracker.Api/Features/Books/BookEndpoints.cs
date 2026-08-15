@@ -83,7 +83,7 @@ public static class BookEndpoints
             var result = await mediator.Send(query);
             if (!result.IsSuccess)
             {
-                if (result.ErrorMessage != null && result.ErrorMessage.Contains("access denied"))
+                if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
                     return Results.Forbid();
                 return Results.NotFound(result.ErrorMessage);
             }
