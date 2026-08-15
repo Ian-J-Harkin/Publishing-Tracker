@@ -3,10 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Application.Books.Queries;
 
-namespace PublishingTracker.Persistence.Repositories;
+using PublishingTracker.Infrastructure.Persistence;
+
+namespace PublishingTracker.Infrastructure.Persistence.Repositories;
 
 /// <summary>
 /// A generic repository implementation using EF Core.

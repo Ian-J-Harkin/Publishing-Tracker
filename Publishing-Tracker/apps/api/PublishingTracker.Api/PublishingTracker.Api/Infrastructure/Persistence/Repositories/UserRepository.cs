@@ -1,9 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Domain.Entities;
 
-namespace PublishingTracker.Api.Persistence.Repositories
+using PublishingTracker.Infrastructure.Persistence;
+
+namespace PublishingTracker.Infrastructure.Persistence.Repositories
 {
     public class UserRepository : IUserRepository
     {

@@ -1,6 +1,6 @@
 using PublishingTracker.Domain.Dtos;
 
-namespace PublishingTracker.Api.Services;
+namespace PublishingTracker.Infrastructure.Services;
 
 /// <summary>
 /// Event args raised when import processing makes progress or completes.

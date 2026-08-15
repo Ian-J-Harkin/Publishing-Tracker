@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using System.Security.Claims;

@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Api.Services;
+using PublishingTracker.Infrastructure.Services;
+using PublishingTracker.Infrastructure.Services;
 
 namespace PublishingTracker.Api.Features.Import;
 

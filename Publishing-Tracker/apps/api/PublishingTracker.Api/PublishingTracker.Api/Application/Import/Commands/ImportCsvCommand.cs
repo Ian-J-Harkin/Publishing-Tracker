@@ -1,10 +1,14 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Api.Domain.Entities;
 using PublishingTracker.Domain.Entities;
+using PublishingTracker.Api.Domain.Entities;
+using PublishingTracker.Api.Extensions;
+using PublishingTracker.Api.Models;
+using PublishingTracker.Domain;
 using PublishingTracker.Application.Common.Interfaces;
 
 namespace PublishingTracker.Application.Import.Commands;
@@ -113,7 +117,7 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                         decimal.TryParse(record.RoyaltyStr, out var r) ? r : 0m,
                         string.IsNullOrEmpty(currency) ? request.Mapping.DefaultCurrency : currency,
                         record.OrderId,
-                        decimal.TryParse(record.RevenueStr, out var rev) ? rev : null
+                        decimal.TryParse(record.RevenueStr, out var rev) ? (decimal?)rev : null
                     );
 
                     _db.Sales.Add(sale);

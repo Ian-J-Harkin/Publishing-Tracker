@@ -4,7 +4,7 @@ using PublishingTracker.Api.Extensions;
 using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Application.Import.Commands;
 
-namespace PublishingTracker.Api.Services;
+namespace PublishingTracker.Infrastructure.Services;
 
 /// <summary>
 /// A hosted BackgroundService that processes CSV imports off the HTTP request thread.

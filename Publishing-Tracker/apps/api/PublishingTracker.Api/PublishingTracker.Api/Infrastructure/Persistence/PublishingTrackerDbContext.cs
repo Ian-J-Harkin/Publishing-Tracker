@@ -6,7 +6,7 @@ using PublishingTracker.Domain;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Api.Domain.Entities;
 
-namespace PublishingTracker.Api.Data;
+namespace PublishingTracker.Infrastructure.Persistence;
 
 public class PublishingTrackerDbContext : DbContext
 {

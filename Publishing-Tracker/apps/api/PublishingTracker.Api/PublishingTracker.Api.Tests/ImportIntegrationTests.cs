@@ -4,7 +4,8 @@ using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PublishingTracker.Domain.Dtos;
 using Xunit;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 

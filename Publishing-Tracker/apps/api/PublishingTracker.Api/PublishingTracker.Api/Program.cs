@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
-using PublishingTracker.Api.Data;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Features.Auth;
 using PublishingTracker.Api.Features.Books;
 using PublishingTracker.Api.Features.Dashboard;
@@ -11,14 +12,15 @@ using PublishingTracker.Api.Features.Platforms;
 using PublishingTracker.Api.Features.Sales;
 using PublishingTracker.Api.Infrastructure.Authentication;
 using PublishingTracker.Api.Middleware;
-using PublishingTracker.Api.Persistence.Repositories;
-using PublishingTracker.Api.Services;
+using PublishingTracker.Infrastructure.Persistence.Repositories;
+using PublishingTracker.Infrastructure.Services;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Infrastructure.Authentication;
-using PublishingTracker.Persistence.Repositories;
+
 using System.Text;
 using System.Threading.Channels;
+using PublishingTracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
