@@ -13,7 +13,17 @@ const ImportPage = lazy(() => import('./pages/ImportPage'));
 const ImportHistoryPage = lazy(() => import('./pages/ImportHistoryPage'));
 const PlatformsPage = lazy(() => import('./pages/PlatformsPage'));
 const RequestPlatformPage = lazy(() => import('./pages/RequestPlatformPage'));
+const AdminPlatformsPage = lazy(() => import('./pages/AdminPlatformsPage'));
+const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
 const MainLayout = lazy(() => import('./components/layout/MainLayout'));
+
+import { useAuth } from './context/AuthContext';
+
+const AdminRoute = ({ children }: { children: React.ReactElement }) => {
+    const { isAdmin } = useAuth();
+    if (!isAdmin) return <Navigate to="/dashboard" />;
+    return children;
+};
 
 function App() {
     return (
@@ -34,6 +44,8 @@ function App() {
                         <Route path="/import/history" element={<ImportHistoryPage />} />
                         <Route path="/platforms" element={<PlatformsPage />} />
                         <Route path="/platforms/request" element={<RequestPlatformPage />} />
+                        <Route path="/admin/platforms" element={<AdminRoute><AdminPlatformsPage /></AdminRoute>} />
+                        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                     </Route>
                 </Routes>
             </Suspense>

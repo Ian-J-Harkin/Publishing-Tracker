@@ -2,15 +2,13 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Infrastructure.Persistence;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Application.Common.Interfaces;
 
 namespace PublishingTracker.Application.Platforms.Queries;
 
-public record GetPlatformsQuery(string? Search) : IRequest<Result<List<PlatformResponseDto>>>;
+public record GetPlatformsQuery(string? Search, bool IncludeInactive = false) : IRequest<Result<List<PlatformResponseDto>>>;
 
 public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Result<List<PlatformResponseDto>>>
 {
@@ -25,6 +23,18 @@ public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Resul
 
     public async Task<Result<List<PlatformResponseDto>>> Handle(GetPlatformsQuery request, CancellationToken cancellationToken)
     {
+        // When including inactive platforms (admin view), bypass the cache to always show fresh data.
+        if (request.IncludeInactive)
+        {
+            var allPlatforms = await _context.Platforms
+                .Search(request.Search)
+                .OrderBy(p => p.Name)
+                .Select(p => p.ToResponseDto())
+                .ToListAsync(cancellationToken);
+
+            return Result<List<PlatformResponseDto>>.Success(allPlatforms);
+        }
+
         var cacheKey = string.IsNullOrWhiteSpace(request.Search) ? "platforms_all" : $"platforms_search_{request.Search.ToLower()}";
 
         var platforms = await _cache.GetOrCreateAsync(cacheKey, async entry =>
@@ -32,6 +42,7 @@ public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Resul
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
 
             return await _context.Platforms
+                .Where(p => p.IsActive)
                 .Search(request.Search)
                 .OrderBy(p => p.Name)
                 .Select(p => p.ToResponseDto())

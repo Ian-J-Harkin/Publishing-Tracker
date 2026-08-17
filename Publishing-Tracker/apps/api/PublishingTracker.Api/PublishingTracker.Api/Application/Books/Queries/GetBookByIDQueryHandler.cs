@@ -1,4 +1,4 @@
-﻿namespace PublishingTracker.Application.Books.Queries;
+namespace PublishingTracker.Application.Books.Queries;
 using MediatR;
 using PublishingTracker.Api.Models; // Result<T>
 using PublishingTracker.Application.Interfaces;
@@ -31,17 +31,21 @@ public class GetBookByIDQueryHandler : IRequestHandler<GetBookByIdQuery, Result<
         if (book.UserId != userId.Value) return Result<BookResponseDto>.Failure("Access denied.");
 
         var totalSold = book.Sales?.Sum(s => s.Quantity) ?? 0;
-        var totalRevenue = book.Sales?.Sum(s => s.Revenue) ?? 0m;
+        var totalRevenue = book.Sales?.Sum(s => s.BaseCurrencyRevenue) ?? 0m;
 
-        var dto = new BookResponseDto(
-            book.Id,
-            book.Title,
-            book.Author,
-            book.ISBN,
-            book.BasePrice,
-            totalSold,
-            totalRevenue
-        );
+        var dto = new BookResponseDto
+        {
+            Id = book.Id,
+            Title = book.Title,
+            Author = book.Author,
+            ISBN = book.ISBN,
+            PublicationDate = book.PublicationDate,
+            BasePrice = book.BasePrice,
+            Genre = book.Genre,
+            Description = book.Description,
+            TotalSales = totalSold,
+            TotalRevenue = totalRevenue
+        };
 
         return Result<BookResponseDto>.Success(dto);
     }

@@ -7,7 +7,7 @@ using PublishingTracker.Application.Common.Interfaces;
 using MediatR;
 using PublishingTracker.Api.Models; // For Result<T>
 
-public record CreateBookCommand(string Title, string Author, string ISBN) : IRequest<Result<int>>;
+public record CreateBookCommand(string Title, string Author, string? ISBN, DateTime? PublicationDate, decimal? BasePrice, string? Genre, string? Description) : IRequest<Result<int>>;
 
 public class CreateBookCommandHandler : IRequestHandler<CreateBookCommand, Result<int>>
 {
@@ -26,10 +26,7 @@ public class CreateBookCommandHandler : IRequestHandler<CreateBookCommand, Resul
         if (userId == null) return Result<int>.Failure("Unauthorized");
 
         // 1. Create using Domain logic
-        var book = new Book(userId.Value, request.Title, request.Author);
-        
-        // Optional: add other properties via domain methods
-        // book.SetIsbn(request.ISBN);
+        var book = new Book(userId.Value, request.Title, request.Author, request.ISBN, request.PublicationDate, request.BasePrice, request.Genre, request.Description);
 
         // 2. Persist using the Port interface (Dependency Inversion)
         await _bookRepository.AddAsync(book, cancellationToken);

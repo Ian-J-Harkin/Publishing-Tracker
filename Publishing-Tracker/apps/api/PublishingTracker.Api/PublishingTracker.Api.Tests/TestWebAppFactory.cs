@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Models;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Api.Domain.Entities;
 using Microsoft.Extensions.Hosting;
@@ -53,28 +52,40 @@ namespace PublishingTracker.Api.Tests
 
                 services.AddDbContext<PublishingTrackerDbContext>(options =>
                 {
-                    options.UseInMemoryDatabase("TestingDb");
+                    options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=PublishingTracker_IntegrationTests;Trusted_Connection=True;MultipleActiveResultSets=true");
                 });
 
 
             });
         }
 
+        private static readonly object _dbLock = new object();
+        private static bool _dbInitialized = false;
+
         protected override IHost CreateHost(IHostBuilder builder)
         {
             var host = base.CreateHost(builder);
-            using (var scope = host.Services.CreateScope())
+            
+            lock (_dbLock)
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
-                if (dbContext.Database.IsInMemory())
+                if (!_dbInitialized)
                 {
-                    dbContext.Database.EnsureCreated();
-                    if (!dbContext.Users.Any(u => u.Email == "test@test.com"))
+                    using (var scope = host.Services.CreateScope())
                     {
-                        var passHash = BCrypt.Net.BCrypt.HashPassword("password123", BCrypt.Net.BCrypt.GenerateSalt(), false, BCrypt.Net.HashType.SHA256);
-                        dbContext.Users.Add(User.Create("test@test.com", passHash, "Test", "User"));
-                        dbContext.SaveChanges();
+                        var dbContext = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
+                        
+                        // Ensure a clean slate for the test run
+                        dbContext.Database.EnsureDeleted();
+                        dbContext.Database.Migrate();
+
+                        if (!dbContext.Users.Any(u => u.Email == "test@test.com"))
+                        {
+                            var passHash = BCrypt.Net.BCrypt.HashPassword("password123", BCrypt.Net.BCrypt.GenerateSalt(), false, BCrypt.Net.HashType.SHA256);
+                            dbContext.Users.Add(User.Create("test@test.com", passHash, "Test", "User", "Admin"));
+                            dbContext.SaveChanges();
+                        }
                     }
+                    _dbInitialized = true;
                 }
             }
             return host;

@@ -27,7 +27,12 @@ public static class MappingExtensions
         Quantity = sale.Quantity,
         UnitPrice = sale.UnitPrice,
         Royalty = sale.Royalty,
-        Revenue = sale.Revenue
+        Revenue = sale.Revenue,
+        Currency = sale.Currency,
+        BaseCurrencyRevenue = sale.BaseCurrencyRevenue,
+        BaseCurrencyRoyalty = sale.BaseCurrencyRoyalty,
+        ExchangeRate = sale.ExchangeRate,
+        PlatformCommissionRate = sale.PlatformCommissionRate
     };
 
     /// <summary>
@@ -45,7 +50,12 @@ public static class MappingExtensions
         Quantity = sale.Quantity,
         UnitPrice = sale.UnitPrice,
         Royalty = sale.Royalty,
-        Revenue = sale.Revenue
+        Revenue = sale.Revenue,
+        Currency = sale.Currency,
+        BaseCurrencyRevenue = sale.BaseCurrencyRevenue,
+        BaseCurrencyRoyalty = sale.BaseCurrencyRoyalty,
+        ExchangeRate = sale.ExchangeRate,
+        PlatformCommissionRate = sale.PlatformCommissionRate
     };
 
     // ── ImportJob ──────────────────────────────────────────────────

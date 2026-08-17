@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// @ts-ignore
 const { TextEncoder, TextDecoder } = require('util');
 
 globalThis.TextEncoder = TextEncoder;

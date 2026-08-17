@@ -15,7 +15,7 @@ public static class BookEndpoints
         booksGroup.MapPost("/", async ([FromServices] IMediator mediator, CreateBookDto createBookDto) =>
         {
             // 1. Create the command from the incoming DTO
-            var command = new CreateBookCommand(createBookDto.Title, createBookDto.Author, createBookDto.ISBN);
+            var command = new CreateBookCommand(createBookDto.Title, createBookDto.Author, createBookDto.ISBN, createBookDto.PublicationDate, createBookDto.BasePrice, createBookDto.Genre, createBookDto.Description);
 
             // 2. Send the command through MediatR. 
             // MediatR will automatically find your CreateBookCommandHandler and execute it!
@@ -53,7 +53,7 @@ public static class BookEndpoints
 
         booksGroup.MapPut("/{id}", async ([FromServices] IMediator mediator, int id, UpdateBookDto updateBookDto) =>
         {
-            var command = new UpdateBookCommand(id, updateBookDto.Title, updateBookDto.Author, updateBookDto.ISBN);
+            var command = new UpdateBookCommand(id, updateBookDto.Title ?? string.Empty, updateBookDto.Author ?? string.Empty, updateBookDto.ISBN, updateBookDto.PublicationDate, updateBookDto.BasePrice, updateBookDto.Genre, updateBookDto.Description);
             var result = await mediator.Send(command);
             if (!result.IsSuccess)
             {

@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Infrastructure.Persistence;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Api.Extensions;
 using PublishingTracker.Api.Models;
 using PublishingTracker.Domain.Dtos;
@@ -34,7 +33,8 @@ public class CreatePlatformCommandHandler : IRequestHandler<CreatePlatformComman
         var platform = Platform.Create(
             request.Name,
             request.BaseUrl,
-            request.CommissionRate
+            request.CommissionRate,
+            createdByUserId: userId
         );
 
         _context.Platforms.Add(platform);

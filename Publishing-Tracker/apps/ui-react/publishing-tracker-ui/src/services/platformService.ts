@@ -8,12 +8,22 @@ const getPlatforms = async (search?: string): Promise<Platform[]> => {
     return response.data;
 };
 
+const getAdminPlatforms = async (search?: string): Promise<Platform[]> => {
+    const response = await axiosClient.get(API_URL, { params: { search, includeInactive: true } });
+    return response.data;
+};
+
 const requestPlatform = async (platformRequest: PlatformRequest): Promise<void> => {
-    // The backend MapPost is mapped to the root of the platforms group: /api/platforms
     await axiosClient.post(API_URL, platformRequest);
+};
+
+const approvePlatform = async (id: number): Promise<void> => {
+    await axiosClient.put(`${API_URL}/${id}/approve`);
 };
 
 export const platformService = {
     getPlatforms,
-    requestPlatform
+    getAdminPlatforms,
+    requestPlatform,
+    approvePlatform
 };

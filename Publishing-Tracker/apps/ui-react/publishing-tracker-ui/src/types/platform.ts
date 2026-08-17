@@ -3,6 +3,7 @@ export interface Platform {
   name: string;
   baseUrl: string;
   commissionRate: number;
+  isActive: boolean;
 }
 
 export interface PlatformRequest {

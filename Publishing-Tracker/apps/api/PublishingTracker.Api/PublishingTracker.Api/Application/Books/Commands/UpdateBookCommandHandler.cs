@@ -5,7 +5,7 @@ using PublishingTracker.Application.Common.Interfaces;
 using MediatR;
 using PublishingTracker.Api.Models; // For Result<T>
     
-public record UpdateBookCommand(int Id, string Title, string Author, string ISBN) : IRequest<Result<int>>;
+public record UpdateBookCommand(int Id, string Title, string Author, string? ISBN, DateTime? PublicationDate, decimal? BasePrice, string? Genre, string? Description) : IRequest<Result<int>>;
 
 public class UpdateBookCommandHandler : IRequestHandler<UpdateBookCommand, Result<int>>
 {
@@ -31,7 +31,7 @@ public class UpdateBookCommandHandler : IRequestHandler<UpdateBookCommand, Resul
         book.VerifyOwnership(userId.Value);
 
         // Update using Domain logic
-        book.Update(request.Title, request.Author, request.ISBN);
+        book.Update(request.Title, request.Author, request.ISBN, request.PublicationDate, request.BasePrice, request.Genre, request.Description);
         
         // Optional: add other properties via domain methods
         // book.SetIsbn(request.ISBN);

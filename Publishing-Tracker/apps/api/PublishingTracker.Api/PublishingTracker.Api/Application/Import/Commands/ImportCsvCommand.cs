@@ -20,15 +20,18 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
     private readonly PublishingTrackerDbContext _db;
     private readonly ICsvReader _csvReader;
     private readonly ILogger<ImportCsvCommandHandler> _logger;
+    private readonly ICurrencyConverterService _currencyConverterService;
 
     public ImportCsvCommandHandler(
         PublishingTrackerDbContext db, 
         ICsvReader csvReader, 
-        ILogger<ImportCsvCommandHandler> logger)
+        ILogger<ImportCsvCommandHandler> logger,
+        ICurrencyConverterService currencyConverterService)
     {
         _db = db;
         _csvReader = csvReader;
         _logger = logger;
+        _currencyConverterService = currencyConverterService;
     }
 
     public async Task<Result<ImportJobDto>> Handle(ImportCsvCommand request, CancellationToken cancellationToken)
@@ -108,6 +111,9 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                         ? record.CurrencyStr 
                         : request.Mapping.DefaultCurrency;
 
+                    var finalCurrency = string.IsNullOrEmpty(currency) ? request.Mapping.DefaultCurrency : currency;
+                    var exchangeRate = _currencyConverterService.GetExchangeRate(finalCurrency, "USD");
+
                     var sale = Sale.Create(
                         book.Id,
                         platform.Id,
@@ -115,7 +121,9 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                         int.TryParse(record.QuantityStr, out var q) ? q : 1,
                         decimal.TryParse(record.UnitPriceStr, out var up) ? up : 0m,
                         decimal.TryParse(record.RoyaltyStr, out var r) ? r : 0m,
-                        string.IsNullOrEmpty(currency) ? request.Mapping.DefaultCurrency : currency,
+                        platform.CommissionRate,
+                        exchangeRate,
+                        finalCurrency,
                         record.OrderId,
                         decimal.TryParse(record.RevenueStr, out var rev) ? (decimal?)rev : null
                     );

@@ -10,6 +10,7 @@ using PublishingTracker.Api.Features.Dashboard;
 using PublishingTracker.Api.Features.Import;
 using PublishingTracker.Api.Features.Platforms;
 using PublishingTracker.Api.Features.Sales;
+using PublishingTracker.Api.Features.Users;
 using PublishingTracker.Api.Infrastructure.Authentication;
 using PublishingTracker.Api.Middleware;
 using PublishingTracker.Infrastructure.Persistence.Repositories;
@@ -96,6 +97,7 @@ builder.Services.AddScoped<ICsvReader, CsvReaderService>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+builder.Services.AddScoped<ICurrencyConverterService, StaticCurrencyConverterService>();
 
 // ── Background Import Service (Channel + BackgroundService) ──────
 // Bounded channel prevents unbounded memory growth if imports queue up.
@@ -197,7 +199,7 @@ app.UseCors("AllowAll");
 
 app.UseAuthentication();
 app.UseAuthorization();
-// app.UseAntiforgery();
+app.UseRoleValidation();
 
 app.MapAuthEndpoints();
 app.MapBookEndpoints();
@@ -205,6 +207,7 @@ app.MapSalesEndpoints();
 app.MapPlatformEndpoints();
 app.MapDashboardEndpoints();
 app.MapImportEndpoints();
+app.MapUserEndpoints();
 
 // ── Health Check Endpoint ─────────────────────────────────────────
 app.MapHealthChecks("/health");

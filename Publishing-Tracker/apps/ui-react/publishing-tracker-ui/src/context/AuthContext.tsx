@@ -1,7 +1,8 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 interface AuthContextType {
     token: string | null;
+    isAdmin: boolean;
     login: (token: string) => void;
     logout: () => void;
 }
@@ -12,12 +13,38 @@ interface AuthProviderProps {
     children: React.ReactNode;
 }
 
+const parseJwt = (token: string | null) => {
+    if (!token) return null;
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
-    const login = (token: string) => {
-        localStorage.setItem('token', token);
-        setToken(token);
+    useEffect(() => {
+        if (token) {
+            const decoded = parseJwt(token);
+            // ASP.NET Core maps ClaimTypes.Role to this long URI by default
+            const role = decoded?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded?.role;
+            setIsAdmin(role === 'Admin');
+        } else {
+            setIsAdmin(false);
+        }
+    }, [token]);
+
+    const login = (newToken: string) => {
+        localStorage.setItem('token', newToken);
+        setToken(newToken);
     };
 
     const logout = () => {
@@ -26,7 +53,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
 
     return (
-        <AuthContext.Provider value={{ token, login, logout }}>
+        <AuthContext.Provider value={{ token, isAdmin, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

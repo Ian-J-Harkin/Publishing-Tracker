@@ -10,13 +10,13 @@ public static class PlatformEndpoints
 {
     public static void MapPlatformEndpoints(this WebApplication app)
     {
-        // RequireAuthorization ensures a valid JWT is present
         var platformsGroup = app.MapGroup("/api/platforms").RequireAuthorization();
 
         // --- GET ALL PLATFORMS ---
-        platformsGroup.MapGet("/", async ([FromServices] IMediator mediator, [FromQuery] string? search) =>
+        // Standard users see only active platforms. Admins can pass ?includeInactive=true.
+        platformsGroup.MapGet("/", async ([FromServices] IMediator mediator, [FromQuery] string? search, [FromQuery] bool includeInactive = false) =>
         {
-            var query = new GetPlatformsQuery(search);
+            var query = new GetPlatformsQuery(search, includeInactive);
             var result = await mediator.Send(query);
             
             if (!result.IsSuccess)
@@ -26,6 +26,7 @@ public static class PlatformEndpoints
         });
 
         // --- CREATE NEW PLATFORM ---
+        // Platforms are created as inactive (pending approval) by default.
         platformsGroup.MapPost("/", async ([FromServices] IMediator mediator, PlatformRequestDto requestDto) =>
         {
             var command = new CreatePlatformCommand(requestDto.Name, requestDto.BaseUrl, requestDto.CommissionRate);
@@ -38,5 +39,17 @@ public static class PlatformEndpoints
         })
         .WithName("CreatePlatform")
         .WithOpenApi();
+
+        // --- APPROVE PLATFORM (Admin only) ---
+        platformsGroup.MapPut("/{id:int}/approve", async ([FromServices] IMediator mediator, int id) =>
+        {
+            var result = await mediator.Send(new ApprovePlatformCommand(id));
+
+            if (!result.IsSuccess)
+                return Results.BadRequest(result.ErrorMessage);
+
+            return Results.NoContent();
+        })
+        .RequireAuthorization(policy => policy.RequireRole("Admin"));
     }
 }

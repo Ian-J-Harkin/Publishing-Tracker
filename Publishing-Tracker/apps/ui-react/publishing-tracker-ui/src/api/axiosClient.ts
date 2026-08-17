@@ -18,4 +18,19 @@ axiosClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+axiosClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Token expired or invalidated (e.g. role change)
+            localStorage.removeItem('token');
+            // Check if we're already on the login page to prevent redirect loops
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
 export default axiosClient;

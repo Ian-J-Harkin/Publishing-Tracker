@@ -23,11 +23,13 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Resul
 {
     private readonly PublishingTrackerDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ICurrencyConverterService _currencyConverterService;
 
-    public CreateSaleCommandHandler(PublishingTrackerDbContext context, ICurrentUserService currentUserService)
+    public CreateSaleCommandHandler(PublishingTrackerDbContext context, ICurrentUserService currentUserService, ICurrencyConverterService currencyConverterService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _currencyConverterService = currencyConverterService;
     }
 
     public async Task<Result<SaleDto>> Handle(CreateSaleCommand request, CancellationToken cancellationToken)
@@ -44,6 +46,8 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Resul
         if (platform == null)
             return Result<SaleDto>.Failure("Platform not found.");
 
+        var exchangeRate = _currencyConverterService.GetExchangeRate(request.Currency, "USD");
+
         var sale = Sale.Create(
             request.BookId,
             request.PlatformId,
@@ -51,6 +55,8 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Resul
             request.Quantity > 0 ? request.Quantity : 1,
             request.UnitPrice,
             request.Royalty,
+            platform.CommissionRate,
+            exchangeRate,
             request.Currency
         );
 

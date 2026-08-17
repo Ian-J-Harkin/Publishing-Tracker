@@ -34,9 +34,9 @@ public class GetSalesSummaryQueryHandler : IRequestHandler<GetSalesSummaryQuery,
             .GroupBy(s => 1)
             .Select(g => new SalesSummaryDto
             {
-                TotalRevenue = g.Sum(s => s.Revenue),
+                TotalRevenue = g.Sum(s => s.BaseCurrencyRevenue),
                 TotalUnitsSold = g.Sum(s => s.Quantity),
-                AverageRoyalty = g.Count() > 0 ? g.Sum(s => s.Royalty) / g.Count() : 0,
+                AverageRoyalty = g.Count() > 0 ? g.Sum(s => s.BaseCurrencyRoyalty) / g.Count() : 0,
                 SalesCount = g.Count()
             }).FirstOrDefaultAsync(cancellationToken) ?? new SalesSummaryDto();
 

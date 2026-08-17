@@ -1,4 +1,4 @@
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace PublishingTracker.Domain.Dtos
@@ -15,6 +15,11 @@ namespace PublishingTracker.Domain.Dtos
         public decimal UnitPrice { get; set; }
         public decimal Royalty { get; set; }
         public decimal Revenue { get; set; }
+        public string Currency { get; set; } = "USD";
+        public decimal BaseCurrencyRevenue { get; set; }
+        public decimal BaseCurrencyRoyalty { get; set; }
+        public decimal PlatformCommissionRate { get; set; }
+        public decimal ExchangeRate { get; set; }
     }
 
     public class CreateSaleDto

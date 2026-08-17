@@ -76,3 +76,29 @@ The primary goal of these tests is to ensure **functional parity**. The API shou
 - **Action:** Attempt to access secure endpoints without a valid token.
 - **Expected Result:** 401 Unauthorized.
 - **Behind the Scenes:** The `TokenService` and `CurrentUserService` dependencies were moved to the Infrastructure layer, and should still be resolving correctly in the DI container.
+
+---
+
+## 5. Security & Admin Features Testing
+
+**Objective:** Verify that the application correctly isolates tenant data and manages Administrator privileges according to the new Domain-Driven security model.
+
+### Test 5.1: Admin Role Bootstrapping
+- **Action:** Start with a fresh database and register two new users in sequence.
+- **Expected Result:** The very first user registered is automatically assigned the `Admin` role. The second user is assigned the standard `User` role.
+
+### Test 5.2: Role Promotion and Demotion
+- **Action:** As the Admin user, navigate to the User Management dashboard and promote the second user to Admin.
+- **Expected Result:** The second user is promoted. When the second user logs out and logs back in, they should see the Admin navigation links.
+- **Action (Demotion):** As an Admin, demote the second user.
+- **Expected Result:** The second user loses access. On their next login, they should no longer see the Admin UI.
+
+### Test 5.3: Admin Lockout Prevention
+- **Action:** As the sole remaining Admin user, attempt to demote yourself via the UI or API.
+- **Expected Result:** The action is blocked. The domain layer throws an error, and the UI displays a failure message, ensuring the system is never left without an administrator.
+
+### Test 5.4: Platform Approval Workflow
+- **Action:** As a standard user, request/submit a new Platform integration.
+- **Expected Result:** The platform is created but is immediately invisible to standard users (including the submitter) because it defaults to an inactive state.
+- **Action:** As an Admin user, navigate to the Platform Management dashboard.
+- **Expected Result:** The pending platform is visible. The Admin can approve it, at which point it becomes visible to all standard users.

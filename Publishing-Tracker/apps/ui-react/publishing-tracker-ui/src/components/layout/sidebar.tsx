@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
     const location = useLocation();
@@ -33,6 +34,17 @@ const Sidebar = () => {
         }
     ];
 
+    const { isAdmin } = useAuth();
+    if (isAdmin) {
+        menuGroups.push({
+            label: 'Admin',
+            items: [
+                { path: '/admin/platforms', label: 'Manage Platforms', icon: '🛡️' },
+                { path: '/admin/users', label: 'Manage Users', icon: '👥' },
+            ]
+        });
+    }
+
     const isActive = (path: string) => location.pathname === path;
 
     return (
@@ -65,10 +77,10 @@ const Sidebar = () => {
 
             <div style={sidebarStyles.footer}>
                 <div style={sidebarStyles.userCard}>
-                    <div style={sidebarStyles.avatar}>AD</div>
+                    <div style={sidebarStyles.avatar}>U</div>
                     <div style={sidebarStyles.userInfo}>
-                        <div style={sidebarStyles.userName}>Admin User</div>
-                        <div style={sidebarStyles.userRole}>Publisher</div>
+                        <div style={sidebarStyles.userName}>Current User</div>
+                        <div style={sidebarStyles.userRole}>{isAdmin ? 'Administrator' : 'Publisher'}</div>
                     </div>
                 </div>
             </div>

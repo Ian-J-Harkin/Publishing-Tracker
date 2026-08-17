@@ -1,20 +1,12 @@
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Domain.Entities;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Api.Domain.Entities;
 using PublishingTracker.Application.Books.Queries;
-
-using PublishingTracker.Infrastructure.Persistence;
 
 namespace PublishingTracker.Infrastructure.Persistence.Repositories;
 
-/// <summary>
-/// A generic repository implementation using EF Core.
-/// Centralizes standard data access logic.
-/// </summary>
 public class BookRepository : IBookRepository
 {
     private readonly PublishingTrackerDbContext _context;
@@ -22,6 +14,23 @@ public class BookRepository : IBookRepository
     public BookRepository(PublishingTrackerDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<Book?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    {
+        return await _context.Books
+            .Include(b => b.User)
+            .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+    }
+
+    public async Task<Book> GetByIdAsync(object id, CancellationToken cancellationToken)
+    {
+        if (id is int intId)
+        {
+            var book = await GetByIdAsync(intId, cancellationToken);
+            return book ?? throw new Exception("Book not found");
+        }
+        throw new ArgumentException("Id must be an integer", nameof(id));
     }
 
     public async Task AddAsync(Book book, CancellationToken cancellationToken)
@@ -41,76 +50,66 @@ public class BookRepository : IBookRepository
             { 
                 PlatformName = g.Key.Name,
                 Currency = g.Key.Currency,
-                TotalRevenue = g.Sum(s => s.Revenue) 
+                TotalRevenue = g.Sum(s => s.BaseCurrencyRevenue) 
             })
             .ToListAsync(cancellationToken);
     }
 
     public async Task<List<BookResponseDto>> GetAllAsync(int userId, string? searchTerm, string? sortBy, string? sortOrder, int page, int pageSize, CancellationToken cancellationToken)
-{
-    var query = _context.Books.Where(b => b.UserId == userId);
-
-    if (!string.IsNullOrWhiteSpace(searchTerm))
     {
-        query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
+        var query = _context.Books.Where(b => b.UserId == userId);
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(b => b.Title.Contains(searchTerm) || b.Author.Contains(searchTerm));
+        }
+
+        query = sortBy?.ToLower() switch
+        {
+            "title" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.Title) : query.OrderBy(b => b.Title),
+            "author" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.Author) : query.OrderBy(b => b.Author),
+            "publicationdate" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.PublicationDate) : query.OrderBy(b => b.PublicationDate),
+            _ => query.OrderByDescending(b => b.CreatedAt)
+        };
+
+        var skip = (page - 1) * pageSize;
+
+        return await query
+            .Skip(skip)
+            .Take(pageSize)
+            .Select(b => new BookResponseDto
+            {
+                Id = b.Id,
+                Title = b.Title,
+                Author = b.Author,
+                ISBN = b.ISBN,
+                PublicationDate = b.PublicationDate,
+                BasePrice = b.BasePrice,
+                Genre = b.Genre,
+                Description = b.Description,
+                TotalSales = b.Sales.Count,
+                TotalRevenue = b.Sales.Sum(s => s.BaseCurrencyRevenue)
+            })
+            .ToListAsync(cancellationToken);
     }
 
-    // ... apply sorting and pagination logic here ...
-
-    // IMPORTANT: We map directly to BookResponseDto here using .Select()
-    // This is a major performance boost because we don't load the heavy 
-    // Domain Entities into memory for Read-Only queries!
-    return await query
-        .Select(b => new BookResponseDto(
-            b.Id,
-            b.Title,
-            b.Author,
-            b.ISBN,
-            b.BasePrice,
-            b.Sales.Sum(s => s.Quantity),
-            b.Sales.Sum(s => s.Revenue)
-        ))
-        .ToListAsync(cancellationToken);
-}
-
-       public async Task<Book?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    public async Task<Book?> GetByIdWithSalesAsync(int id, CancellationToken cancellationToken)
     {
-        // Finds the book by its primary key
-        return await _context.Books.FindAsync(new object[] { id }, cancellationToken);
+        return await _context.Books
+            .Include(b => b.Sales)
+            .ThenInclude(s => s.Platform)
+            .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
     }
 
     public async Task UpdateAsync(Book book, CancellationToken cancellationToken)
     {
-        // Marks the entity as modified and saves
         _context.Books.Update(book);
         await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(Book book, CancellationToken cancellationToken)
     {
-        // Removes the entity and saves
         _context.Books.Remove(book);
         await _context.SaveChangesAsync(cancellationToken);
-    }
-
-    public async Task<Book> GetByIdAsync(object id, CancellationToken cancellationToken)
-    {
-        // Validate and convert the id parameter
-        if (id is not int intId)
-        {
-            throw new ArgumentException("ID must be an integer", nameof(id));
-        }
-        
-        // Reuse the existing GetByIdAsync method
-        var book = await GetByIdAsync(intId, cancellationToken);
-        
-        // Handle null case - since this overload returns non-nullable Task<Book>,
-        // we need to throw if the book is not found
-        if (book == null)
-        {
-            throw new KeyNotFoundException($"Book with ID {intId} not found");
-        }
-        
-        return book;
     }
 }

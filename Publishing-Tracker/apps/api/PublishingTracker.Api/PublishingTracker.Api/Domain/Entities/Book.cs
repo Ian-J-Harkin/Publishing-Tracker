@@ -28,21 +28,30 @@ namespace PublishingTracker.Domain.Entities
         private Book() { }
 
         // Factory method or public constructor enforcing invariants
-        public Book(int userId, string title, string author)
+        public Book(int userId, string title, string author, string? isbn = null, DateTime? publicationDate = null, decimal? basePrice = null, string? genre = null, string? description = null)
         {
             if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Title is required");
 
             UserId = userId;
             Title = title;
             Author = author;
+            ISBN = isbn;
+            PublicationDate = publicationDate;
+            BasePrice = basePrice;
+            Genre = genre;
+            Description = description;
         }
         
-        public void Update(string title, string author, string? isbn)
+        public void Update(string title, string author, string? isbn, DateTime? publicationDate = null, decimal? basePrice = null, string? genre = null, string? description = null)
         {
             if (string.IsNullOrWhiteSpace(title)) throw new ArgumentException("Title cannot be empty.");
             Title = title;
             Author = author;
             ISBN = isbn;
+            PublicationDate = publicationDate;
+            BasePrice = basePrice;
+            Genre = genre;
+            Description = description;
         }
         // Domain behavior
         public void UpdatePricing(decimal newPrice)

@@ -30,11 +30,16 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
             return null; // Email already exists
         }
 
+        // First user ever registered becomes Admin; all others default to User.
+        var isFirstUser = !await _context.Users.AnyAsync(cancellationToken);
+        var role = isFirstUser ? "Admin" : "User";
+
         var user = User.Create(
             request.Email,
             BCrypt.Net.BCrypt.HashPassword(request.Password, BCrypt.Net.BCrypt.GenerateSalt(), enhancedEntropy: false, hashType: BCrypt.Net.HashType.SHA256),
             request.FirstName,
-            request.LastName
+            request.LastName,
+            role
         );
 
         _context.Users.Add(user);

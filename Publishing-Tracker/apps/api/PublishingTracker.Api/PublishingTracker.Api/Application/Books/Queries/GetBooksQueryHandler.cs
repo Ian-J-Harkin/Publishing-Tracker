@@ -6,15 +6,19 @@ using MediatR;
 using PublishingTracker.Api.Models; // For Result<T>
 
 // 1. The DTO
-public record BookResponseDto(
-    int Id, 
-    string Title, 
-    string Author, 
-    string? ISBN, 
-    decimal? BasePrice,
-    int TotalSold,
-    decimal TotalRevenue    
-);
+public class BookResponseDto
+{
+    public int Id { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Author { get; init; } = string.Empty;
+    public string? ISBN { get; init; }
+    public DateTime? PublicationDate { get; init; }
+    public decimal? BasePrice { get; init; }
+    public string? Genre { get; init; }
+    public string? Description { get; init; }
+    public int TotalSales { get; init; }
+    public decimal TotalRevenue { get; init; }
+}
 
 // 2. The Query
 public record GetBooksQuery(string? SearchTerm, string? SortBy, string? SortOrder, int Page, int PageSize) : IRequest<Result<List<BookResponseDto>>>;

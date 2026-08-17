@@ -5,13 +5,21 @@ using PublishingTracker.Api.Models;
 using PublishingTracker.Domain;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Api.Domain.Entities;
+using PublishingTracker.Application.Common.Interfaces;
 
 namespace PublishingTracker.Infrastructure.Persistence;
 
 public class PublishingTrackerDbContext : DbContext
 {
+    private readonly ICurrentUserService? _currentUserService;
+
     public PublishingTrackerDbContext(DbContextOptions<PublishingTrackerDbContext> options) : base(options)
     {
+    }
+
+    public PublishingTrackerDbContext(DbContextOptions<PublishingTrackerDbContext> options, ICurrentUserService currentUserService) : base(options)
+    {
+        _currentUserService = currentUserService;
     }
 
     public DbSet<User> Users { get; set; }
@@ -29,6 +37,10 @@ public class PublishingTrackerDbContext : DbContext
             entity.Property(e => e.Revenue).HasPrecision(18, 2);
             entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
             entity.Property(e => e.Royalty).HasPrecision(18, 2);
+            entity.Property(e => e.PlatformCommissionRate).HasPrecision(5, 4);
+            entity.Property(e => e.ExchangeRate).HasPrecision(18, 6);
+            entity.Property(e => e.BaseCurrencyRevenue).HasPrecision(18, 2);
+            entity.Property(e => e.BaseCurrencyRoyalty).HasPrecision(18, 2);
         });
 
         modelBuilder.Entity<Book>(entity =>
@@ -40,6 +52,19 @@ public class PublishingTrackerDbContext : DbContext
         {
             entity.Property(e => e.CommissionRate).HasPrecision(5, 4);
         });
+
+        // ── Global Query Filters (Multi-Tenancy) ─────────────────────
+        // These filters enforce tenant isolation at the database level.
+        // When _currentUserService.UserId is null (e.g. background services),
+        // the filter is bypassed so those processes can access all data.
+        modelBuilder.Entity<Book>().HasQueryFilter(b =>
+            _currentUserService == null || _currentUserService.UserId == null || b.UserId == _currentUserService.UserId);
+
+        modelBuilder.Entity<ImportJob>().HasQueryFilter(j =>
+            _currentUserService == null || _currentUserService.UserId == null || j.UserId == _currentUserService.UserId);
+
+        modelBuilder.Entity<Sale>().HasQueryFilter(s =>
+            _currentUserService == null || _currentUserService.UserId == null || s.Book.UserId == _currentUserService.UserId);
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

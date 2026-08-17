@@ -9,7 +9,7 @@ const mockedPlatformService = platformService as jest.Mocked<typeof platformServ
 
 describe('PlatformsPage', () => {
     it('should render platforms', async () => {
-        const platforms: Platform[] = [{ id: 1, name: 'Platform 1', baseUrl: 'url1', commissionRate: 0.1 }];
+        const platforms: Platform[] = [{ id: 1, name: 'Platform 1', baseUrl: 'url1', commissionRate: 0.1, isActive: true }];
         mockedPlatformService.getPlatforms.mockResolvedValue(platforms);
 
         render(
