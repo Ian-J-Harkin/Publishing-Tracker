@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { importService } from '../services/importService';
 import { ImportJob } from '../types/import';
+import { useDependencies } from '../context/DependencyContext';
 
 const ImportHistoryPage = () => {
+    const { imports: importServicePort } = useDependencies();
     const [history, setHistory] = useState<ImportJob[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -11,7 +12,7 @@ const ImportHistoryPage = () => {
     useEffect(() => {
         const fetchHistory = async () => {
             try {
-                const historyData = await importService.getHistory();
+                const historyData = await importServicePort.getHistory();
                 setHistory(historyData);
             } catch {
                 setError('Failed to fetch import history.');

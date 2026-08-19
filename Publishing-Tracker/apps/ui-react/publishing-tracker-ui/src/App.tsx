@@ -15,9 +15,11 @@ const PlatformsPage = lazy(() => import('./pages/PlatformsPage'));
 const RequestPlatformPage = lazy(() => import('./pages/RequestPlatformPage'));
 const AdminPlatformsPage = lazy(() => import('./pages/AdminPlatformsPage'));
 const AdminUsersPage = lazy(() => import('./pages/AdminUsersPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const MainLayout = lazy(() => import('./components/layout/MainLayout'));
 
 import { useAuth } from './context/AuthContext';
+import { DependencyProvider } from './context/DependencyContext';
 
 const AdminRoute = ({ children }: { children: React.ReactElement }) => {
     const { isAdmin } = useAuth();
@@ -27,8 +29,9 @@ const AdminRoute = ({ children }: { children: React.ReactElement }) => {
 
 function App() {
     return (
-        <Router>
-            <Suspense fallback={<div>Loading...</div>}>
+        <DependencyProvider>
+            <Router>
+                <Suspense fallback={<div>Loading...</div>}>
                 <Routes>
                     <Route path="/" element={<Navigate to="/login" />} />
                     <Route path="/login" element={<LoginPage />} />
@@ -44,12 +47,14 @@ function App() {
                         <Route path="/import/history" element={<ImportHistoryPage />} />
                         <Route path="/platforms" element={<PlatformsPage />} />
                         <Route path="/platforms/request" element={<RequestPlatformPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
                         <Route path="/admin/platforms" element={<AdminRoute><AdminPlatformsPage /></AdminRoute>} />
                         <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
                     </Route>
                 </Routes>
-            </Suspense>
-        </Router>
+                </Suspense>
+            </Router>
+        </DependencyProvider>
     );
 }
 

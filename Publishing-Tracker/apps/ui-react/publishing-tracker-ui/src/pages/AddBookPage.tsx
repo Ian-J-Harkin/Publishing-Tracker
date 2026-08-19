@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { bookService } from '../services/bookService';
 import type { CreateBook } from '../types/book';
+import { useDependencies } from '../context/DependencyContext';
 
 const schema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -17,6 +17,7 @@ const schema = z.object({
 });
 
 const AddBookPage = () => {
+    const { books: bookServicePort } = useDependencies();
     const { register, handleSubmit, formState: { errors } } = useForm<CreateBook>({
         resolver: zodResolver(schema)
     });
@@ -25,7 +26,7 @@ const AddBookPage = () => {
 
     const onSubmit = async (data: CreateBook) => {
         try {
-            await bookService.createBook(data);
+            await bookServicePort.createBook(data);
             navigate('/books');
         } catch {
             setError('Failed to create book. Please check your inputs.');

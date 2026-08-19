@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { platformService } from '../services/platformService';
 import { Platform } from '../types/platform';
+import { useDependencies } from '../context/DependencyContext';
 
 const AdminPlatformsPage = () => {
+    const { platforms: platformServicePort } = useDependencies();
     const [platforms, setPlatforms] = useState<Platform[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -10,7 +11,7 @@ const AdminPlatformsPage = () => {
     const fetchPlatforms = async () => {
         try {
             setLoading(true);
-            const data = await platformService.getAdminPlatforms();
+            const data = await platformServicePort.getAdminPlatforms();
             setPlatforms(data);
         } catch {
             setError('Failed to fetch platforms.');
@@ -25,7 +26,7 @@ const AdminPlatformsPage = () => {
 
     const handleApprove = async (id: number) => {
         try {
-            await platformService.approvePlatform(id);
+            await platformServicePort.approvePlatform(id);
             // Refresh list to show it as active
             await fetchPlatforms();
         } catch {

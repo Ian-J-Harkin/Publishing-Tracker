@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saleService } from '../services/saleService';
-import { bookService } from '../services/bookService';
-import { platformService } from '../services/platformService';
+import { salePort } from '../adapters/SaleAxiosAdapter';
+import { platformPort } from '../adapters/PlatformAxiosAdapter';
 import { CreateSale } from '../types/sale';
 import { Book } from '../types/book';
 import { Platform } from '../types/platform';
+import { useDependencies } from '../context/DependencyContext';
 
 const AddSalePage = () => {
+    const { books: bookPort, platforms: platformPort, sales: salePort } = useDependencies();
     const navigate = useNavigate();
     const [sale, setSale] = useState<CreateSale>({
         bookId: 0,
@@ -26,8 +27,7 @@ const AddSalePage = () => {
         const fetchData = async () => {
             try {
                 const [availableBooks, availablePlatforms] = await Promise.all([
-                    bookService.getBooks(),
-                    platformService.getPlatforms()
+                    bookPort.getBooks().getPlatforms()
                 ]);
                 setBooks(availableBooks);
                 setPlatforms(availablePlatforms);
@@ -55,7 +55,7 @@ const AddSalePage = () => {
         }
 
         try {
-            await saleService.createSale(sale);
+            await salePort.createSale(sale);
             navigate('/sales');
         } catch {
             setError('Transmission Error: Failed to secure transaction data on the ledger.');

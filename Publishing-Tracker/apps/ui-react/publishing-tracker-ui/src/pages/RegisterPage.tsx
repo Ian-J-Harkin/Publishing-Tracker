@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import authService from '../services/authService';
+
 import { useNavigate } from 'react-router-dom';
+import { useDependencies } from '../context/DependencyContext';
 
 const RegisterPage = () => {
+    const { auth: authPort } = useDependencies();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
@@ -12,7 +14,7 @@ const RegisterPage = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await authService.register({ firstName, lastName, email, password });
+            await authPort.register({ firstName, lastName, email, password });
             navigate('/login');
         } catch (error) {
             console.error(error);

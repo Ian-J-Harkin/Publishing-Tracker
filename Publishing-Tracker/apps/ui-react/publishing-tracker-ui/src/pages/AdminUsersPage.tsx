@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { userService, User } from '../services/userService';
+import { User } from '../adapters/UserAxiosAdapter';
+import { useDependencies } from '../context/DependencyContext';
 
 const AdminUsersPage = () => {
+    const { users: userServicePort } = useDependencies();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -9,7 +11,7 @@ const AdminUsersPage = () => {
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const data = await userService.getUsers();
+            const data = await userServicePort.getUsers();
             setUsers(data);
         } catch {
             setError('Failed to fetch users.');
@@ -24,7 +26,7 @@ const AdminUsersPage = () => {
 
     const handlePromote = async (id: number) => {
         try {
-            await userService.promoteUser(id);
+            await userServicePort.promoteUser(id);
             await fetchUsers();
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to promote user.');
@@ -34,7 +36,7 @@ const AdminUsersPage = () => {
     const handleDemote = async (id: number) => {
         if (!window.confirm("Are you sure you want to revoke Admin rights from this user?")) return;
         try {
-            await userService.demoteUser(id);
+            await userServicePort.demoteUser(id);
             await fetchUsers();
         } catch (err: any) {
             setError(err.response?.data || 'Failed to demote user.');

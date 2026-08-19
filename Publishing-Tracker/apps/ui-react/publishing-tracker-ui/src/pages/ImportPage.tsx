@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { importService } from '../services/importService';
 import { ImportJob, ColumnMapping } from '../types/import';
 import axios from 'axios';
+import { useDependencies } from '../context/DependencyContext';
 
 const ImportPage = () => {
+    const { imports: importServicePort } = useDependencies();
     const navigate = useNavigate();
     const [file, setFile] = useState<File | null>(null);
     const [mapping, setMapping] = useState<ColumnMapping>({
@@ -52,7 +53,7 @@ const ImportPage = () => {
     const handleUpload = async () => {
         if (file) {
             try {
-                const data = await importService.uploadFile(file);
+                const data = await importServicePort.uploadFile(file);
                 setHeaders(data.headers);
                 setPreviewData(data);
                 autoMapHeaders(data.headers);
@@ -71,7 +72,7 @@ const ImportPage = () => {
     const handleProcess = async () => {
         if (file) {
             try {
-                const result = await importService.processFile(file.name, mapping);
+                const result = await importServicePort.processFile(file.name, mapping);
                 console.log("Import result from API:", result);
                 console.log("Records successful:", result.recordsSuccessful);
                 console.log("Records failed:", result.recordsFailed);

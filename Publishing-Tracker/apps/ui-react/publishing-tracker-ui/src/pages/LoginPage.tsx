@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import authService from '../services/authService';
+
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import '../pages/LoginPage.css';
+import { useDependencies } from '../context/DependencyContext';
 
 const LoginPage = () => {
+    const { auth: authPort } = useDependencies();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -18,7 +20,7 @@ const LoginPage = () => {
         setLoading(true);
         try {
             console.log('Attempting login with:', { email });
-            const response = await authService.login({ email, password });
+            const response = await authPort.login({ email, password });
             console.log('Login response:', response.data);
 
             if (!response.data.token) {

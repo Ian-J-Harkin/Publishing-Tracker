@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { dashboardService } from '../services/dashboardService';
+import { useDependencies } from '../context/DependencyContext';
 
 export const useDashboardData = () => {
+    const { dashboard: dashboardServicePort } = useDependencies();
     const { data, isLoading, isError } = useQuery({
         queryKey: ['dashboardAll'],
-        queryFn: dashboardService.getDashboardData
+        queryFn: dashboardServicePort.getDashboardData
     });
 
     return {

@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { bookService } from '../services/bookService';
 import type { UpdateBook } from '../types/book';
+import { useDependencies } from '../context/DependencyContext';
 
 const schema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -17,6 +17,7 @@ const schema = z.object({
 });
 
 const EditBookPage = () => {
+    const { books: bookServicePort } = useDependencies();
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -30,7 +31,7 @@ const EditBookPage = () => {
         const fetchBook = async () => {
             try {
                 if (id) {
-                    const book = await bookService.getBookById(parseInt(id, 10));
+                    const book = await bookServicePort.getBookById(parseInt(id, 10));
                     // Format date for the input field
                     const formattedDate = book.publicationDate
                         ? new Date(book.publicationDate).toISOString().split('T')[0]
@@ -53,7 +54,7 @@ const EditBookPage = () => {
     const onSubmit = async (data: z.infer<typeof schema>) => {
         if (!id) return;
         try {
-            await bookService.updateBook(parseInt(id, 10), data as unknown as UpdateBook);
+            await bookServicePort.updateBook(parseInt(id, 10), data as unknown as UpdateBook);
             navigate('/books');
         } catch {
             setError('Failed to update book details. Please check your inputs.');

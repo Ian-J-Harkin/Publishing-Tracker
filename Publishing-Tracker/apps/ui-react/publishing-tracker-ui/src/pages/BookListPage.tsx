@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { bookService } from '../services/bookService';
 import { Book } from '../types/book';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useDependencies } from '../context/DependencyContext';
 
 const BookListPage = () => {
+    const { books: bookServicePort } = useDependencies();
     const [books, setBooks] = useState<Book[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState<boolean>(true);
@@ -15,7 +16,7 @@ const BookListPage = () => {
     const fetchBooks = useCallback(async (search?: string) => {
         try {
             setLoading(true);
-            const booksData = await bookService.getBooks(search);
+            const booksData = await bookServicePort.getBooks(search);
             setBooks(booksData);
             setError(null);
         } catch {
@@ -42,7 +43,7 @@ const BookListPage = () => {
     const handleDelete = async (id: number, title: string) => {
         if (window.confirm(`Are you sure you want to delete "${title}"? All associated sales data will be lost.`)) {
             try {
-                await bookService.deleteBook(id);
+                await bookServicePort.deleteBook(id);
                 setBooks(prev => prev.filter(b => b.id !== id));
             } catch {
                 setError('Failed to delete book. It may have active sales records.');

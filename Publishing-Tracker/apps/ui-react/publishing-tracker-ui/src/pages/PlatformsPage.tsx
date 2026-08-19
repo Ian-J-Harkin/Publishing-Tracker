@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { platformService } from '../services/platformService';
 import { Platform } from '../types/platform';
+import { useDependencies } from '../context/DependencyContext';
 
 const PlatformsPage = () => {
+    const { platforms: platformServicePort } = useDependencies();
     const [platforms, setPlatforms] = useState<Platform[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
@@ -13,7 +14,7 @@ const PlatformsPage = () => {
     const fetchPlatforms = async (search?: string) => {
         try {
             setLoading(true);
-            const data = await platformService.getPlatforms(search);
+            const data = await platformServicePort.getPlatforms(search);
             setPlatforms(data);
         } catch {
             setError('Failed to fetch integrated distribution channels.');

@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { saleService } from '../services/saleService';
-import { bookService } from '../services/bookService';
-import { platformService } from '../services/platformService';
+import { salePort } from '../adapters/SaleAxiosAdapter';
+import { platformPort } from '../adapters/PlatformAxiosAdapter';
 import { Sale, SalesSummary, SalesFilter } from '../types/sale';
 import { Book } from '../types/book';
 import { Platform } from '../types/platform';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useDependencies } from '../context/DependencyContext';
 
 const SalesPage = () => {
+    const { books: bookPort, platforms: platformPort, sales: salePort } = useDependencies();
     const [sales, setSales] = useState<Sale[]>([]);
     const [summary, setSummary] = useState<SalesSummary | null>(null);
     const [books, setBooks] = useState<Book[]>([]);
@@ -27,8 +28,7 @@ const SalesPage = () => {
         const loadMetadata = async () => {
             try {
                 const [availableBooks, availablePlatforms] = await Promise.all([
-                    bookService.getBooks(),
-                    platformService.getPlatforms()
+                    bookPort.getBooks().getPlatforms()
                 ]);
                 setBooks(availableBooks);
                 setPlatforms(availablePlatforms);
@@ -48,8 +48,7 @@ const SalesPage = () => {
                 );
 
                 const [salesData, summaryData] = await Promise.all([
-                    saleService.getSales(cleanFilters),
-                    saleService.getSummary(cleanFilters)
+                    salePort.getSales(cleanFilters).getSummary(cleanFilters)
                 ]);
                 setSales(salesData);
                 setSummary(summaryData);

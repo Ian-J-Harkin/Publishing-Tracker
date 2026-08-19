@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { platformService } from '../services/platformService';
 import { PlatformRequest } from '../types/platform';
+import { useDependencies } from '../context/DependencyContext';
 
 const requestSchema = z.object({
     name: z.string().min(2, 'Platform identity must be at least 2 characters'),
@@ -15,6 +15,7 @@ const requestSchema = z.object({
 type RequestFormData = z.infer<typeof requestSchema>;
 
 const RequestPlatformPage = () => {
+    const { platforms: platformServicePort } = useDependencies();
     const navigate = useNavigate();
     const {
         register,
@@ -34,7 +35,7 @@ const RequestPlatformPage = () => {
     const onSubmit = async (data: RequestFormData) => {
         try {
             setSubmissionStatus('idle');
-            await platformService.requestPlatform(data as PlatformRequest);
+            await platformServicePort.requestPlatform(data as PlatformRequest);
             setSubmissionStatus('success');
             setTimeout(() => navigate('/platforms'), 2000);
         } catch {
