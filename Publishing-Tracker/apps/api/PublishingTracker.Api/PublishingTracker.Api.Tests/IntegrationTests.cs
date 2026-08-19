@@ -40,7 +40,11 @@ namespace PublishingTracker.Api.Tests
             var client = _factory.CreateClient();
             var loginRequest = new LoginRequest { Email = "test@test.com", Password = "password123" };
             var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Login failed: {response.StatusCode} - {error}");
+            }
             var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse.Token);
             return client;
@@ -232,7 +236,7 @@ namespace PublishingTracker.Api.Tests
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PublishingTracker.Infrastructure.Persistence.PublishingTrackerDbContext>();
             
-            var platform = PublishingTracker.Api.Domain.Entities.Platform.Create("TestPlatform", "http://test.com", 0.30m);
+            var platform = PublishingTracker.Domain.Entities.Platform.Create("TestPlatform", "http://test.com", 0.30m);
             db.Platforms.Add(platform);
             await db.SaveChangesAsync();
 
@@ -252,7 +256,7 @@ namespace PublishingTracker.Api.Tests
             var createdSaleA = await saleAResp.Content.ReadFromJsonAsync<SaleDto>();
 
             // 4. Update Platform to 35%
-            typeof(PublishingTracker.Api.Domain.Entities.Platform).GetProperty("CommissionRate")!.SetValue(platform, 0.35m);
+            typeof(PublishingTracker.Domain.Entities.Platform).GetProperty("CommissionRate")!.SetValue(platform, 0.35m);
             db.Platforms.Update(platform);
             await db.SaveChangesAsync();
 
@@ -306,6 +310,96 @@ namespace PublishingTracker.Api.Tests
 
             var approveResponse = await client.PutAsync("/api/platforms/1/approve", null);
             Assert.Equal(HttpStatusCode.Forbidden, approveResponse.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetProfile_ReturnsCurrentUserProfile()
+        {
+            var client = _factory.CreateClient();
+            var registerRequest = new RegisterRequest { Email = "profile@test.com", Password = "password123", FirstName = "John", LastName = "Doe" };
+            await client.PostAsJsonAsync("/api/auth/register", registerRequest);
+            
+            var loginRequest = new LoginRequest { Email = "profile@test.com", Password = "password123" };
+            var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+            var profileResponse = await client.GetAsync("/api/users/me");
+            Assert.Equal(HttpStatusCode.OK, profileResponse.StatusCode);
+            
+            var profile = await profileResponse.Content.ReadFromJsonAsync<UserResponseDto>();
+            Assert.Equal("John", profile!.FirstName);
+            Assert.Equal("Doe", profile.LastName);
+            Assert.Equal("profile@test.com", profile.Email);
+        }
+
+        [Fact]
+        public async Task UpdateProfile_UpdatesUserProperly()
+        {
+            var client = _factory.CreateClient();
+            var registerRequest = new RegisterRequest { Email = "profileupdate@test.com", Password = "password123", FirstName = "Old", LastName = "Name" };
+            await client.PostAsJsonAsync("/api/auth/register", registerRequest);
+            
+            var loginRequest = new LoginRequest { Email = "profileupdate@test.com", Password = "password123" };
+            var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+            var updateCommand = new PublishingTracker.Application.Users.Commands.UpdateProfileCommand("New First", "New Last");
+            var updateResponse = await client.PutAsJsonAsync("/api/users/me/profile", updateCommand);
+            Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+
+            var profileResponse = await client.GetAsync("/api/users/me");
+            var profile = await profileResponse.Content.ReadFromJsonAsync<UserResponseDto>();
+            Assert.Equal("New First", profile!.FirstName);
+            Assert.Equal("New Last", profile.LastName);
+        }
+
+        [Fact]
+        public async Task ChangePassword_WithCorrectOldPassword_ChangesPassword()
+        {
+            var client = _factory.CreateClient();
+            var registerRequest = new RegisterRequest { Email = "passchange@test.com", Password = "oldPassword123", FirstName = "Pass", LastName = "Change" };
+            await client.PostAsJsonAsync("/api/auth/register", registerRequest);
+            
+            var loginRequest = new LoginRequest { Email = "passchange@test.com", Password = "oldPassword123" };
+            var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+            var changeCommand = new PublishingTracker.Application.Users.Commands.ChangePasswordCommand("oldPassword123", "newPassword123");
+            var changeResponse = await client.PutAsJsonAsync("/api/users/me/password", changeCommand);
+            Assert.Equal(HttpStatusCode.OK, changeResponse.StatusCode);
+
+            // Verify login with new password works
+            var newLoginRequest = new LoginRequest { Email = "passchange@test.com", Password = "newPassword123" };
+            var newLoginResponse = await client.PostAsJsonAsync("/api/auth/login", newLoginRequest);
+            Assert.Equal(HttpStatusCode.OK, newLoginResponse.StatusCode);
+
+            // Verify login with old password fails
+            var oldLoginResponse = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            Assert.Equal(HttpStatusCode.Unauthorized, oldLoginResponse.StatusCode);
+        }
+
+        [Fact]
+        public async Task ChangePassword_WithIncorrectOldPassword_Fails()
+        {
+            var client = _factory.CreateClient();
+            var registerRequest = new RegisterRequest { Email = "passfail@test.com", Password = "realPassword123", FirstName = "Pass", LastName = "Fail" };
+            await client.PostAsJsonAsync("/api/auth/register", registerRequest);
+            
+            var loginRequest = new LoginRequest { Email = "passfail@test.com", Password = "realPassword123" };
+            var response = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+            var changeCommand = new PublishingTracker.Application.Users.Commands.ChangePasswordCommand("wrongPassword", "newPassword123");
+            var changeResponse = await client.PutAsJsonAsync("/api/users/me/password", changeCommand);
+            Assert.Equal(HttpStatusCode.BadRequest, changeResponse.StatusCode);
+
+            // Verify login with old password still works
+            var oldLoginResponse = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
+            Assert.Equal(HttpStatusCode.OK, oldLoginResponse.StatusCode);
         }
     }
 }

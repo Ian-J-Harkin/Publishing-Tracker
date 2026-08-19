@@ -6,7 +6,7 @@ using PublishingTracker.Api.Models;
 using PublishingTracker.Api.Models.Dtos;
 using System.Security.Claims;
 
-namespace PublishingTracker.Api.Features.Platforms;
+namespace PublishingTracker.Application.Platforms;
 
 public static class PlatformEndpoints
 {

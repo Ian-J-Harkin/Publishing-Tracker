@@ -4,36 +4,24 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Api.Features.Auth;
-using PublishingTracker.Api.Features.Books;
-using PublishingTracker.Api.Features.Dashboard;
-using PublishingTracker.Api.Features.Import;
-using PublishingTracker.Api.Features.Platforms;
-using PublishingTracker.Api.Features.Sales;
-using PublishingTracker.Api.Features.Users;
-using PublishingTracker.Api.Infrastructure.Authentication;
+using PublishingTracker.Application.Auth;
+using PublishingTracker.Application.Books;
+using PublishingTracker.Application.Dashboard;
+using PublishingTracker.Application.Import;
+using PublishingTracker.Application.Platforms;
+using PublishingTracker.Application.Sales;
+using PublishingTracker.Application.Users;
+using PublishingTracker.Application;
+using PublishingTracker.Infrastructure;
 using PublishingTracker.Api.Middleware;
-using PublishingTracker.Infrastructure.Persistence.Repositories;
-using PublishingTracker.Infrastructure.Services;
-using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Infrastructure.Authentication;
-
 using System.Text;
-using System.Threading.Channels;
-using PublishingTracker.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 
-// Register the Repository (Infrastructure)
-builder.Services.AddScoped<IBookRepository, BookRepository>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-
-// Register MediatR (Application)
-// This scans the current assembly to find your CreateBookCommandHandler automatically
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -88,25 +76,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<ITokenService, TokenService>();
-// builder.Services.AddScoped<IAuthService, AuthService>(); // Replaced by MediatR handlers
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-//builder.Services.AddScoped<IBookService, BookService>();
-builder.Services.AddScoped<ICsvReader, CsvReaderService>();
-builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
-builder.Services.AddScoped<ICurrencyConverterService, StaticCurrencyConverterService>();
-
-// ── Background Import Service (Channel + BackgroundService) ──────
-// Bounded channel prevents unbounded memory growth if imports queue up.
-builder.Services.AddSingleton(Channel.CreateBounded<ImportRequest>(new BoundedChannelOptions(100)
-{
-    FullMode = BoundedChannelFullMode.Wait
-}));
-builder.Services.AddSingleton<ImportBackgroundService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<ImportBackgroundService>());
 
 // ── Health Checks ─────────────────────────────────────────────────
 // NOTE: Planned migration to Application Insights for production telemetry.
@@ -156,10 +127,9 @@ app.UseExceptionHandler(errorApp =>
                  await context.Response.WriteAsJsonAsync(new { error = "An error occurred. Please contact support." });
             }
         }
-    });
 });
 
-if (app.Environment.IsEnvironment("Testing") || app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();

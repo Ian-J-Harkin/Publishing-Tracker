@@ -27,7 +27,7 @@ The deficiencies are ordered by critical importance, ranging from active data lo
 * **Platform Spoofing (US-019):** The spec requests that new platform requests go into "admin review". Instead, the `POST /api/platforms` endpoint blindly creates and activates platforms instantly. A malicious user could create a fake global platform (e.g., "Amazon KDP Fake") that pollutes the database for all users.
 * **Weak Multi-Tenancy:** Tenant isolation relies entirely on developers remembering to manually append `.Where(x => x.UserId == currentUser)` to queries in the Application or Infrastructure layers. A robust architecture would mandate a global query filter at the Entity Framework level to physically prevent cross-tenant data leakage.
 
-## 4. Missing Core MVP Features (High)
+## 4. Missing Core MVP Features (High) ✅ [RESOLVED]
 **Issue:** Entire epics and features promised in the MVP are entirely absent from both the frontend and backend.
 
 * **Context:** The `USER_STORIES.md` defines a strict set of MVP features required for launch.

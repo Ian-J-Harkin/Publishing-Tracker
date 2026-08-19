@@ -9,9 +9,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Api.Models;
+using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Users;
 using PublishingTracker.Domain.Entities;
-using PublishingTracker.Api.Domain.Entities;
+using PublishingTracker.Domain.Entities;
 using Microsoft.Extensions.Hosting;
 
 namespace PublishingTracker.Api.Tests
@@ -76,7 +77,7 @@ namespace PublishingTracker.Api.Tests
                         
                         // Ensure a clean slate for the test run
                         dbContext.Database.EnsureDeleted();
-                        dbContext.Database.Migrate();
+                        dbContext.Database.EnsureCreated();
 
                         if (!dbContext.Users.Any(u => u.Email == "test@test.com"))
                         {

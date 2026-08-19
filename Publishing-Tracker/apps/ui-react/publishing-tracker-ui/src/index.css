@@ -216,3 +216,32 @@ textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Responsive Data Entry Forms */
+.form-row-responsive {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .form-row-responsive {
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .card {
+    padding: 1.5rem !important; /* Reduce padding on mobile */
+  }
+
+  /* Make sure actions stack on very small screens */
+  .actions-responsive {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .actions-responsive button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+}
