@@ -401,5 +401,21 @@ namespace PublishingTracker.Api.Tests
             var oldLoginResponse = await client.PostAsJsonAsync("/api/auth/login", loginRequest);
             Assert.Equal(HttpStatusCode.OK, oldLoginResponse.StatusCode);
         }
+
+        [Fact]
+        public async Task GetDashboardData_ReturnsOk()
+        {
+            var client = await GetAuthenticatedClientAsync();
+            var response = await client.GetAsync("/api/dashboard/all");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetDashboardSummary_ReturnsOk()
+        {
+            var client = await GetAuthenticatedClientAsync();
+            var response = await client.GetAsync("/api/dashboard/summary");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
     }
 }

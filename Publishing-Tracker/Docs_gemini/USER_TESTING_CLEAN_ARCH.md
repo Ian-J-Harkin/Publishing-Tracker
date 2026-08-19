@@ -66,7 +66,23 @@ The primary goal of these tests is to ensure **functional parity**. The API shou
 
 ---
 
-## 4. General Application Health
+## 4. Dashboard API Testing
+
+**Objective:** Verify that Dashboard endpoints correctly aggregate data using MediatR and EF Core.
+
+### Test 4.1: Retrieve Dashboard Data
+- **Action:** Send a `GET /api/dashboard/all` request.
+- **Expected Result:** Returns a 200 OK with aggregated dashboard data (revenue by currency, YoY growth, seasonal trends, top platforms/books).
+- **Behind the Scenes:** Should trigger `GetDashboardDataQuery` and be handled by `GetDashboardDataQueryHandler`.
+
+### Test 4.2: Retrieve Dashboard Summary
+- **Action:** Send a `GET /api/dashboard/summary` request.
+- **Expected Result:** Returns a 200 OK with a lightweight summary (total books, total sales, revenue by currency).
+- **Behind the Scenes:** Should trigger `GetDashboardSummaryQuery` and be handled by `GetDashboardSummaryQueryHandler`.
+
+---
+
+## 5. General Application Health
 
 ### Test 4.1: Database Migrations
 - **Action:** Ensure the app boots and connects to the database successfully.
@@ -79,7 +95,7 @@ The primary goal of these tests is to ensure **functional parity**. The API shou
 
 ---
 
-## 5. Security & Admin Features Testing
+## 6. Security & Admin Features Testing
 
 **Objective:** Verify that the application correctly isolates tenant data and manages Administrator privileges according to the new Domain-Driven security model.
 
