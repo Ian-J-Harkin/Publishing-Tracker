@@ -112,9 +112,16 @@ Creates a new sale.
 
 All endpoints in this section require authentication.
 
+### GET /api/dashboard/all
+
+Retrieves aggregated dashboard data (revenue by currency, YoY growth, seasonal trends, top platforms/books) for the authenticated user.
+
+-   **Responses:**
+    -   `200 OK`: Returns a `DashboardDataDto` object.
+
 ### GET /api/dashboard/summary
 
-Retrieves a summary of key metrics for the authenticated user.
+Retrieves a lightweight summary of key metrics for the authenticated user.
 
 -   **Responses:**
     -   `200 OK`: Returns a `DashboardSummaryDto` object.
