@@ -14,11 +14,13 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
 {
     private readonly IApplicationDbContext _context;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmailService _emailService;
 
-    public ChangePasswordCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public ChangePasswordCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService, IEmailService emailService)
     {
         _context = context;
         _currentUserService = currentUserService;
+        _emailService = emailService;
     }
 
     public async Task<Result<bool>> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
@@ -45,6 +47,13 @@ public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordComman
         {
             user.ChangePassword(newHash);
             await _context.SaveChangesAsync(cancellationToken);
+            
+            await _emailService.SendEmailAsync(
+                user.Email, 
+                "Password Changed", 
+                "Your password has been successfully changed. If this was not you, please contact support immediately."
+            );
+            
             return Result<bool>.Success(true);
         }
         catch (System.Exception ex)

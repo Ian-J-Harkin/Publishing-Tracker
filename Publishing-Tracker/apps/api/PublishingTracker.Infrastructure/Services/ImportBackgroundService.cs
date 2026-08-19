@@ -2,8 +2,10 @@ using System.Threading.Channels;
 using MediatR;
 using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Application.Import.Commands;
-
-namespace PublishingTracker.Infrastructure.Services;
+using PublishingTracker.Infrastructure.Services;
+using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Domain.Entities;
 
 /// <summary>
 /// A hosted BackgroundService that processes CSV imports off the HTTP request thread.
@@ -67,6 +69,10 @@ public class ImportBackgroundService : BackgroundService
         var command = new ImportCsvCommand(request.UserId, request.JobId, request.FilePath, request.Mapping);
         
         var result = await mediator.Send(command, ct);
+        
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+        var user = await db.Users.FindAsync(new object[] { request.UserId }, ct);
 
         // Fire completion event
         if (result.IsSuccess && result.Value != null)
@@ -83,10 +89,28 @@ public class ImportBackgroundService : BackgroundService
             _logger.LogInformation(
                 "Import job {JobId} finished. Status: {Status}, Processed: {Processed}, Success: {Success}, Failed: {Failed}",
                 request.JobId, result.Value.Status, result.Value.RecordsProcessed, result.Value.RecordsSuccessful, result.Value.RecordsFailed);
+                
+            if (user != null)
+            {
+                await emailService.SendEmailAsync(
+                    user.Email,
+                    "Import Completed Successfully",
+                    $"Your CSV import (Job ID: {request.JobId}) has completed. Processed: {result.Value.RecordsProcessed}, Success: {result.Value.RecordsSuccessful}, Failed: {result.Value.RecordsFailed}."
+                );
+            }
         }
         else
         {
             _logger.LogError("Import job {JobId} failed during CQRS execution: {Error}", request.JobId, result.ErrorMessage);
+            
+            if (user != null)
+            {
+                await emailService.SendEmailAsync(
+                    user.Email,
+                    "Import Failed",
+                    $"Your CSV import (Job ID: {request.JobId}) failed to process. Error: {result.ErrorMessage}"
+                );
+            }
         }
     }
 

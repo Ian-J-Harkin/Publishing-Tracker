@@ -127,6 +127,7 @@ app.UseExceptionHandler(errorApp =>
                  await context.Response.WriteAsJsonAsync(new { error = "An error occurred. Please contact support." });
             }
         }
+    });
 });
 
 if (app.Environment.IsDevelopment())

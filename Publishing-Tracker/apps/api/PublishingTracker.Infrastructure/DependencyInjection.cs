@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<ICsvReader, CsvReaderService>();
         services.AddScoped<ICurrencyConverterService, StaticCurrencyConverterService>();
+        services.AddTransient<IEmailService, EmailService>();
 
         services.AddSingleton(Channel.CreateBounded<ImportRequest>(new BoundedChannelOptions(100)
         {
