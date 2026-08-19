@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { salePort } from '../adapters/SaleAxiosAdapter';
-import { platformPort } from '../adapters/PlatformAxiosAdapter';
+
 import { Sale, SalesSummary, SalesFilter } from '../types/sale';
 import { Book } from '../types/book';
 import { Platform } from '../types/platform';
@@ -28,7 +27,8 @@ const SalesPage = () => {
         const loadMetadata = async () => {
             try {
                 const [availableBooks, availablePlatforms] = await Promise.all([
-                    bookPort.getBooks().getPlatforms()
+                    bookPort.getBooks(),
+                    platformPort.getPlatforms()
                 ]);
                 setBooks(availableBooks);
                 setPlatforms(availablePlatforms);
@@ -48,7 +48,8 @@ const SalesPage = () => {
                 );
 
                 const [salesData, summaryData] = await Promise.all([
-                    salePort.getSales(cleanFilters).getSummary(cleanFilters)
+                    salePort.getSales(cleanFilters),
+                    salePort.getSummary(cleanFilters)
                 ]);
                 setSales(salesData);
                 setSummary(summaryData);

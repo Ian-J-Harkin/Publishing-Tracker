@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { salePort } from '../adapters/SaleAxiosAdapter';
-import { platformPort } from '../adapters/PlatformAxiosAdapter';
+
 import { CreateSale } from '../types/sale';
 import { Book } from '../types/book';
 import { Platform } from '../types/platform';
@@ -27,7 +26,8 @@ const AddSalePage = () => {
         const fetchData = async () => {
             try {
                 const [availableBooks, availablePlatforms] = await Promise.all([
-                    bookPort.getBooks().getPlatforms()
+                    bookPort.getBooks(),
+                    platformPort.getPlatforms()
                 ]);
                 setBooks(availableBooks);
                 setPlatforms(availablePlatforms);
