@@ -24,7 +24,6 @@
     <InternalsVisibleTo Include="PublishingTracker.Api.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Application\NewFolder\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\PublishingTracker.Application\PublishingTracker.Application.csproj" />

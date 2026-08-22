@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Application.Common.Interfaces;
 
 
@@ -10,21 +9,23 @@ public record DemoteUserCommand(int TargetUserId) : IRequest<Result>;
 public class DemoteUserCommandHandler : IRequestHandler<DemoteUserCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
 
-    public DemoteUserCommandHandler(IApplicationDbContext context)
+    public DemoteUserCommandHandler(IApplicationDbContext context, IQueryExecutor queries)
     {
         _context = context;
+        _queries = queries;
     }
 
     public async Task<Result> Handle(DemoteUserCommand request, CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FindAsync(new object[] { request.TargetUserId }, cancellationToken);
+        var user = await _queries.FirstOrDefaultAsync(_context.Users.Where(u => u.Id == request.TargetUserId), cancellationToken);
         if (user == null)
             return Result.Failure("User not found.");
 
         // Query the total number of admins and pass to the domain.
         // The domain enforces the invariant that the last admin cannot be demoted.
-        var totalAdminCount = await _context.Users.CountAsync(u => u.Role == "Admin", cancellationToken);
+        var totalAdminCount = (await _queries.ToListAsync(_context.Users.Where(u => u.Role == "Admin"), cancellationToken)).Count;
 
         user.Demote(totalAdminCount);
 

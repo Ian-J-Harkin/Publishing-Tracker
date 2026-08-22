@@ -2,11 +2,12 @@ using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Extensions;
 using PublishingTracker.Domain;
 using Microsoft.AspNetCore.Mvc;
+using PublishingTracker.Api.Extensions;
 using MediatR;
 using PublishingTracker.Application.Users.Commands;
 using PublishingTracker.Application.Users.Queries;
 
-namespace PublishingTracker.Application.Users;
+namespace PublishingTracker.Api.Endpoints;
 
 public static class UserEndpoints
 {
@@ -18,7 +19,9 @@ public static class UserEndpoints
         {
             var result = await mediator.Send(new GetProfileQuery());
             if (!result.IsSuccess)
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.NotFound(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.NotFound(result.ErrorMessage ?? "Not found");
             return Results.Ok(result.Value);
         });
 
@@ -26,7 +29,9 @@ public static class UserEndpoints
         {
             var result = await mediator.Send(command);
             if (!result.IsSuccess)
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
             return Results.Ok();
         });
 
@@ -34,7 +39,9 @@ public static class UserEndpoints
         {
             var result = await mediator.Send(command);
             if (!result.IsSuccess)
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
             return Results.Ok();
         });
 
@@ -47,7 +54,7 @@ public static class UserEndpoints
             var result = await mediator.Send(new GetUsersQuery());
 
             if (!result.IsSuccess)
-                return Results.BadRequest(result.ErrorMessage);
+                return ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
 
             return Results.Ok(result.Value);
         });
@@ -58,7 +65,7 @@ public static class UserEndpoints
             var result = await mediator.Send(new PromoteUserCommand(id));
 
             if (!result.IsSuccess)
-                return Results.BadRequest(result.ErrorMessage);
+                return ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
 
             return Results.NoContent();
         });
@@ -69,10 +76,9 @@ public static class UserEndpoints
             var result = await mediator.Send(new DemoteUserCommand(id));
 
             if (!result.IsSuccess)
-                return Results.BadRequest(result.ErrorMessage);
+                return ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
 
             return Results.NoContent();
         });
     }
 }
-

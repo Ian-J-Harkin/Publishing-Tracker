@@ -1,9 +1,8 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
@@ -17,15 +16,18 @@ public class GetBookPerformanceQueryHandler : IRequestHandler<GetBookPerformance
 {
     private readonly IRepository<Book> _bookRepository;
     private readonly IRepository<Sale> _saleRepository;
+    private readonly IQueryExecutor _queries;
     private readonly ICurrentUserService _currentUserService;
 
     public GetBookPerformanceQueryHandler(
         IRepository<Book> bookRepository, 
         IRepository<Sale> saleRepository, 
+        IQueryExecutor queries,
         ICurrentUserService currentUserService)
     {
         _bookRepository = bookRepository;
         _saleRepository = saleRepository;
+        _queries = queries;
         _currentUserService = currentUserService;
     }
 
@@ -41,8 +43,7 @@ public class GetBookPerformanceQueryHandler : IRequestHandler<GetBookPerformance
             return Result<List<BookPerformanceDto>>.Failure("Book not found or access denied.");
         }
 
-        var performanceData = await _saleRepository.Query()
-            .Include(s => s.Platform)
+        var performanceData = await _queries.ToListAsync(_saleRepository.Query()
             .Where(s => s.BookId == request.BookId)
             .GroupBy(s => new { s.Platform.Name, s.Currency })
             .Select(g => new BookPerformanceDto 
@@ -51,7 +52,7 @@ public class GetBookPerformanceQueryHandler : IRequestHandler<GetBookPerformance
                 Currency = g.Key.Currency,
                 TotalRevenue = g.Sum(s => s.Revenue) 
             })
-            .ToListAsync(cancellationToken);
+            , cancellationToken);
 
         return Result<List<BookPerformanceDto>>.Success(performanceData);
     }

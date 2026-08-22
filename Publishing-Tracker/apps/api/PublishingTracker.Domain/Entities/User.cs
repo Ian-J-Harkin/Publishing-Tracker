@@ -5,20 +5,20 @@ namespace PublishingTracker.Domain.Entities
 {
     public class User : IEntity
     {
-        public int Id { get; set; }
+        public int Id { get; private set; }
 
         [Required]
         [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        public string Email { get; private set; } = string.Empty;
 
         [Required]
         public string PasswordHash { get; private set; } = string.Empty;
 
         [Required]
-        public string FirstName { get; set; } = string.Empty;
+        public string FirstName { get; private set; } = string.Empty;
 
         [Required]
-        public string LastName { get; set; } = string.Empty;
+        public string LastName { get; private set; } = string.Empty;
 
         [Required]
         public string Role { get; private set; } = "User";
@@ -26,10 +26,10 @@ namespace PublishingTracker.Domain.Entities
         public DateTime? RoleChangedAt { get; private set; }
 
         [Auditable(isCreationTime: true)]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
         [Auditable]
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
         // Factory / invariant enforcement
         public static User Create(string email, string passwordHash, string firstName, string lastName, string role = "User")
@@ -81,6 +81,18 @@ namespace PublishingTracker.Domain.Entities
                 
             FirstName = firstName;
             LastName = lastName;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Updates the user's email address.
+        /// </summary>
+        public void UpdateEmail(string newEmail)
+        {
+            if (string.IsNullOrWhiteSpace(newEmail))
+                throw new ArgumentException("Email cannot be empty.", nameof(newEmail));
+
+            Email = newEmail;
             UpdatedAt = DateTime.UtcNow;
         }
 

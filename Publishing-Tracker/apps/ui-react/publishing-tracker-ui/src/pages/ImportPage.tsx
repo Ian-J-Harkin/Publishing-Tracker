@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImportJob, ColumnMapping } from '../types/import';
-import axios from 'axios';
 import { useDependencies } from '../context/DependencyContext';
+import { getApiErrorMessage } from '../utils/apiError';
 
 const ImportPage = () => {
     const { imports: importServicePort } = useDependencies();
@@ -80,15 +80,9 @@ const ImportPage = () => {
                 setSummary(result);
                 setStep('summary');
             } catch (err) {
-                let msg = 'Unknown processing error';
-                if (axios.isAxiosError(err)) {
-                    msg = err.response?.data?.title || err.response?.data?.message || err.message || msg;
-                } else if (err instanceof Error) {
-                    msg = err.message;
-                }
-
-                console.error("Process error:", err);
-                setError(`Processing failed: ${msg}`);
+                const message = getApiErrorMessage(err, 'Unknown processing error');
+                console.error('Process error:', err);
+                setError(`Processing failed: ${message}`);
             }
         }
     };

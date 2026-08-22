@@ -12,11 +12,13 @@ public record UpdateProfileCommand(string FirstName, string LastName) : IRequest
 public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand, Result<bool>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
     private readonly ICurrentUserService _currentUserService;
 
-    public UpdateProfileCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public UpdateProfileCommandHandler(IApplicationDbContext context, IQueryExecutor queries, ICurrentUserService currentUserService)
     {
         _context = context;
+        _queries = queries;
         _currentUserService = currentUserService;
     }
 
@@ -26,7 +28,7 @@ public class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileCommand,
         if (userId == null)
             return Result<bool>.Failure("Unauthorized");
 
-        var user = await _context.Users.FindAsync(new object[] { userId.Value }, cancellationToken);
+        var user = await _queries.FirstOrDefaultAsync(_context.Users.Where(u => u.Id == userId.Value), cancellationToken);
         if (user == null)
             return Result<bool>.Failure("User not found");
 

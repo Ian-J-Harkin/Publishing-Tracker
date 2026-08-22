@@ -2,12 +2,13 @@ using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Extensions;
 using PublishingTracker.Domain;
 using Microsoft.AspNetCore.Mvc;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Api.Extensions;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Application.Sales.Queries;
 using PublishingTracker.Application.Sales.Commands;
 using MediatR;
 
-namespace PublishingTracker.Application.Sales;
+namespace PublishingTracker.Api.Endpoints;
 
 public static class SalesEndpoints
 {
@@ -26,7 +27,9 @@ public static class SalesEndpoints
             var result = await mediator.Send(query);      
             
             if (!result.IsSuccess)            
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
             
             return Results.Ok(result.Value);
         });
@@ -40,7 +43,9 @@ public static class SalesEndpoints
             var result = await mediator.Send(query);
             
             if (!result.IsSuccess)
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
                 
             return Results.Ok(result.Value);
         });
@@ -62,13 +67,14 @@ public static class SalesEndpoints
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("not found"))
-                    return Results.NotFound(result.ErrorMessage);
+                    return ApiResults.NotFound(result.ErrorMessage ?? "Not found");
                     
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
             }
                 
             return Results.Created($"/api/sales/{result.Value?.Id}", result.Value);
         });
     }
 }
-

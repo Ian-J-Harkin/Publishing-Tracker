@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { User } from '../adapters/UserAxiosAdapter';
+import { User } from '../types/user';
 import { useDependencies } from '../context/DependencyContext';
+import { getApiErrorMessage } from '../utils/apiError';
 
 const AdminUsersPage = () => {
     const { users: userServicePort } = useDependencies();
@@ -28,8 +29,8 @@ const AdminUsersPage = () => {
         try {
             await userServicePort.promoteUser(id);
             await fetchUsers();
-        } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to promote user.');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to promote user.'));
         }
     };
 
@@ -38,8 +39,8 @@ const AdminUsersPage = () => {
         try {
             await userServicePort.demoteUser(id);
             await fetchUsers();
-        } catch (err: any) {
-            setError(err.response?.data || 'Failed to demote user.');
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Failed to demote user.'));
         }
     };
 

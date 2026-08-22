@@ -3,11 +3,12 @@ import { ImportJob, ColumnMapping, PreviewData } from '../types/import';
 import { Platform, PlatformRequest } from '../types/platform';
 import { Sale, CreateSale, SalesSummary, SalesFilter } from '../types/sale';
 import { DashboardSummary, YoYComparison, SeasonalPerformance, DashboardData } from '../types/dashboard';
-import { User } from '../adapters/UserAxiosAdapter'; // TODO: Move User interface to types/user.ts
+import { AuthResponse, LoginRequest, RegisterRequest } from '../types/auth';
+import { User } from '../types/user';
 
 export interface IAuthPort {
-    register(data: Record<string, unknown>): Promise<any>;
-    login(data: Record<string, unknown>): Promise<any>;
+    register(data: RegisterRequest): Promise<AuthResponse>;
+    login(data: LoginRequest): Promise<AuthResponse>;
 }
 
 export interface IBookPort {

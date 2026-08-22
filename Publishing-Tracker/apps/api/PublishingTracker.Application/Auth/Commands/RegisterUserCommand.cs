@@ -1,35 +1,37 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
+using PublishingTracker.Domain;
 
 namespace PublishingTracker.Application.Auth.Commands;
 
-public record RegisterUserCommand(string Email, string Password, string FirstName, string LastName) : IRequest<AuthResponse?>;
+public record RegisterUserCommand(string Email, string Password, string FirstName, string LastName) : IRequest<Result<AuthResponse>>;
 
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, AuthResponse?>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Result<AuthResponse>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
     private readonly ITokenService _tokenService;
 
-    public RegisterUserCommandHandler(IApplicationDbContext context, ITokenService tokenService)
+    public RegisterUserCommandHandler(IApplicationDbContext context, IQueryExecutor queries, ITokenService tokenService)
     {
         _context = context;
+        _queries = queries;
         _tokenService = tokenService;
     }
 
-    public async Task<AuthResponse?> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthResponse>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email, cancellationToken))
+        if (await _queries.AnyAsync(_context.Users.Where(u => u.Email == request.Email), cancellationToken))
         {
-            return null; // Email already exists
+            return Result<AuthResponse>.Failure("Email already exists.");
         }
 
         // First user ever registered becomes Admin; all others default to User.
-        var isFirstUser = !await _context.Users.AnyAsync(cancellationToken);
+        var isFirstUser = !await _queries.AnyAsync(_context.Users, cancellationToken);
         var role = isFirstUser ? "Admin" : "User";
 
         var user = User.Create(
@@ -40,16 +42,16 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
             role
         );
 
-        _context.Users.Add(user);
+        _context.Add(user);
         await _context.SaveChangesAsync(cancellationToken);
 
         var token = _tokenService.CreateToken(user);
-        return new AuthResponse
+        return Result<AuthResponse>.Success(new AuthResponse
         {
             Token = token,
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName
-        };
+        });
     }
 }

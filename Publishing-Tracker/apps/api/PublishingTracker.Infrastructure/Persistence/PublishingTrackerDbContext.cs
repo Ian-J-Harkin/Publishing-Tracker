@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using System.Reflection;
 using PublishingTracker.Domain;
 using PublishingTracker.Domain.Entities;
@@ -25,6 +25,14 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
     public DbSet<Sale> Sales { get; set; }
     public DbSet<Platform> Platforms { get; set; }
     public DbSet<ImportJob> ImportJobs { get; set; }
+
+    IQueryable<User> IApplicationDbContext.Users => Users;
+    IQueryable<Book> IApplicationDbContext.Books => Books;
+    IQueryable<Sale> IApplicationDbContext.Sales => Sales;
+    IQueryable<Platform> IApplicationDbContext.Platforms => Platforms;
+    IQueryable<ImportJob> IApplicationDbContext.ImportJobs => ImportJobs;
+
+    void IApplicationDbContext.Add<T>(T entity) => Add(entity);
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,7 +73,19 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
             _currentUserService == null || _currentUserService.UserId == null || s.Book.UserId == _currentUserService.UserId);
     }
 
+    public override int SaveChanges()
+    {
+        ApplyAuditTimestamps();
+        return base.SaveChanges();
+    }
+
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyAuditTimestamps();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void ApplyAuditTimestamps()
     {
         var entries = ChangeTracker.Entries()
             .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
@@ -84,16 +104,24 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
                 {
                     if (entry.State == EntityState.Added)
                     {
-                        property.SetValue(entry.Entity, now);
+                        SetPropertyValue(property, entry.Entity, now);
                     }
                     else if (entry.State == EntityState.Modified && !attr.IsCreationTime)
                     {
-                        property.SetValue(entry.Entity, now);
+                        SetPropertyValue(property, entry.Entity, now);
                     }
                 }
             }
         }
 
-        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void SetPropertyValue(PropertyInfo property, object entity, DateTime value)
+    {
+        var setter = property.GetSetMethod(true);
+        if (setter == null)
+            throw new InvalidOperationException($"Property {property.Name} does not have a setter.");
+
+        setter.Invoke(entity, new object[] { value });
     }
 }

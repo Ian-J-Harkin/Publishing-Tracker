@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../adapters/UserAxiosAdapter';
+import { User } from '../types/user';
 import { useDependencies } from '../context/DependencyContext';
+import { getApiErrorMessage } from '../utils/apiError';
 
 const ProfilePage: React.FC = () => {
     const { users } = useDependencies();
@@ -41,8 +42,8 @@ const ProfilePage: React.FC = () => {
             if (profile) {
                 setProfile({ ...profile, firstName, lastName });
             }
-        } catch (error: any) {
-            setProfileMessage({ text: error.response?.data || 'Failed to update profile', type: 'error' });
+        } catch (error) {
+            setProfileMessage({ text: getApiErrorMessage(error, 'Failed to update profile'), type: 'error' });
         }
     };
 
@@ -61,8 +62,8 @@ const ProfilePage: React.FC = () => {
             setOldPassword('');
             setNewPassword('');
             setConfirmPassword('');
-        } catch (error: any) {
-            setPasswordMessage({ text: error.response?.data || 'Failed to change password', type: 'error' });
+        } catch (error) {
+            setPasswordMessage({ text: getApiErrorMessage(error, 'Failed to change password'), type: 'error' });
         }
     };
 

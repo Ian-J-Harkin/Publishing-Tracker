@@ -3,7 +3,7 @@ using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Application.Common.Interfaces;
 
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Interfaces;
 
@@ -37,7 +37,7 @@ public class CreatePlatformCommandHandler : IRequestHandler<CreatePlatformComman
             createdByUserId: userId
         );
 
-        _context.Platforms.Add(platform);
+        _context.Add(platform);
         await _context.SaveChangesAsync(cancellationToken);
 
         // Invalidate the cache to ensure the new platform appears in subsequent requests

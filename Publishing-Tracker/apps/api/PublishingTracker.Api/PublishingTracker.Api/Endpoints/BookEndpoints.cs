@@ -2,12 +2,12 @@ using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Extensions;
 using PublishingTracker.Domain;
 using Microsoft.AspNetCore.Mvc;
-using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Api.Extensions;
+using PublishingTracker.Application.Common.Dtos;
 using MediatR;
 using PublishingTracker.Application.Books.Commands;
 using PublishingTracker.Application.Books.Queries; 
-namespace PublishingTracker.Application.Books;
+namespace PublishingTracker.Api.Endpoints;
 
 public static class BookEndpoints
 {
@@ -25,7 +25,9 @@ public static class BookEndpoints
             var result = await mediator.Send(command);
 
             if (!result.IsSuccess)
-                return result.ErrorMessage == "Unauthorized" ? Results.Unauthorized() : Results.BadRequest(result.ErrorMessage);
+                return result.ErrorMessage == "Unauthorized"
+                    ? ApiResults.Unauthorized("Unauthorized")
+                    : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
 
             return Results.Created($"/api/books/{result.Value}", result.Value);
         });
@@ -35,7 +37,7 @@ public static class BookEndpoints
             // TODO: adjust pagination parameters as needed
             var query = new GetBooksQuery(search, null, null, 1, 10);
             var result = await mediator.Send(query);
-            return result.IsSuccess ? Results.Ok(result.Value) : Results.BadRequest(result.ErrorMessage);
+            return result.IsSuccess ? Results.Ok(result.Value) : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
         });
 
         booksGroup.MapGet("/{id}", async ([FromServices] IMediator mediator, int id) =>
@@ -46,8 +48,8 @@ public static class BookEndpoints
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
-                    return Results.Forbid();
-                return Results.NotFound(result.ErrorMessage);
+                    return ApiResults.Forbidden("Access denied");
+                return ApiResults.NotFound(result.ErrorMessage ?? "Not found");
             }
             return Results.Ok(result.Value);
         });
@@ -61,8 +63,8 @@ public static class BookEndpoints
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
-                    return Results.Forbid();
-                return Results.NotFound(result.ErrorMessage);
+                    return ApiResults.Forbidden("Access denied");
+                return ApiResults.NotFound(result.ErrorMessage ?? "Not found");
             }
             return Results.Ok(result.Value);
         });
@@ -74,8 +76,8 @@ public static class BookEndpoints
             if (!result.IsSuccess)
             {
                 if (result.ErrorMessage != null && result.ErrorMessage.Contains("Access denied"))
-                    return Results.Forbid();
-                return Results.NotFound(result.ErrorMessage);
+                    return ApiResults.Forbidden("Access denied");
+                return ApiResults.NotFound(result.ErrorMessage ?? "Not found");
             }
             return Results.NoContent();
         });
@@ -94,4 +96,3 @@ public static class BookEndpoints
         });
     }
 }
-

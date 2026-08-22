@@ -36,7 +36,7 @@ public static class HttpContextExtensions
         }
 
         userId = 0;
-        errorResult = Results.Unauthorized();
+        errorResult = ApiResults.Unauthorized("Unauthorized");
         return false;
     }
 }

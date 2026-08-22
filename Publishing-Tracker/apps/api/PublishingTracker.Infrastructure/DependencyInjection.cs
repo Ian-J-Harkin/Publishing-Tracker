@@ -3,11 +3,12 @@ using Microsoft.Extensions.Configuration;
 using System.Threading.Channels;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
+using PublishingTracker.Application.Import.Models;
 using PublishingTracker.Infrastructure.Authentication;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Infrastructure.Persistence.Repositories;
 using PublishingTracker.Infrastructure.Services;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace PublishingTracker.Infrastructure;
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<PublishingTrackerDbContext>());
+        services.AddScoped<IQueryExecutor, QueryExecutor>();
 
         services.AddScoped<ITokenService, TokenService>();
         services.AddHttpContextAccessor();
@@ -33,6 +35,7 @@ public static class DependencyInjection
             FullMode = BoundedChannelFullMode.Wait
         }));
         services.AddSingleton<ImportBackgroundService>();
+        services.AddSingleton<IImportQueue>(sp => sp.GetRequiredService<ImportBackgroundService>());
         services.AddHostedService(sp => sp.GetRequiredService<ImportBackgroundService>());
 
         return services;

@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Net.Http.Headers;
-using Microsoft.AspNetCore.Mvc.Testing;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using Xunit;
 using PublishingTracker.Infrastructure.Persistence;
-using PublishingTracker.Application.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 
@@ -110,6 +108,13 @@ namespace PublishingTracker.Api.Tests
             Assert.Equal(2, importResult.RecordsProcessed);
             Assert.Equal(2, importResult.RecordsSuccessful);
             Assert.Equal(0, importResult.RecordsFailed);
+
+            var historyResponse = await client.GetAsync("/api/import/history");
+            historyResponse.EnsureSuccessStatusCode();
+
+            var history = await historyResponse.Content.ReadFromJsonAsync<System.Collections.Generic.List<ImportJobDto>>();
+            Assert.NotNull(history);
+            Assert.Contains(history, item => item.Id == queuedJob.Id);
 
             // 4. VERIFY DB State
             using (var scope = _factory.Services.CreateScope())

@@ -4,7 +4,7 @@ using PublishingTracker.Api.Extensions;
 using MediatR;
 using PublishingTracker.Application.Dashboard.Queries;
 
-namespace PublishingTracker.Application.Dashboard;
+namespace PublishingTracker.Api.Endpoints;
 
 public static class DashboardEndpoints
 {

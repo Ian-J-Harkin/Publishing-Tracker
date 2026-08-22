@@ -1,10 +1,9 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PublishingTracker.Application.Common.Interfaces;
 
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 
 namespace PublishingTracker.Application.Platforms.Queries;
 
@@ -13,11 +12,13 @@ public record GetPlatformsQuery(string? Search, bool IncludeInactive = false) : 
 public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Result<List<PlatformResponseDto>>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
     private readonly IMemoryCache _cache;
 
-    public GetPlatformsQueryHandler(IApplicationDbContext context, IMemoryCache cache)
+    public GetPlatformsQueryHandler(IApplicationDbContext context, IQueryExecutor queries, IMemoryCache cache)
     {
         _context = context;
+        _queries = queries;
         _cache = cache;
     }
 
@@ -26,11 +27,11 @@ public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Resul
         // When including inactive platforms (admin view), bypass the cache to always show fresh data.
         if (request.IncludeInactive)
         {
-            var allPlatforms = await _context.Platforms
+            var allPlatforms = await _queries.ToListAsync(_context.Platforms
                 .Search(request.Search)
                 .OrderBy(p => p.Name)
                 .Select(p => p.ToResponseDto())
-                .ToListAsync(cancellationToken);
+                , cancellationToken);
 
             return Result<List<PlatformResponseDto>>.Success(allPlatforms);
         }
@@ -41,12 +42,12 @@ public class GetPlatformsQueryHandler : IRequestHandler<GetPlatformsQuery, Resul
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
 
-            return await _context.Platforms
+            return await _queries.ToListAsync(_context.Platforms
                 .Where(p => p.IsActive)
                 .Search(request.Search)
                 .OrderBy(p => p.Name)
                 .Select(p => p.ToResponseDto())
-                .ToListAsync(cancellationToken);
+                , cancellationToken);
         });
 
         // GetOrCreateAsync returns nullable if the factory returns null, but ours won't

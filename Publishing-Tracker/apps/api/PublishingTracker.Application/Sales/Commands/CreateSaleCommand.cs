@@ -1,9 +1,8 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Interfaces;
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Interfaces;
 
@@ -22,12 +21,14 @@ public record CreateSaleCommand(
 public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Result<SaleDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
     private readonly ICurrentUserService _currentUserService;
     private readonly ICurrencyConverterService _currencyConverterService;
 
-    public CreateSaleCommandHandler(IApplicationDbContext context, ICurrentUserService currentUserService, ICurrencyConverterService currencyConverterService)
+    public CreateSaleCommandHandler(IApplicationDbContext context, IQueryExecutor queries, ICurrentUserService currentUserService, ICurrencyConverterService currencyConverterService)
     {
         _context = context;
+        _queries = queries;
         _currentUserService = currentUserService;
         _currencyConverterService = currencyConverterService;
     }
@@ -38,11 +39,11 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Resul
         if (userId == null)
             return Result<SaleDto>.Failure("Unauthorized");
 
-        var book = await _context.Books.FirstOrDefaultAsync(b => b.Id == request.BookId && b.UserId == userId, cancellationToken);
+        var book = await _queries.FirstOrDefaultAsync(_context.Books.Where(b => b.Id == request.BookId && b.UserId == userId), cancellationToken);
         if (book == null)
             return Result<SaleDto>.Failure("Book not found or does not belong to the user.");
 
-        var platform = await _context.Platforms.FirstOrDefaultAsync(p => p.Id == request.PlatformId, cancellationToken);
+        var platform = await _queries.FirstOrDefaultAsync(_context.Platforms.Where(p => p.Id == request.PlatformId), cancellationToken);
         if (platform == null)
             return Result<SaleDto>.Failure("Platform not found.");
 
@@ -60,7 +61,7 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Resul
             request.Currency
         );
 
-        _context.Sales.Add(sale);
+        _context.Add(sale);
         await _context.SaveChangesAsync(cancellationToken);
 
         return Result<SaleDto>.Success(sale.ToDto(book.Title, platform.Name));

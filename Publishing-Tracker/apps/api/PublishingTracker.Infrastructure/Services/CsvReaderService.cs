@@ -2,7 +2,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
 using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using System.Runtime.CompilerServices;
 
 namespace PublishingTracker.Infrastructure.Services;

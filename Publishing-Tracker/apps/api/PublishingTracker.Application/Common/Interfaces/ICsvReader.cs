@@ -1,4 +1,4 @@
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 
 namespace PublishingTracker.Application.Common.Interfaces;
 

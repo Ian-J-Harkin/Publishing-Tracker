@@ -1,6 +1,6 @@
 namespace PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 
 using PublishingTracker.Application.Books.Queries;
 

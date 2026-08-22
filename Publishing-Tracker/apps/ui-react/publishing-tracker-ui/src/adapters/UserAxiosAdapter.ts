@@ -1,15 +1,6 @@
 import axiosClient from '../api/axiosClient';
 import { IUserPort } from '../ports';
-
-// TODO: move User interface to types/user.ts
-export interface User {
-    id: number;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    createdAt: string;
-}
+import { User } from '../types/user';
 
 const API_URL = '/api/users';
 

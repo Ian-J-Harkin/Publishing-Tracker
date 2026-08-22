@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 import { useDependencies } from '../context/DependencyContext';
+import { getApiErrorMessage } from '../utils/apiError';
+import { RegisterRequest } from '../types/auth';
 
 const RegisterPage = () => {
     const { auth: authPort } = useDependencies();
@@ -9,21 +11,25 @@ const RegisterPage = () => {
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         try {
-            await authPort.register({ firstName, lastName, email, password });
+            const payload: RegisterRequest = { firstName, lastName, email, password };
+            await authPort.register(payload);
             navigate('/login');
         } catch (error) {
-            console.error(error);
+            setError(getApiErrorMessage(error, 'Registration failed'));
         }
     };
 
     return (
         <div>
             <h2>Register</h2>
+            {error && <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
             <form onSubmit={handleSubmit}>
                 <div>
                     <label>First Name</label>

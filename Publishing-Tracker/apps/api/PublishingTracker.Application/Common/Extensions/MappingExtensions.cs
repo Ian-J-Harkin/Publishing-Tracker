@@ -1,5 +1,5 @@
 
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Domain.Entities;
 
 namespace PublishingTracker.Application.Common.Extensions;

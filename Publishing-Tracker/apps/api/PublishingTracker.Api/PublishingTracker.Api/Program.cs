@@ -2,19 +2,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
-using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Application.Auth;
-using PublishingTracker.Application.Books;
-using PublishingTracker.Application.Dashboard;
-using PublishingTracker.Application.Import;
-using PublishingTracker.Application.Platforms;
-using PublishingTracker.Application.Sales;
-using PublishingTracker.Application.Users;
+using PublishingTracker.Api.Endpoints;
 using PublishingTracker.Application;
 using PublishingTracker.Infrastructure;
 using PublishingTracker.Api.Middleware;
 using System.Text;
+using PublishingTracker.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,15 +32,22 @@ if (!builder.Environment.IsEnvironment("Testing"))
     {
         Console.WriteLine("Running in Azure environment.");
         builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseNpgsql(builder.Configuration.GetConnectionString("NeonConnection")));
+            options.UseNpgsql(
+                builder.Configuration.GetConnectionString("NeonConnection"),
+                npgsql => npgsql.MigrationsAssembly(typeof(PublishingTrackerDbContext).Assembly.GetName().Name!)));
     }
     else
     {
         Console.WriteLine("Running in Local/Development environment.");
         // Use SQL Server for local development (Requires running SQL Server instance)
         builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
-                sqlOptions => sqlOptions.EnableRetryOnFailure()));
+            options.UseSqlServer(
+                builder.Configuration.GetConnectionString("DefaultConnection"),
+                sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure();
+                    sqlOptions.MigrationsAssembly(typeof(PublishingTrackerDbContext).Assembly.GetName().Name!);
+                }));
     }
 }
 

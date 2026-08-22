@@ -9,9 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Application.Users;
-using PublishingTracker.Domain.Entities;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Domain.Entities;
 using Microsoft.Extensions.Hosting;
 

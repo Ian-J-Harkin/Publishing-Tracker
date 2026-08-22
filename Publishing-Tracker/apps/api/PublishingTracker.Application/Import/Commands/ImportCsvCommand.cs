@@ -1,15 +1,9 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Domain.Entities;
-using PublishingTracker.Domain.Entities;
-
-
 using PublishingTracker.Domain;
-using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Domain.Entities;
 
 namespace PublishingTracker.Application.Import.Commands;
 
@@ -18,17 +12,20 @@ public record ImportCsvCommand(int UserId, int JobId, string FilePath, ColumnMap
 public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<ImportJobDto>>
 {
     private readonly IApplicationDbContext _db;
+    private readonly IQueryExecutor _queries;
     private readonly ICsvReader _csvReader;
     private readonly ILogger<ImportCsvCommandHandler> _logger;
     private readonly ICurrencyConverterService _currencyConverterService;
 
     public ImportCsvCommandHandler(
         IApplicationDbContext db, 
+        IQueryExecutor queries,
         ICsvReader csvReader, 
         ILogger<ImportCsvCommandHandler> logger,
         ICurrencyConverterService currencyConverterService)
     {
         _db = db;
+        _queries = queries;
         _csvReader = csvReader;
         _logger = logger;
         _currencyConverterService = currencyConverterService;
@@ -36,7 +33,7 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
 
     public async Task<Result<ImportJobDto>> Handle(ImportCsvCommand request, CancellationToken cancellationToken)
     {
-        var job = await _db.ImportJobs.FindAsync(new object[] { request.JobId }, cancellationToken);
+        var job = await _queries.FirstOrDefaultAsync(_db.ImportJobs.Where(j => j.Id == request.JobId), cancellationToken);
         if (job == null)
         {
             _logger.LogError("Import job {JobId} not found in database.", request.JobId);
@@ -46,22 +43,21 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
         try
         {
             // Pre-fetch user's books and platforms
-            var userBooks = await _db.Books.Where(b => b.UserId == request.UserId).ToListAsync(cancellationToken);
-            var platforms = await _db.Platforms.ToListAsync(cancellationToken);
+            var userBooks = await _queries.ToListAsync(_db.Books.Where(b => b.UserId == request.UserId), cancellationToken);
+            var platforms = await _queries.ToListAsync(_db.Platforms, cancellationToken);
 
             using var fileStream = new FileStream(request.FilePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var parsedRecords = _csvReader.ReadCsvAsync(fileStream, request.Mapping, cancellationToken);
 
             await foreach (var record in parsedRecords)
             {
-                job.RecordsProcessed++;
+                job.IncrementProcessed();
                 try
                 {
                     // 1. Resolve Book
                     if (string.IsNullOrWhiteSpace(record.BookTitle))
                     {
-                        job.RecordsFailed++;
-                        job.ErrorLog += $"Row {job.RecordsProcessed}: Book title is required but was empty or missing.\n";
+                        job.IncrementFailed($"Row {job.RecordsProcessed}: Book title is required but was empty or missing.");
                         _logger.LogWarning("Import row {RowNum} skipped: Book title is empty", job.RecordsProcessed);
                         continue; 
                     }
@@ -70,7 +66,7 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                     if (book == null)
                     {
                         book = new Book(request.UserId, record.BookTitle, string.Empty);
-                        _db.Books.Add(book);
+                        _db.Add(book);
                         await _db.SaveChangesAsync(cancellationToken); 
                         userBooks.Add(book);
                     }
@@ -81,13 +77,12 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                     {
                         if (string.IsNullOrWhiteSpace(record.PlatformName))
                         {
-                           job.RecordsFailed++;
-                           job.ErrorLog += $"Row {job.RecordsProcessed}: Platform name is empty.\n";
+                           job.IncrementFailed($"Row {job.RecordsProcessed}: Platform name is empty.");
                            continue;
                         }
 
                         platform = Platform.Create(record.PlatformName, record.PlatformName, 0m);
-                        _db.Platforms.Add(platform);
+                        _db.Add(platform);
                         await _db.SaveChangesAsync(cancellationToken);
                         platforms.Add(platform);
                         _logger.LogInformation("Auto-created new platform '{PlatformName}' during import.", record.PlatformName);
@@ -96,11 +91,10 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                     // 3. Deduplication
                     if (!string.IsNullOrWhiteSpace(record.OrderId))
                     {
-                        var exists = await _db.Sales.AnyAsync(s => s.OrderId == record.OrderId && s.BookId == book.Id, cancellationToken);
+                        var exists = await _queries.AnyAsync(_db.Sales.Where(s => s.OrderId == record.OrderId && s.BookId == book.Id), cancellationToken);
                         if (exists)
                         {
-                            job.RecordsFailed++;
-                            job.ErrorLog += $"Row {job.RecordsProcessed}: Duplicate order ID '{record.OrderId}' for book '{record.BookTitle}' - record already exists.\n";
+                            job.IncrementFailed($"Row {job.RecordsProcessed}: Duplicate order ID '{record.OrderId}' for book '{record.BookTitle}' - record already exists.");
                             _logger.LogInformation("Skipping duplicate OrderId: {OrderId}", record.OrderId);
                             continue; 
                         }
@@ -128,13 +122,12 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                         decimal.TryParse(record.RevenueStr, out var rev) ? (decimal?)rev : null
                     );
 
-                    _db.Sales.Add(sale);
-                    job.RecordsSuccessful++;
+                    _db.Add(sale);
+                    job.IncrementSuccessful();
                 }
                 catch (Exception ex)
                 {
-                    job.RecordsFailed++;
-                    job.ErrorLog += $"Row {job.RecordsProcessed}: {ex.Message}\n";
+                    job.IncrementFailed($"Row {job.RecordsProcessed}: {ex.Message}");
                 }
 
                 if (job.RecordsProcessed % 100 == 0)
@@ -143,18 +136,16 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                 }
             }
 
-            job.Status = "Completed";
-            job.CompletedAt = DateTime.UtcNow;
+            job.MarkCompleted();
         }
         catch (OperationCanceledException)
         {
-            job.Status = "Cancelled";
+            job.MarkCancelled();
             _logger.LogWarning("Import job {JobId} was cancelled.", request.JobId);
         }
         catch (Exception ex)
         {
-            job.Status = "Failed";
-            job.ErrorLog += $"Critical Error: {ex.Message}";
+            job.MarkFailed($"Critical Error: {ex.Message}");
             _logger.LogError(ex, "CSV Import failed for job {JobId}", request.JobId);
         }
 

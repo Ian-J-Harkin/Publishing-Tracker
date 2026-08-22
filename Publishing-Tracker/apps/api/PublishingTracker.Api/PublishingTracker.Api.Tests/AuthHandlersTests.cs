@@ -1,15 +1,11 @@
 using Moq;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Application.Users;
+using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Domain.Entities;
-using PublishingTracker.Domain.Entities;
-using PublishingTracker.Domain.Dtos;
-using PublishingTracker.Infrastructure.Services;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Application.Auth.Commands;
 using PublishingTracker.Application.Auth.Queries;
+using PublishingTracker.Domain;
 using Xunit;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
@@ -21,6 +17,7 @@ namespace PublishingTracker.Api.Tests
     public class AuthHandlersTests : IDisposable
     {
         private readonly PublishingTrackerDbContext _context;
+        private readonly IQueryExecutor _queries;
         private readonly Mock<ITokenService> _mockTokenService;
         private readonly RegisterUserCommandHandler _registerHandler;
         private readonly LoginUserQueryHandler _loginHandler;
@@ -31,10 +28,11 @@ namespace PublishingTracker.Api.Tests
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
                 .Options;
             _context = new PublishingTrackerDbContext(options);
-            _mockTokenService = new Mock<ITokenService>();
+                _queries = new QueryExecutor();
+                _mockTokenService = new Mock<ITokenService>();
             
-            _registerHandler = new RegisterUserCommandHandler(_context, _mockTokenService.Object);
-            _loginHandler = new LoginUserQueryHandler(_context, _mockTokenService.Object);
+                _registerHandler = new RegisterUserCommandHandler(_context, _queries, _mockTokenService.Object);
+                _loginHandler = new LoginUserQueryHandler(_context, _queries, _mockTokenService.Object);
         }
 
         public void Dispose()
@@ -54,9 +52,10 @@ namespace PublishingTracker.Api.Tests
             var result = await _registerHandler.Handle(command, CancellationToken.None);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal("test_token", result.Token);
-            Assert.Equal(command.Email, result.Email);
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Value);
+            Assert.Equal("test_token", result.Value!.Token);
+            Assert.Equal(command.Email, result.Value.Email);
         }
 
         [Fact]
@@ -73,13 +72,14 @@ namespace PublishingTracker.Api.Tests
             var result = await _loginHandler.Handle(query, CancellationToken.None);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal("test_token", result.Token);
-            Assert.Equal(user.Email, result.Email);
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Value);
+            Assert.Equal("test_token", result.Value!.Token);
+            Assert.Equal(user.Email, result.Value.Email);
         }
 
         [Fact]
-        public async Task RegisterUserCommand_WithExistingUser_ReturnsNull()
+        public async Task RegisterUserCommand_WithExistingUser_ReturnsFailure()
         {
             // Arrange
             var command = new RegisterUserCommand("test@example.com", "Password123", "Test", "User");
@@ -91,11 +91,12 @@ namespace PublishingTracker.Api.Tests
             var result = await _registerHandler.Handle(command, CancellationToken.None);
 
             // Assert
-            Assert.Null(result);
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Email already exists.", result.ErrorMessage);
         }
 
         [Fact]
-        public async Task LoginUserQuery_WithInvalidCredentials_ReturnsNull()
+        public async Task LoginUserQuery_WithInvalidCredentials_ReturnsFailure()
         {
             // Arrange
             var query = new LoginUserQuery("test@example.com", "Password123");
@@ -107,7 +108,8 @@ namespace PublishingTracker.Api.Tests
             var result = await _loginHandler.Handle(query, CancellationToken.None);
 
             // Assert
-            Assert.Null(result);
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Invalid email or password.", result.ErrorMessage);
         }
 
         [Fact]

@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import '../pages/LoginPage.css';
 import { useDependencies } from '../context/DependencyContext';
+import { getApiErrorMessage } from '../utils/apiError';
+import { LoginRequest } from '../types/auth';
 
 const LoginPage = () => {
     const { auth: authPort } = useDependencies();
@@ -20,27 +22,18 @@ const LoginPage = () => {
         setLoading(true);
         try {
             console.log('Attempting login with:', { email });
-            const response = await authPort.login({ email, password });
-            console.log('Login response:', response.data);
+            const credentials: LoginRequest = { email, password };
+            const response = await authPort.login(credentials);
+            console.log('Login response:', response);
 
-            if (!response.data.token) {
+            if (!response.token) {
                 throw new Error('No token received from server');
             }
 
-            login(response.data.token);
+            login(response.token);
             navigate('/dashboard');
         } catch (err: unknown) {
-            let errorMsg = 'Login failed';
-
-            if (err && typeof err === 'object') {
-                const axiosErr = err as { response?: { data?: { message?: string } } };
-                if (axiosErr.response?.data?.message) {
-                    errorMsg = axiosErr.response.data.message;
-                } else if (err instanceof Error) {
-                    errorMsg = err.message;
-                }
-            }
-
+            const errorMsg = getApiErrorMessage(err, 'Login failed');
             console.error('Login error:', err);
             setError(errorMsg);
         } finally {
@@ -88,6 +81,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
-
 

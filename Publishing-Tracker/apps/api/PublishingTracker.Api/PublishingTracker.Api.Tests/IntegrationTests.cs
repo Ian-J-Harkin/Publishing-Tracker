@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
-using PublishingTracker.Domain.Dtos;
+using PublishingTracker.Application.Common.Dtos;
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
@@ -188,7 +188,7 @@ namespace PublishingTracker.Api.Tests
             var bookId = books!.First(b => b.Title == "Currency Test Book").Id;
 
             // Fetch platforms, including inactive ones since we just created it
-            var platforms = await client.GetFromJsonAsync<System.Collections.Generic.List<PublishingTracker.Domain.Dtos.PlatformResponseDto>>("/api/platforms?includeInactive=true");
+            var platforms = await client.GetFromJsonAsync<System.Collections.Generic.List<PublishingTracker.Application.Common.Dtos.PlatformResponseDto>>("/api/platforms?includeInactive=true");
             var platId = platforms!.First(p => p.Name == "EuroPlatform").Id;
 
             // Approve the platform

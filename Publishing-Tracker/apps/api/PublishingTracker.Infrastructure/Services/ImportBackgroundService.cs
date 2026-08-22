@@ -1,18 +1,18 @@
 using System.Threading.Channels;
 using MediatR;
-using PublishingTracker.Domain.Dtos;
 using PublishingTracker.Application.Import.Commands;
-using PublishingTracker.Infrastructure.Services;
 using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
+using PublishingTracker.Application.Import.Models;
+
+namespace PublishingTracker.Infrastructure.Services;
 
 /// <summary>
 /// A hosted BackgroundService that processes CSV imports off the HTTP request thread.
 /// Uses <see cref="Channel{T}"/> (producer/consumer pattern) so the API endpoint can enqueue
 /// work and immediately return 202 Accepted.
 /// </summary>
-public class ImportBackgroundService : BackgroundService
+public class ImportBackgroundService : BackgroundService, IImportQueue
 {
     private readonly Channel<ImportRequest> _channel;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -71,8 +71,9 @@ public class ImportBackgroundService : BackgroundService
         var result = await mediator.Send(command, ct);
         
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
+        var queries = scope.ServiceProvider.GetRequiredService<IQueryExecutor>();
         var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-        var user = await db.Users.FindAsync(new object[] { request.UserId }, ct);
+        var user = await queries.FirstOrDefaultAsync(db.Users.Where(u => u.Id == request.UserId), ct);
 
         // Fire completion event
         if (result.IsSuccess && result.Value != null)

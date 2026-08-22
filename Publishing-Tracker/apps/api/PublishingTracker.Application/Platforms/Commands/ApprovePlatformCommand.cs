@@ -1,5 +1,4 @@
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Application.Common.Interfaces;
 
 
@@ -10,15 +9,17 @@ public record ApprovePlatformCommand(int PlatformId) : IRequest<Result>;
 public class ApprovePlatformCommandHandler : IRequestHandler<ApprovePlatformCommand, Result>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
 
-    public ApprovePlatformCommandHandler(IApplicationDbContext context)
+    public ApprovePlatformCommandHandler(IApplicationDbContext context, IQueryExecutor queries)
     {
         _context = context;
+        _queries = queries;
     }
 
     public async Task<Result> Handle(ApprovePlatformCommand request, CancellationToken cancellationToken)
     {
-        var platform = await _context.Platforms.FindAsync(new object[] { request.PlatformId }, cancellationToken);
+        var platform = await _queries.FirstOrDefaultAsync(_context.Platforms.Where(p => p.Id == request.PlatformId), cancellationToken);
         if (platform == null)
             return Result.Failure("Platform not found.");
 

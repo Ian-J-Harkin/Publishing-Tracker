@@ -2,9 +2,7 @@ using MediatR;
 
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Application.Common.Interfaces;
-using PublishingTracker.Domain.Dtos;
-using System.Threading;
-using System.Threading.Tasks;
+using PublishingTracker.Application.Common.Dtos;
 
 namespace PublishingTracker.Application.Users.Queries;
 
@@ -13,11 +11,13 @@ public record GetProfileQuery() : IRequest<Result<UserResponseDto>>;
 public class GetProfileQueryHandler : IRequestHandler<GetProfileQuery, Result<UserResponseDto>>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IQueryExecutor _queries;
     private readonly ICurrentUserService _currentUserService;
 
-    public GetProfileQueryHandler(IApplicationDbContext context, ICurrentUserService currentUserService)
+    public GetProfileQueryHandler(IApplicationDbContext context, IQueryExecutor queries, ICurrentUserService currentUserService)
     {
         _context = context;
+        _queries = queries;
         _currentUserService = currentUserService;
     }
 
@@ -27,7 +27,7 @@ public class GetProfileQueryHandler : IRequestHandler<GetProfileQuery, Result<Us
         if (userId == null)
             return Result<UserResponseDto>.Failure("Unauthorized");
 
-        var user = await _context.Users.FindAsync(new object[] { userId.Value }, cancellationToken);
+        var user = await _queries.FirstOrDefaultAsync(_context.Users.Where(u => u.Id == userId.Value), cancellationToken);
         if (user == null)
             return Result<UserResponseDto>.Failure("User not found");
 

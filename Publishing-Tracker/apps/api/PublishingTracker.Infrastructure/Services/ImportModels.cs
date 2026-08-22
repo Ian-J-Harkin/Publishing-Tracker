@@ -1,5 +1,3 @@
-using PublishingTracker.Domain.Dtos;
-
 namespace PublishingTracker.Infrastructure.Services;
 
 /// <summary>
@@ -15,16 +13,4 @@ public class ImportProgressEventArgs : EventArgs
     public int RowsFailed { get; init; }
     public string? LastError { get; init; }
     public bool IsComplete { get; init; }
-}
-
-/// <summary>
-/// Represents a queued import request for the background processing channel.
-/// </summary>
-public class ImportRequest
-{
-    public int UserId { get; init; }
-    public int JobId { get; init; }
-    public string FilePath { get; init; } = string.Empty;
-    public string FileName { get; init; } = string.Empty;
-    public ColumnMappingDto Mapping { get; init; } = null!;
 }
