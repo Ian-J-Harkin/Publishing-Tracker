@@ -10,7 +10,7 @@ echo ==============================================
 echo.
 
 :: Define paths relative to the script location
-set "API_PATH=%~dp0apps\api\PublishingTracker.Api\PublishingTracker.Api"
+set "API_PATH=%~dp0apps\api\src\PublishingTracker.Api"
 set "REACT_PATH=%~dp0apps\ui-react\publishing-tracker-ui"
 set "ANGULAR_PATH=%~dp0apps\ui-angular\publishing-tracker-ui-angular"
 

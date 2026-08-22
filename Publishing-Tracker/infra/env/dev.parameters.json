@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "resourceGroupName": {
+      "value": "rg-publishing-tracker-dev"
+    },
+    "appServicePlanName": {
+      "value": "asp-publishing-tracker-dev"
+    },
+    "apiWebAppName": {
+      "value": "app-publishing-tracker-api-dev"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "log-publishing-tracker-dev"
+    },
+    "applicationInsightsName": {
+      "value": "appi-publishing-tracker-dev"
+    },
+    "sqlServerName": {
+      "value": "sql-publishingtracker-dev"
+    },
+    "sqlDatabaseName": {
+      "value": "sqldb-publishingtracker-dev"
+    },
+    "sqlAdminLogin": {
+      "value": "ptsqladmin"
+    },
+    "sqlPublicNetworkAccess": {
+      "value": "Enabled"
+    },
+    "sqlAllowAzureServices": {
+      "value": true
+    },
+    "sqlAllowedClientIp": {
+      "value": ""
+    },
+    "keyVaultName": {
+      "value": "kv-publishing-tracker-dev"
+    },
+    "alertActionGroupName": {
+      "value": "ag-publishing-tracker-dev"
+    },
+    "alertEmailReceiver": {
+      "value": ""
+    }
+  }
+}

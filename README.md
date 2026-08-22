@@ -3,7 +3,7 @@
 A full-stack application for managing book publications and sales tracking. Built with .NET Web API backend and dual frontend options (React and Angular).
 
 **Tech Stack:**
-- Backend: .NET 8 Web API
+- Backend: .NET 9 Web API
 - Frontend (Primary): React with Vite
 - Frontend (Alternative): Angular
 - Database: SQL Server / Azure SQL
@@ -17,10 +17,14 @@ A full-stack application for managing book publications and sales tracking. Buil
 Publishing-Tracker/
 ├── apps/
 │   ├── api/
-│   │   └── PublishingTracker.Api/           # .NET Web API
-│   │       ├── PublishingTracker.Api.csproj
-│   │       ├── Program.cs
-│   │       └── ...
+│   │   ├── PublishingTracker.Api.sln        # .NET solution
+│   │   ├── src/
+│   │   │   ├── PublishingTracker.Api/
+│   │   │   ├── PublishingTracker.Application/
+│   │   │   ├── PublishingTracker.Domain/
+│   │   │   └── PublishingTracker.Infrastructure/
+│   │   └── tests/
+│   │       └── PublishingTracker.Api.Tests/
 │   ├── ui-react/                             # React UI (Vite)
 │   │   ├── package.json
 │   │   ├── src/
@@ -34,7 +38,7 @@ Publishing-Tracker/
 │           └── ...
 ├── .github/
 │   └── workflows/                            # CI/CD pipelines
-├── devops/                                   # Azure/Infrastructure
+├── infra/                                    # IaC (Bicep templates and env params)
 ├── docs/                                     # Documentation
 └── README.md
 
@@ -47,7 +51,7 @@ Publishing-Tracker/
 - [Visual Studio Code](https://code.visualstudio.com/) or [Visual Studio 2022](https://visualstudio.microsoft.com/)
 
 ### Backend (.NET API)
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
 
 ### Frontend (React)
 - [Node.js 20.x LTS](https://nodejs.org/)
@@ -74,27 +78,27 @@ cd Publishing-Tracker
 
 ### 2. Backend Setup (.NET Web API)
 
-**Directory:** `[C:\Github\PublishingTracker\Publishing-Tracker\apps\api\PublishingTracker.Api]`
+**Directory:** `[C:\Github\PublishingTracker\Publishing-Tracker\apps\api]`
 
 #### Install & Build
 
 ```powershell
-cd apps/api/PublishingTracker.Api
+cd apps/api
 
 # Restore dependencies
-dotnet restore
+dotnet restore PublishingTracker.Api.sln
 
 # Build the project
-dotnet build --configuration Release
+dotnet build PublishingTracker.Api.sln --configuration Release
 
 # Run tests (if available)
-dotnet test
+dotnet test PublishingTracker.Api.sln
 ```
 
 #### Run the API
 
 ```powershell
-# From: apps/api/PublishingTracker.Api/PublishingTracker.Api/
+# From: apps/api/src/PublishingTracker.Api/
 dotnet run
 
 # API will be available at: https://localhost:5001
@@ -102,7 +106,7 @@ dotnet run
 
 #### Visual Studio Users
 
-- Open `apps/api/PublishingTracker.Api/PublishingTracker.Api.sln` in Visual Studio 2022
+- Open `apps/api/PublishingTracker.Api.sln` in Visual Studio 2022
 - Build the solution (Ctrl+Shift+B)
 - Run (F5)
 
@@ -212,7 +216,7 @@ This will launch:
 
 **Terminal 1 - Backend API:**
 ```powershell
-cd apps/api/PublishingTracker.Api/PublishingTracker.Api
+cd apps/api/src/PublishingTracker.Api
 dotnet run
 ```
 
@@ -232,8 +236,15 @@ npm start
 
 ## CI/CD Configuration
 
-GitHub Actions workflows are consolidated into a single master pipeline:
-- `.github/workflows/cicd.yml` - Unified pipeline for .NET API, React, and Angular apps.
+GitHub Actions workflows are split by app and include an umbrella run:
+- `.github/workflows/api.yml` - API build and test (path-filtered)
+- `.github/workflows/ui-react.yml` - React lint/build/test (path-filtered)
+- `.github/workflows/ui-angular.yml` - Angular build/test (path-filtered)
+- `.github/workflows/monorepo.yml` - Full PR/workflow-dispatch run across all apps
+- `.github/workflows/infra.yml` - IaC validation, PR what-if, and manual infra deploy
+
+Infrastructure runbook:
+- `Publishing-Tracker/infra/README.md` - IaC setup, environment protection, approval flow, and Day-2 operations
 
 ---
 

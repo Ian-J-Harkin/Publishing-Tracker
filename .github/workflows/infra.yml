@@ -1,0 +1,160 @@
+name: Infra IaC
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "Publishing-Tracker/infra/**"
+      - ".github/workflows/infra.yml"
+  push:
+    branches: [ main ]
+    paths:
+      - "Publishing-Tracker/infra/**"
+      - ".github/workflows/infra.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+      apply:
+        description: "Apply changes (set true to deploy)"
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  validate:
+    name: Validate Bicep templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build main template
+        run: az bicep build --file Publishing-Tracker/infra/bicep/main.bicep
+
+      - name: Build module templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          for template in Publishing-Tracker/infra/bicep/modules/*.bicep; do
+            az bicep build --file "$template"
+          done
+
+  what-if-dev:
+    name: What-if (dev)
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight secret checks (dev what-if)
+        shell: bash
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          SQL_ADMIN_PASSWORD_DEV: ${{ secrets.SQL_ADMIN_PASSWORD_DEV }}
+        run: |
+          set -euo pipefail
+          missing=0
+
+          if [[ -z "${AZURE_CREDENTIALS}" ]]; then
+            echo "::error::Missing required secret: AZURE_CREDENTIALS"
+            missing=1
+          fi
+
+          if [[ -z "${SQL_ADMIN_PASSWORD_DEV}" ]]; then
+            echo "::error::Missing required secret: SQL_ADMIN_PASSWORD_DEV"
+            missing=1
+          fi
+
+          if [[ $missing -ne 0 ]]; then
+            echo "Preflight checks failed. Add the missing secrets and rerun."
+            exit 1
+          fi
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: What-if deployment (dev)
+        run: |
+          az deployment sub what-if \
+            --name "publishing-tracker-dev-pr-${{ github.event.pull_request.number }}" \
+            --location westeurope \
+            --template-file Publishing-Tracker/infra/bicep/main.bicep \
+            --parameters @Publishing-Tracker/infra/env/dev.parameters.json \
+            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD_DEV }}"
+
+  deploy:
+    name: Deploy infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight secret checks (selected environment)
+        shell: bash
+        env:
+          TARGET_ENV: ${{ inputs.environment }}
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          SQL_ADMIN_PASSWORD_DEV: ${{ secrets.SQL_ADMIN_PASSWORD_DEV }}
+          SQL_ADMIN_PASSWORD_PROD: ${{ secrets.SQL_ADMIN_PASSWORD_PROD }}
+        run: |
+          set -euo pipefail
+          missing=0
+
+          if [[ -z "${AZURE_CREDENTIALS}" ]]; then
+            echo "::error::Missing required secret: AZURE_CREDENTIALS"
+            missing=1
+          fi
+
+          if [[ "${TARGET_ENV}" == "prod" ]]; then
+            if [[ -z "${SQL_ADMIN_PASSWORD_PROD}" ]]; then
+              echo "::error::Missing required secret for prod deploy: SQL_ADMIN_PASSWORD_PROD"
+              missing=1
+            fi
+          else
+            if [[ -z "${SQL_ADMIN_PASSWORD_DEV}" ]]; then
+              echo "::error::Missing required secret for dev deploy: SQL_ADMIN_PASSWORD_DEV"
+              missing=1
+            fi
+          fi
+
+          if [[ $missing -ne 0 ]]; then
+            echo "Preflight checks failed. Add the missing secrets and rerun."
+            exit 1
+          fi
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy selected environment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ inputs.environment }}" == "prod" ]]; then
+            PARAM_FILE="Publishing-Tracker/infra/env/prod.parameters.json"
+            SQL_PASSWORD="${{ secrets.SQL_ADMIN_PASSWORD_PROD }}"
+            DEPLOYMENT_NAME="publishing-tracker-prod-manual-${{ github.run_id }}"
+          else
+            PARAM_FILE="Publishing-Tracker/infra/env/dev.parameters.json"
+            SQL_PASSWORD="${{ secrets.SQL_ADMIN_PASSWORD_DEV }}"
+            DEPLOYMENT_NAME="publishing-tracker-dev-manual-${{ github.run_id }}"
+          fi
+
+          az deployment sub create \
+            --name "$DEPLOYMENT_NAME" \
+            --location westeurope \
+            --template-file Publishing-Tracker/infra/bicep/main.bicep \
+            --parameters @"$PARAM_FILE" \
+            --parameters sqlAdminPassword="$SQL_PASSWORD"

@@ -11,7 +11,7 @@
   - ✓ Strong ecosystem with Material-UI/Ant Design
   - ❓ **Question**: Are you comfortable with functional components vs class components?
 
-- **Backend**: .NET 8 Minimal API
+- **Backend**: .NET 9 Minimal API
   - ✓ Leverages your existing expertise
   - ✓ Latest Microsoft patterns
   - ✓ Excellent performance and scalability
@@ -134,7 +134,7 @@
 #### Development Environment
 - [ ] Visual Studio Code with extensions
 - [ ] Node.js 18+ for React development
-- [ ] .NET 8 SDK
+- [ ] .NET 9 SDK
 - [ ] SQL Server LocalDB or Docker
 - [ ] Git for version control
 

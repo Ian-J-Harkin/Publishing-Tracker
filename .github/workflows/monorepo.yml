@@ -1,0 +1,61 @@
+name: Monorepo Full CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "Publishing-Tracker/apps/api/**"
+      - "Publishing-Tracker/apps/ui-react/**"
+      - "Publishing-Tracker/apps/ui-angular/**"
+      - "Publishing-Tracker/package.json"
+      - "Publishing-Tracker/package-lock.json"
+      - ".github/workflows/monorepo.yml"
+  workflow_dispatch:
+
+jobs:
+  api:
+    name: API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet restore Publishing-Tracker/apps/api/PublishingTracker.Api.sln
+      - run: dotnet build Publishing-Tracker/apps/api/PublishingTracker.Api.sln --configuration Release --no-restore
+      - run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --verbosity normal
+
+  react:
+    name: React
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Publishing-Tracker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Publishing-Tracker/package-lock.json
+      - run: npm ci
+      - run: npm run lint --workspace=@publishing-tracker/ui-react
+      - run: npm run build --workspace=@publishing-tracker/ui-react
+      - run: npm test --workspace=@publishing-tracker/ui-react
+
+  angular:
+    name: Angular
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Publishing-Tracker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: Publishing-Tracker/package-lock.json
+      - run: npm ci
+      - run: npm run build --workspace=@publishing-tracker/ui-angular
+      - run: npm run test --workspace=@publishing-tracker/ui-angular -- --watch=false --browsers=ChromeHeadless

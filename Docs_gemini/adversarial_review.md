@@ -4,6 +4,7 @@
 **Scope:** .NET Backend (Clean Architecture + CQRS) and React Frontend (Hexagonal)  
 **Starting Point:** [application_deficiencies_waypoint.md](file:///c:/Github/PublishingTracker/Docs_gemini/application_deficiencies_waypoint.md) and related documentation  
 **Method:** Code-level audit against the documented claims and canonical Clean Architecture / Hexagonal Architecture design goals
+**Note:** This is a historical snapshot. File links are kept current, but findings reflect repository state at the review date.
 
 ---
 
@@ -43,7 +44,7 @@ The cardinal rule of Clean Architecture: **inner layers must not know about oute
 
 #### Finding: Endpoint files live in the API project but declare Application-layer namespaces
 
-Every single endpoint file in [`Endpoints/`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Endpoints) uses an Application-layer namespace:
+Every single endpoint file in [`Endpoints/`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints) uses an Application-layer namespace:
 
 ```
 AuthEndpoints.cs        → namespace PublishingTracker.Application.Auth;
@@ -65,7 +66,7 @@ UserEndpoints.cs        → namespace PublishingTracker.Application.Users;
 
 #### Finding: ImportEndpoints directly references Infrastructure concrete types
 
-[`ImportEndpoints.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Endpoints/ImportEndpoints.cs) has:
+[`ImportEndpoints.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/ImportEndpoints.cs) has:
 
 ```csharp
 using PublishingTracker.Infrastructure.Persistence;   // Line 6
@@ -88,7 +89,7 @@ And directly injects:
 
 ### 2. 🔴 DTOs in the Domain Layer
 
-[`PublishingTracker.Domain/Dtos/`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Domain/Dtos) contains 11 DTO files:
+[`PublishingTracker.Domain/Dtos/`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Dtos) contains 11 DTO files:
 
 | File | Contents |
 |------|----------|
@@ -122,14 +123,14 @@ The documentation emphasises DDD-style encapsulation via `private set` and facto
 
 | Entity | `private set`? | Factory method? | Notes |
 |--------|:---:|:---:|-------|
-| [`Sale.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Domain/Entities/Sale.cs) | ✅ All | ✅ `Sale.Create()` | Good |
-| [`Platform.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Domain/Entities/Platform.cs) | ✅ All | ✅ `Platform.Create()` | Good |
-| [`User.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Domain/Entities/User.cs) | ⚠️ **Mixed** | ✅ `User.Create()` | **`Id`, `Email`, `FirstName`, `LastName`, `CreatedAt`, `UpdatedAt` all have `public set`** |
-| [`ImportJob.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Domain/ImportJob.cs) | 🔴 **None** | 🔴 **None** | Fully anemic — all properties have `public set`, no factory method, no invariant enforcement |
+| [`Sale.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Sale.cs) | ✅ All | ✅ `Sale.Create()` | Good |
+| [`Platform.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Platform.cs) | ✅ All | ✅ `Platform.Create()` | Good |
+| [`User.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/User.cs) | ⚠️ **Mixed** | ✅ `User.Create()` | **`Id`, `Email`, `FirstName`, `LastName`, `CreatedAt`, `UpdatedAt` all have `public set`** |
+| [`ImportJob.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Domain/ImportJob.cs) | 🔴 **None** | 🔴 **None** | Fully anemic — all properties have `public set`, no factory method, no invariant enforcement |
 
 The `User` entity is half-encapsulated: `PasswordHash` and `Role` correctly use `private set`, but core identity fields like `Email`, `FirstName`, `LastName`, and even `Id` are fully `public set`. This means any layer can silently mutate a user's email without going through a domain method — exactly the scenario the refactoring was supposed to prevent.
 
-`ImportJob` is a completely "old-style" entity that was never migrated to the DDD pattern. It sits at the Domain root level rather than in `Entities/`, and it uses direct property assignment everywhere (including in [ImportEndpoints.cs line 96-104](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Endpoints/ImportEndpoints.cs#L96-L104) where `new ImportJob { ... }` is used with object initializer syntax).
+`ImportJob` is a completely "old-style" entity that was never migrated to the DDD pattern. It sits at the Domain root level rather than in `Entities/`, and it uses direct property assignment everywhere (including in [ImportEndpoints.cs line 96-104](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/ImportEndpoints.cs#L96-L104) where `new ImportJob { ... }` is used with object initializer syntax).
 
 > **Severity: MEDIUM.** Partial enforcement is arguably worse than no enforcement because it creates a false sense of safety.
 
@@ -137,13 +138,13 @@ The `User` entity is half-encapsulated: `PasswordHash` and `Role` correctly use 
 
 ### 4. 🟡 Application Layer Has an EF Core Dependency
 
-[`PublishingTracker.Application.csproj`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Application/PublishingTracker.Application.csproj) references:
+[`PublishingTracker.Application.csproj`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Application/PublishingTracker.Application.csproj) references:
 
 ```xml
 <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.8" />
 ```
 
-And [`IApplicationDbContext.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Application/Interfaces/IApplicationDbContext.cs) uses `DbSet<T>`:
+And [`IApplicationDbContext.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Application/Interfaces/IApplicationDbContext.cs) uses `DbSet<T>`:
 
 ```csharp
 using Microsoft.EntityFrameworkCore;
@@ -160,9 +161,9 @@ The orthodox approach is to define repository interfaces returning domain entiti
 
 ---
 
-### 5. 🟡 Migrations Live in the Wrong Project
+### 5. 🟡 Migrations Were in the Wrong Project
 
-EF Core migrations live in [`PublishingTracker.Api/Migrations/`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Migrations). In a properly structured Clean Architecture solution, migrations belong in the Infrastructure project (alongside the DbContext they describe). Placing them in the API project:
+At review time, EF Core migrations were in the API project rather than Infrastructure. In a properly structured Clean Architecture solution, migrations belong in the Infrastructure project (alongside the DbContext they describe). Placing them in the API project:
 
 - Forces the API project to reference `Microsoft.EntityFrameworkCore.Design` (which it does)
 - Means the API project contains persistence implementation details
@@ -177,7 +178,7 @@ EF Core migrations live in [`PublishingTracker.Api/Migrations/`](file:///c:/Gith
 The codebase uses three different error-handling strategies simultaneously:
 
 1. **`Result<T>` pattern** (Domain layer) — used by most CQRS handlers
-2. **Null checks** — [`AuthEndpoints.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Endpoints/AuthEndpoints.cs) checks `if (authResponse == null)` instead of using `Result<T>.IsSuccess`
+2. **Null checks** — [`AuthEndpoints.cs`](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/AuthEndpoints.cs) checks `if (authResponse == null)` instead of using `Result<T>.IsSuccess`
 3. **Raw exceptions** — Domain entity factory methods throw `ArgumentException` directly, which bubble up unhandled to the global exception handler
 
 The Auth endpoints don't use `Result<T>` at all — the handlers appear to return `AuthResponse?` (nullable) rather than `Result<AuthResponse>`. This is inconsistent with how Sales, Platforms, Books, and Dashboard all work.
@@ -326,7 +327,7 @@ One more same-class mismatch: `USER_TESTING_CLEAN_ARCH.md` describes `POST /api/
 
 ### 15. 🔴 ImportEndpoints Is the Remaining Monolith
 
-This deserves emphasis as a standalone finding. The [Import endpoints file](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/PublishingTracker.Api/PublishingTracker.Api/Endpoints/ImportEndpoints.cs) is 161 lines of endpoint code that:
+This deserves emphasis as a standalone finding. The [Import endpoints file](file:///c:/Github/PublishingTracker/Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/ImportEndpoints.cs) is 161 lines of endpoint code that:
 
 1. **Directly accesses `PublishingTrackerDbContext`** (not through a repository or mediator)
 2. **Performs CSV parsing inline** using `CsvHelper` (lines 47-68) — this is infrastructure/parsing logic in the presentation layer
@@ -373,7 +374,7 @@ This single file violates essentially every principle the refactoring was meant 
 
 2. **Move DTOs out of Domain.** Either co-locate them with their handlers (as the phase 2 walkthrough recommends) or create a `PublishingTracker.Application.Contracts` shared project. The Domain layer should contain only entities, value objects, and domain-service interfaces.
 
-3. **Fix endpoint namespaces.** Every file in `PublishingTracker.Api/Endpoints/` should use `namespace PublishingTracker.Api.Endpoints;` — matching their physical location and logical layer.
+3. **Fix endpoint namespaces.** Every file in `apps/api/src/PublishingTracker.Api/Endpoints/` should use `namespace PublishingTracker.Api.Endpoints;` — matching their physical location and logical layer.
 
 ### Should-Fix (Inconsistencies that erode trust)
 

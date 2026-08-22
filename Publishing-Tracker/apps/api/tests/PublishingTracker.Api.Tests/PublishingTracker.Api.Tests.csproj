@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AutoFixture.Xunit2" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\PublishingTracker.Api\PublishingTracker.Api.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Domain\PublishingTracker.Domain.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Application\PublishingTracker.Application.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

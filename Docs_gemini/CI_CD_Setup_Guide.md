@@ -9,7 +9,7 @@ This guide provides step-by-step instructions for setting up and using the CI/CD
 
 ## 2. Configure GitHub Secrets
 
-The CI/CD pipeline requires a secret to authenticate with Azure.
+Azure credentials are only required for deployment workflows. The current repository workflows focus on CI validation.
 
 1.  **Create a Service Principal:** In the Azure portal, open the Cloud Shell and run the following command, replacing `YOUR_SUBSCRIPTION_ID` and `YOUR_RESOURCE_GROUP` with your actual values:
 
@@ -28,20 +28,17 @@ The CI/CD pipeline requires a secret to authenticate with Azure.
 
 ## 3. Using the CI/CD Pipelines
 
-This project includes two CI/CD pipelines:
+This project now uses split workflows:
 
--   `dotnet.yml`: A basic pipeline that builds and tests the .NET backend. This is useful for quick validation of backend changes.
--   `cicd.yml`: A comprehensive pipeline that builds, tests, and deploys both the backend and frontend. This is the primary pipeline for production deployments.
+-   `api.yml`: Builds and tests the .NET API (`apps/api/PublishingTracker.Api.sln`) when API files change.
+-   `ui-react.yml`: Runs React checks when files in `apps/ui-react` change.
+-   `ui-angular.yml`: Runs Angular checks when files in `apps/ui-angular` change.
+-   `monorepo.yml`: Runs full monorepo validation and can be started manually with **Run workflow**.
 
-### Running the `cicd.yml` Pipeline
+### Trigger Model
 
-1.  **Push to `main`:** The pipeline is configured to run automatically on pushes to the `main` branch. However, the deployment jobs will only run when manually triggered.
-
-2.  **Manual Deployment:**
-    -   In your GitHub repository, go to the **Actions** tab.
-    -   Select the **CI/CD Pipeline** workflow.
-    -   Click **Run workflow** and select the `main` branch.
-    -   This will trigger the build, test, and deployment jobs.
+1.  **Path-filtered runs:** On pushes/PRs, only workflows related to changed paths run automatically.
+2.  **Full validation:** Use `monorepo.yml` from the **Actions** tab when you want an end-to-end check across all apps.
 
 ## 4. Post-Deployment Steps
 
@@ -49,8 +46,8 @@ After the first successful deployment, you will need to run the database migrati
 
 1.  **Get the Publish Profile:** In the Azure portal, navigate to your backend App Service (`PublishingTrackerApi`) and download the publish profile.
 2.  **Run Migrations from Visual Studio:**
-    -   Open the project in Visual Studio.
-    -   Right-click the `PublishingTracker.Api` project and select **Publish**.
+    -   Open `apps/api/PublishingTracker.Api.sln` in Visual Studio.
+    -   Right-click the `PublishingTracker.Api` project (under `apps/api/src`) and select **Publish**.
     -   Import the publish profile you downloaded.
     -   In the **Service Dependencies** section, configure the database connection to use your Azure SQL Database.
     -   In the **Entity Framework Migrations** section, check the box to apply migrations on publish.
