@@ -10,6 +10,7 @@ using PublishingTracker.Api.Middleware;
 using System.Text;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Domain.Configuration;
+using PublishingTracker.Mcp.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 
 builder.Services.AddAuthorization();
+
+// Stateless: each POST /mcp runs inside its own authenticated HttpContext, so tools resolve the caller per request.
+builder.Services
+    .AddMcpServer()
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<CatalogueMcpTools>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
@@ -186,6 +193,7 @@ app.MapPlatformEndpoints();
 app.MapDashboardEndpoints();
 app.MapImportEndpoints();
 app.MapUserEndpoints();
+app.MapMcp("/mcp").RequireAuthorization();
 
 // ── Health Check Endpoint ─────────────────────────────────────────
 app.MapHealthChecks("/health");

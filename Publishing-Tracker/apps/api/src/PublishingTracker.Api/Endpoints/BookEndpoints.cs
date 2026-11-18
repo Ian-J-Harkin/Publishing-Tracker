@@ -40,6 +40,27 @@ public static class BookEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
         });
 
+        booksGroup.MapGet("/missing-metadata", async (
+            [FromServices] IMediator mediator,
+            [FromQuery] string? format,
+            [FromQuery] string? missingField,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken cancellationToken = default) =>
+        {
+            var result = await mediator.Send(new FindTitlesMissingMetadataQuery(format, missingField, page, pageSize), cancellationToken);
+            return result.IsSuccess ? Results.Ok(result.Value) : MapCatalogueError(result.ErrorMessage);
+        });
+
+        booksGroup.MapGet("/{id:int}/details", async (
+            [FromServices] IMediator mediator,
+            int id,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await mediator.Send(new GetTitleDetailsQuery(id), cancellationToken);
+            return result.IsSuccess ? Results.Ok(result.Value) : MapCatalogueError(result.ErrorMessage);
+        });
+
         booksGroup.MapGet("/{id}", async ([FromServices] IMediator mediator, int id) =>
         {
             // TODO: implement GetBookByIdQuery and its handler
@@ -94,5 +115,13 @@ public static class BookEndpoints
             }
             return Results.Ok(result.Value);
         });
+    }
+
+    private static IResult MapCatalogueError(string? message)
+    {
+        var text = message ?? "Request failed";
+        if (text.StartsWith("UNAUTHORIZED:", StringComparison.Ordinal)) return ApiResults.Unauthorized(text);
+        if (text.StartsWith("NOT_FOUND_OR_UNAUTHORIZED:", StringComparison.Ordinal)) return ApiResults.NotFound(text);
+        return ApiResults.BadRequest(text);
     }
 }
