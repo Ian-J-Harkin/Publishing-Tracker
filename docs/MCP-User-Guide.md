@@ -47,7 +47,7 @@ Every request to `/mcp` must present a valid Bearer JWT issued by `PublishingTra
 Authenticate against the API auth endpoint:
 
 ```bash
-curl -X POST https://localhost:7001/api/auth/login \
+curl -X POST https://localhost:7285/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "author-a@example.test",
@@ -199,7 +199,7 @@ In Claude Desktop's `claude_desktop_config.json`:
       "args": [
         "-y",
         "mcp-remote-client",
-        "https://localhost:7001/mcp",
+        "https://localhost:7285/mcp",
         "--header",
         "Authorization: Bearer <YOUR_JWT_TOKEN>"
       ]
@@ -208,7 +208,7 @@ In Claude Desktop's `claude_desktop_config.json`:
 }
 ```
 
-*(Note: Replace `<YOUR_JWT_TOKEN>` with your active JWT token obtained via `/api/auth/login`.)*
+*(Note: Replace `<YOUR_JWT_TOKEN>` with your active JWT token obtained via `/api/auth/login`. In local development, ensure your local ASP.NET Core dev certificate is trusted via `dotnet dev-certs https --trust`.)*
 
 ### 4.2 Cursor / VS Code MCP Configuration
 In your project `.cursor/mcp.json` or VS Code MCP settings:
@@ -217,7 +217,7 @@ In your project `.cursor/mcp.json` or VS Code MCP settings:
 {
   "mcpServers": {
     "publishing-tracker": {
-      "url": "https://localhost:7001/mcp",
+      "url": "https://localhost:7285/mcp",
       "headers": {
         "Authorization": "Bearer <YOUR_JWT_TOKEN>"
       }
@@ -232,7 +232,7 @@ using System.Net.Http.Headers;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-var httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:7001") };
+var httpClient = new HttpClient { BaseAddress = new Uri("https://localhost:7285") };
 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", jwtToken);
 
 var transport = new HttpClientTransport(

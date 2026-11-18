@@ -85,14 +85,17 @@ To test a live running instance of `PublishingTracker.Api`:
 $env:ASPNETCORE_ENVIRONMENT="Development"
 dotnet run --project Publishing-Tracker/apps/api/src/PublishingTracker.Api
 ```
-*(Assume the API runs at `https://localhost:7001`)*
+*(Default launch profile listens at `https://localhost:7285` / `http://localhost:5226`)*
 
 ### Step 2: Acquire a JWT Token
+If testing against an existing database seeded with test accounts:
 ```bash
-curl -k -X POST https://localhost:7001/api/auth/login \
+curl -k -X POST https://localhost:7285/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"author-a@example.test","password":"Password123!"}'
 ```
+*(Tip: If testing against a fresh, empty development database, first register a user via `POST /api/auth/register` with `{"email":"author-a@example.test","password":"Password123!","firstName":"Author","lastName":"Alpha"}`)*
+
 Set the returned token to a variable:
 ```powershell
 $token = "<token_from_login>"
@@ -102,7 +105,7 @@ $token = "<token_from_login>"
 Send a standard JSON-RPC 2.0 `initialize` request to `POST /mcp`:
 
 ```bash
-curl -k -X POST https://localhost:7001/mcp \
+curl -k -X POST https://localhost:7285/mcp \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -133,7 +136,7 @@ curl -k -X POST https://localhost:7001/mcp \
 
 ### Step 4: Discover Tools (`tools/list`)
 ```bash
-curl -k -X POST https://localhost:7001/mcp \
+curl -k -X POST https://localhost:7285/mcp \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -152,7 +155,7 @@ curl -k -X POST https://localhost:7001/mcp \
 
 ### Step 5: Execute `find_titles_missing_metadata`
 ```bash
-curl -k -X POST https://localhost:7001/mcp \
+curl -k -X POST https://localhost:7285/mcp \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -176,7 +179,7 @@ curl -k -X POST https://localhost:7001/mcp \
 2. Make a `tools/call` for `get_title_details` with `"bookId": 99` using User A's token:
 
 ```bash
-curl -k -X POST https://localhost:7001/mcp \
+curl -k -X POST https://localhost:7285/mcp \
   -H "Authorization: Bearer $token" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
@@ -221,4 +224,4 @@ curl -k -X POST https://localhost:7001/mcp \
 | `HTTP 400 Bad Request` | Required Streamable HTTP headers missing. | Include `-H "Accept: application/json, text/event-stream"` on the request. |
 | `INVALID_ARGUMENT: Unsupported format '...'` | Passing numeric format (`"1"`) or comma lists (`"Ebook,Paperback"`). | Pass exact declared format name: `Ebook`, `Paperback`, `Hardcover`, `Audiobook`, or `LargeText`. |
 | Tool returns text instead of JSON | Client omitting structured content handling. | Ensure client supports `UseStructuredContent = true` (MCP Protocol 2025-06-18+). |
-| Handshake hangs or fails | Trying to connect over stdio rather than HTTP. | Point client at `https://localhost:7001/mcp` using `StreamableHttp` transport mode. |
+| Handshake hangs or fails | Trying to connect over stdio rather than HTTP. | Point client at `https://localhost:7285/mcp` using `StreamableHttp` transport mode. |

@@ -10,7 +10,6 @@
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
-    <PackageReference Include="ModelContextProtocol.AspNetCore" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
@@ -20,7 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\PublishingTracker.Application\PublishingTracker.Application.csproj" />
     <ProjectReference Include="..\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
-    <ProjectReference Include="..\PublishingTracker.Mcp\PublishingTracker.Mcp.csproj" />
   </ItemGroup>
 
 </Project>
