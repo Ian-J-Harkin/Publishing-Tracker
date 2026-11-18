@@ -74,3 +74,4 @@ _ReSharper*/
 # --- Agent specific ---
 .agent/
 .agents/
+.cr/
