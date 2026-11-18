@@ -65,7 +65,7 @@ public class ImportCsvCommandHandler : IRequestHandler<ImportCsvCommand, Result<
                     var book = userBooks.FirstOrDefault(b => b.Title.Equals(record.BookTitle, StringComparison.OrdinalIgnoreCase));
                     if (book == null)
                     {
-                        book = new Book(request.UserId, record.BookTitle, string.Empty);
+                        book = new Book(request.UserId, record.BookTitle, "Unknown Author");
                         _db.Add(book);
                         await _db.SaveChangesAsync(cancellationToken); 
                         userBooks.Add(book);

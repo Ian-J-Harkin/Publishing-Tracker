@@ -9,6 +9,7 @@ using PublishingTracker.Infrastructure;
 using PublishingTracker.Api.Middleware;
 using System.Text;
 using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Domain.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,27 +29,27 @@ builder.Services.AddCors(options =>
 
 if (!builder.Environment.IsEnvironment("Testing"))
 {
+    var connectionString = IsRunningInAzure()
+        ? builder.Configuration.GetConnectionString("NeonConnection")
+        : builder.Configuration.GetConnectionString("DefaultConnection");
+
     if (IsRunningInAzure())
     {
         Console.WriteLine("Running in Azure environment.");
-        builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseNpgsql(
-                builder.Configuration.GetConnectionString("NeonConnection"),
-                npgsql => npgsql.MigrationsAssembly(typeof(PublishingTrackerDbContext).Assembly.GetName().Name!)));
     }
     else
     {
         Console.WriteLine("Running in Local/Development environment.");
-        // Use SQL Server for local development (Requires running SQL Server instance)
-        builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
-            options.UseSqlServer(
-                builder.Configuration.GetConnectionString("DefaultConnection"),
-                sqlOptions =>
-                {
-                    sqlOptions.EnableRetryOnFailure();
-                    sqlOptions.MigrationsAssembly(typeof(PublishingTrackerDbContext).Assembly.GetName().Name!);
-                }));
     }
+
+    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+        options.UseNpgsql(
+            connectionString,
+            npgsql =>
+            {
+                npgsql.EnableRetryOnFailure();
+                npgsql.MigrationsAssembly(typeof(PublishingTrackerDbContext).Assembly.GetName().Name!);
+            }));
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -77,6 +78,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 
 builder.Services.AddAuthorization();
+
 builder.Services.AddMemoryCache();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 
@@ -95,6 +97,10 @@ builder.Services.AddHealthChecks()
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Register Currency Settings
+builder.Services.Configure<CurrencySettings>(
+    builder.Configuration.GetSection(CurrencySettings.SectionName));
 
 var app = builder.Build();
 

@@ -32,15 +32,18 @@ public class GetBookByIDQueryHandler : IRequestHandler<GetBookByIdQuery, Result<
 
         var totalSold = book.Sales?.Sum(s => s.Quantity) ?? 0;
         var totalRevenue = book.Sales?.Sum(s => s.BaseCurrencyRevenue) ?? 0m;
+        var primaryEdition = book.Editions?.OrderBy(e => e.Id).FirstOrDefault();
 
         var dto = new BookResponseDto
         {
             Id = book.Id,
             Title = book.Title,
             Author = book.Author,
-            ISBN = book.ISBN,
-            PublicationDate = book.PublicationDate,
-            BasePrice = book.BasePrice,
+            ISBN = primaryEdition?.ISBN,
+            PublicationDate = book.Editions != null && book.Editions.Any()
+                ? book.Editions.Min(e => e.PublicationDate)
+                : null,
+            BasePrice = primaryEdition?.BasePrice,
             Genre = book.Genre,
             Description = book.Description,
             TotalSales = totalSold,

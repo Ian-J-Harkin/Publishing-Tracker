@@ -28,13 +28,29 @@ public class UpdateBookCommandHandler : IRequestHandler<UpdateBookCommand, Resul
         if (book == null) return Result<int>.Failure("Book not found");
 
         // Verify ownership
-        book.VerifyOwnership(userId.Value);
+        if (book.UserId != userId.Value)
+            return Result<int>.Failure("Access denied.");
 
         // Update using Domain logic
-        book.Update(request.Title, request.Author, request.ISBN, request.PublicationDate, request.BasePrice, request.Genre, request.Description);
-        
-        // Optional: add other properties via domain methods
-        // book.SetIsbn(request.ISBN);
+        book.Update(request.Title, request.Author, book.SeriesName, book.SeriesNumber, request.Genre, request.Description, book.CoverImageUrl);
+
+        var primaryEdition = book.Editions.OrderBy(e => e.Id).FirstOrDefault();
+        if (primaryEdition != null)
+        {
+            primaryEdition.Update(
+                request.ISBN ?? primaryEdition.ISBN,
+                request.PublicationDate ?? primaryEdition.PublicationDate,
+                request.BasePrice ?? primaryEdition.BasePrice,
+                primaryEdition.PageCount,
+                primaryEdition.Dimensions,
+                primaryEdition.FileSize,
+                primaryEdition.Narrator,
+                primaryEdition.Duration);
+        }
+        else if (request.ISBN != null || request.PublicationDate != null || request.BasePrice != null)
+        {
+            book.AddEdition(EditionFormat.Paperback, request.ISBN, request.PublicationDate, request.BasePrice);
+        }
 
         // 2. Persist using the Port interface (Dependency Inversion)
         await _bookRepository.UpdateAsync(book, cancellationToken);

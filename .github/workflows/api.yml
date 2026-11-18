@@ -19,13 +19,27 @@ jobs:
   build-test-api:
     name: Build and test API
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: publishingtracker_tests
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d publishingtracker_tests"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: "10.0.x"
 
       - name: Restore
         run: dotnet restore Publishing-Tracker/apps/api/PublishingTracker.Api.sln
@@ -34,4 +48,6 @@ jobs:
         run: dotnet build Publishing-Tracker/apps/api/PublishingTracker.Api.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --verbosity normal
+        env:
+          TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=publishingtracker_tests;Username=postgres;Password=postgres
+        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --configuration Release --verbosity normal

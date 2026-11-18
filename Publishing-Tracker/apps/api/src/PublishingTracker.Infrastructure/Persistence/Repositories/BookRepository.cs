@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Dtos;
 using PublishingTracker.Application.Interfaces;
-using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Books.Queries;
 
 namespace PublishingTracker.Infrastructure.Persistence.Repositories;
@@ -20,6 +19,9 @@ public class BookRepository : IBookRepository
     {
         return await _context.Books
             .Include(b => b.User)
+            .Include(b => b.Editions)
+                .ThenInclude(e => e.PlatformMetadata)
+            .Include(b => b.Sales)
             .FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
     }
 
@@ -57,7 +59,10 @@ public class BookRepository : IBookRepository
 
     public async Task<List<BookResponseDto>> GetAllAsync(int userId, string? searchTerm, string? sortBy, string? sortOrder, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var query = _context.Books.Where(b => b.UserId == userId);
+        var query = _context.Books
+            .Include(b => b.Editions)
+            .Include(b => b.Sales)
+            .Where(b => b.UserId == userId);
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
@@ -68,7 +73,9 @@ public class BookRepository : IBookRepository
         {
             "title" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.Title) : query.OrderBy(b => b.Title),
             "author" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.Author) : query.OrderBy(b => b.Author),
-            "publicationdate" => sortOrder?.ToLower() == "desc" ? query.OrderByDescending(b => b.PublicationDate) : query.OrderBy(b => b.PublicationDate),
+            "publicationdate" => sortOrder?.ToLower() == "desc" 
+                ? query.OrderByDescending(b => b.Editions.Min(e => e.PublicationDate)) 
+                : query.OrderBy(b => b.Editions.Min(e => e.PublicationDate)),
             _ => query.OrderByDescending(b => b.CreatedAt)
         };
 
@@ -82,9 +89,9 @@ public class BookRepository : IBookRepository
                 Id = b.Id,
                 Title = b.Title,
                 Author = b.Author,
-                ISBN = b.ISBN,
-                PublicationDate = b.PublicationDate,
-                BasePrice = b.BasePrice,
+                ISBN = b.Editions.OrderBy(e => e.Id).Select(e => e.ISBN).FirstOrDefault(),
+                PublicationDate = b.Editions.Min(e => e.PublicationDate),
+                BasePrice = b.Editions.OrderBy(e => e.Id).Select(e => e.BasePrice).FirstOrDefault(),
                 Genre = b.Genre,
                 Description = b.Description,
                 TotalSales = b.Sales.Count,

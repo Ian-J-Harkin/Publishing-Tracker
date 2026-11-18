@@ -1,5 +1,3 @@
-
-
 namespace PublishingTracker.Application.Books.Commands;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Domain.Entities;
@@ -25,10 +23,16 @@ public class CreateBookCommandHandler : IRequestHandler<CreateBookCommand, Resul
         var userId = _currentUserService.UserId;
         if (userId == null) return Result<int>.Failure("Unauthorized");
 
-        // 1. Create using Domain logic
-        var book = new Book(userId.Value, request.Title, request.Author, request.ISBN, request.PublicationDate, request.BasePrice, request.Genre, request.Description);
+        // 1. Create using Domain logic - Book no longer takes ISBN, PublicationDate, BasePrice
+        var book = new Book(userId.Value, request.Title, request.Author, seriesName: null, seriesNumber: null, request.Genre, request.Description);
 
-        // 2. Persist using the Port interface (Dependency Inversion)
+        // 2. Add an Edition with the ISBN, PublicationDate, and BasePrice
+        if (request.ISBN != null || request.PublicationDate != null || request.BasePrice != null)
+        {
+            book.AddEdition(EditionFormat.Paperback, request.ISBN, request.PublicationDate, request.BasePrice);
+        }
+
+        // 3. Persist using the Port interface (Dependency Inversion)
         await _bookRepository.AddAsync(book, cancellationToken);
 
         return Result<int>.Success(book.Id);

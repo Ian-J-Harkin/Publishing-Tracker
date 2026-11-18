@@ -51,7 +51,15 @@ namespace PublishingTracker.Api.Tests
 
                 services.AddDbContext<PublishingTrackerDbContext>(options =>
                 {
-                    options.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=PublishingTracker_IntegrationTests;Trusted_Connection=True;MultipleActiveResultSets=true");
+                    var postgresConn = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
+                    if (!string.IsNullOrWhiteSpace(postgresConn))
+                    {
+                        options.UseNpgsql(postgresConn);
+                    }
+                    else
+                    {
+                        options.UseInMemoryDatabase("PublishingTracker_IntegrationTests");
+                    }
                 });
 
 

@@ -18,9 +18,15 @@ public class TokenService : ITokenService
 
     public string CreateToken(User user)
     {
+        var now = DateTimeOffset.UtcNow;
+        var expiryMinutes = int.TryParse(_configuration["Jwt:ExpiryMinutes"], out var configuredMinutes) && configuredMinutes > 0
+            ? configuredMinutes
+            : 60;
+
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.NameId, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, now.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
             new Claim(ClaimTypes.Surname, user.LastName),
@@ -34,7 +40,8 @@ public class TokenService : ITokenService
             issuer: _configuration["Jwt:Issuer"],
             audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.Now.AddDays(7),
+            notBefore: now.UtcDateTime,
+            expires: now.UtcDateTime.AddMinutes(expiryMinutes),
             signingCredentials: creds
         );
 

@@ -6,6 +6,8 @@ public interface IApplicationDbContext
 {
     IQueryable<User> Users { get; }
     IQueryable<Book> Books { get; }
+    IQueryable<Edition> Editions { get; }
+    IQueryable<PlatformEditionMetadata> PlatformEditionMetadata { get; }
     IQueryable<Sale> Sales { get; }
     IQueryable<Platform> Platforms { get; }
     IQueryable<ImportJob> ImportJobs { get; }
