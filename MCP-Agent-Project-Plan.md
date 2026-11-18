@@ -230,8 +230,8 @@ Layer the 15–25 xUnit cases across three explicit test tiers:
 |---|---|:---:|---|:---:|
 | **Phase 0** | Baseline, `.NET 10`, Auth & Contracts | ✅ **Completed** | [Phase-0-Baseline-and-Contracts.md](docs/Phase-0-Baseline-and-Contracts.md)<br>Reconciled entities, Postgres migration, `TokenService` `iat` + 60m expiry | 41/41 |
 | **Phase 1** | Read-Only Catalogue & Hosted `/mcp` | ✅ **Completed** | [Phase-1-Read-Only-Catalogue-and-MCP.md](docs/Phase-1-Read-Only-Catalogue-and-MCP.md)<br>`PublishingTracker.Mcp`, `find_titles_missing_metadata`, `get_title_details`, `/mcp` streamable HTTP, 2-user isolation | 54/54 |
-| **Phase 2** | Agent Loop, Dual Budgets & Tracing | 🟡 **Designed** | [Phase-2-Agent-Loop-and-Tracing.md](docs/Phase-2-Agent-Loop-and-Tracing.md)<br>`PublishingTracker.Agent`, OpenRouter + Claude, dual loop budgets (6 turns, 8 tool calls), `ActivitySource` tracing | 18 planned |
-| **Phase 3** | Evidence Ledger & Reliable Outputs | ⚪ Planned | Per-run `EvidenceLedger` tracking linked source fields, Stage 2 structured repair turns | 6 planned |
+| **Phase 2** | Agent Loop, Dual Budgets & Tracing | ✅ **Completed** | [Phase-2-Agent-Loop-and-Tracing.md](docs/Phase-2-Agent-Loop-and-Tracing.md)<br>`PublishingTracker.Agent`, OpenRouter + Claude, dual loop budgets (6 turns, 8 tool calls), `ActivitySource` tracing | 20/20<br>(74/74 total) |
+| **Phase 3** | Evidence Ledger & Reliable Outputs | 🟡 **Designed** | [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](docs/Phase-3-Evidence-Ledger-and-Reliable-Outputs.md)<br>Per-run `EvidenceLedger` tracking linked source fields, Stage 2 structured repair turns | 22 planned |
 | **Phase 4** | RAG Module with `pgvector` | ⚪ Planned | `PublishingTracker.Rag`, `search_publishing_guidelines`, host-bound user scoping | 6 planned |
 | **Phase 5** | Layered CI Evaluation Suites | ⚪ Planned | Fast unit evals (`ScriptedChatClient`) + DB/HTTP integration tests + opt-in live smoke | 15–20 total |
 | **Phase 6** | Deployment & Operational Hardening | ⚪ Planned | Multi-stage Dockerfiles, Azure deployment Bicep, CI workflow updates | CI green |
@@ -297,6 +297,8 @@ Layer the 15–25 xUnit cases across three explicit test tiers:
 - Local OpenTelemetry trace shows the run span and child model/tool spans without leaking tokens or prompts.
 
 ### Phase 3 — Linked Evidence Ledger & Reliable Final Outputs
+
+> Detailed specification: [docs/Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](docs/Phase-3-Evidence-Ledger-and-Reliable-Outputs.md)
 
 **Goal:** Ensure every response satisfies the versioned JSON schema and passes linked provenance verification.
 

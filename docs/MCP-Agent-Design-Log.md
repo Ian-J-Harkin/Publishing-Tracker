@@ -5,8 +5,8 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 **Expanded Phase Specifications & Completion Waypoints:**
 - [Phase 0 — Baseline, `.NET 10` Upgrade, Auth Hygiene, and Contracts](Phase-0-Baseline-and-Contracts.md) — ✅ **Completed** (41/41 tests passing)
 - [Phase 1 — Read-Only Catalogue Capabilities & Hosted `/mcp` Endpoint](Phase-1-Read-Only-Catalogue-and-MCP.md) — ✅ **Completed** (54/54 tests passing)
-- [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — 🟡 **Specification Ready** (18 deterministic tests planned)
-- Phase 3 — Linked Evidence Ledger & Reliable Final Outputs — ⚪ *Planned*
+- [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 74/74 total passing)
+- [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — 🟡 **Specification Ready** (22 deterministic tests planned)
 - Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval — ⚪ *Planned*
 - Phase 5 — Layered Evaluation Strategy & Continuous Verification — ⚪ *Planned*
 - Phase 6 — Deployment, Containerization, & Operational Readiness — ⚪ *Planned*
