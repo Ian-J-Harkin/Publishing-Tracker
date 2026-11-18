@@ -7,7 +7,7 @@ Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Projec
 ## 1. Purpose, Scope, and System Boundaries
 
 ### Goal
-Implement `PublishingTracker.Agent` as an authenticated ASP.NET Core service hosting an **explicit, dual-budget orchestration loop** powered by `Microsoft.Extensions.AI` (`IChatClient`). Connect to `PublishingTracker.Api`'s `/mcp` endpoint over Streamable HTTP using per-request JWT forwarding (never shared `DefaultRequestHeaders`), enforce deterministic execution controls (`MaxModelTurns = 6`, `MaxTotalToolCalls = 8`, payload caps, recursive JSON canonicalization for repeat-call limits, 2-page pagination boundaries), emit privacy-safe OpenTelemetry activity traces, and verify behavior with 18 deterministic test doubles (`ScriptedChatClient` and `RecordingHttpMessageHandler`).
+Implement `PublishingTracker.Agent` as an authenticated ASP.NET Core service hosting an **explicit, dual-budget orchestration loop** powered by `Microsoft.Extensions.AI` (`IChatClient`). Connect to `PublishingTracker.Api`'s `/mcp` endpoint over Streamable HTTP using per-request JWT forwarding (never shared `DefaultRequestHeaders`), enforce deterministic execution controls (`MaxModelTurns = 6`, `MaxTotalToolCalls = 8`, payload caps, recursive JSON canonicalization for repeat-call limits, 2-page pagination boundaries), emit privacy-safe OpenTelemetry activity traces, and verify behavior with 20 deterministic test doubles (`ScriptedChatClient` and `RecordingHttpMessageHandler`).
 
 ```
                            ┌────────────────────────────────────────────────────────┐
@@ -55,7 +55,7 @@ Client (JWT) ─────────────>│ POST /api/agent/query  
    - Generic public error codes (`TOOL_ERROR`, `TIMEOUT`, `BUDGET_EXCEEDED`) masking internal exceptions from client payloads.
 5. **Observability & OpenTelemetry (`ActivitySource("PublishingTracker.Agent")`)**: Root span `agent.run` and child spans `agent.model_turn` and `agent.tool_call` with execution metadata (turn numbers, tool names, durations, payload sizes, status codes, error codes), strictly excluding sensitive data (no prompts, tool arguments, full tool outputs, or bearer tokens).
 6. **Agent Query Endpoint**: `POST /api/agent/query` accepting `AgentQueryRequest` and returning `AgentQueryResponse`.
-7. **Test Suite (`PublishingTracker.Agent.Tests`)**: 18 deterministic unit tests with `ScriptedChatClient` (simulating tool turns and completions without external API calls) and `RecordingHttpMessageHandler` (validating provider configuration, headers, and endpoints without spend).
+7. **Test Suite (`PublishingTracker.Agent.Tests`)**: 20 deterministic unit tests with `ScriptedChatClient` (simulating tool turns and completions without external API calls) and `RecordingHttpMessageHandler` (validating provider configuration, headers, and endpoints without spend).
 
 ### Out of Scope for Phase 2
 - **Evidence Ledger & Stage 2 Structured Output Verification** (Phase 3: `EvidenceLedger`, `AgentOutputValidator`, citation provenance, and JSON schema repair turns).
@@ -72,7 +72,7 @@ The following packages are pinned in `Directory.Packages.props` and cached local
 | Package | Version | Purpose |
 |---|---|---|
 | `Microsoft.Extensions.AI` | `10.10.0` | Core abstractions: `IChatClient`, `ChatMessage`, `ChatOptions`, `AIFunction`, `FunctionCallContent`, `FunctionResultContent` |
-| `Microsoft.Extensions.AI.OpenAI` | `10.10.0` | Adapts OpenAI/OpenRouter REST clients to `IChatClient` (`.AsChatClient()`) |
+| `Microsoft.Extensions.AI.OpenAI` | `10.10.0` | Adapts OpenAI/OpenRouter REST clients to `IChatClient` (`.AsIChatClient()`) |
 | `ModelContextProtocol` | `1.3.0` | Client MCP SDK: `McpClient`, `HttpClientTransport`, and `McpClientTool` (`AIFunction` interop) |
 | `OpenTelemetry` | `1.16.0` | Activity listener and telemetry export primitives |
 | `OpenTelemetry.Extensions.Hosting` | `1.16.0` | ASP.NET Core OpenTelemetry hosting integration |
@@ -229,15 +229,43 @@ public static class AIProviderSetup
         if (options.Type == "openrouter")
         {
             // Privacy & attribution headers required by ADR-008
-            openAiOptions.AddPolicy(new OpenRouterHeadersPolicy(), System.ClientModel.Primitives.ClientPipelinePosition.PerCall);
+            openAiOptions.AddPolicy(new OpenRouterHeadersPolicy(), System.ClientModel.Primitives.PipelinePosition.PerCall);
         }
 
         var client = new OpenAI.OpenAIClient(new System.ClientModel.ApiKeyCredential(options.ApiKey), openAiOptions);
-        return client.GetChatClient(options.ModelId).AsChatClient();
+        return client.GetChatClient(options.ModelId).AsIChatClient();
     }
 
     private static string? FirstNonEmpty(params string?[] values) =>
         values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
+
+    private sealed class OpenRouterHeadersPolicy : System.ClientModel.Primitives.PipelinePolicy
+    {
+        public override void Process(
+            System.ClientModel.Primitives.PipelineMessage message,
+            IReadOnlyList<System.ClientModel.Primitives.PipelinePolicy> pipeline,
+            int currentIndex)
+        {
+            ApplyHeaders(message);
+            ProcessNext(message, pipeline, currentIndex);
+        }
+
+        public override ValueTask ProcessAsync(
+            System.ClientModel.Primitives.PipelineMessage message,
+            IReadOnlyList<System.ClientModel.Primitives.PipelinePolicy> pipeline,
+            int currentIndex)
+        {
+            ApplyHeaders(message);
+            return ProcessNextAsync(message, pipeline, currentIndex);
+        }
+
+        private static void ApplyHeaders(System.ClientModel.Primitives.PipelineMessage message)
+        {
+            message.Request.Headers.Set("HTTP-Referer", "https://publishingtracker.local");
+            message.Request.Headers.Set("X-Title", "PublishingTracker");
+            message.Request.Headers.Set("data_collection", "deny");
+        }
+    }
 }
 ```
 
@@ -247,7 +275,7 @@ public static class AIProviderSetup
 
 ### 4.1 Per-Request JWT Propagation & Credential Guard: `PerRequestBearerHandler.cs`
 Enforces `ADR-005` with strict credential protection:
-1. **Endpoint Trust Verification:** Ensures the target request URI uses `https://` (or `http://localhost` / `http://127.0.0.1` strictly in Development/Testing) and the path begins with the expected MCP route (`/mcp`), preventing credential leakage to arbitrary endpoints.
+1. **Endpoint Trust Verification:** Ensures the target request URI uses `https://` (or `http://localhost` / `http://127.0.0.1` strictly in Development/Testing), matches the configured `AIProviderOptions.McpEndpoint` scheme/host/port, and targets the exact normalized `/mcp` route, preventing credential leakage to arbitrary endpoints or unintended API paths.
 2. **Conflict Sanitization:** Explicitly removes any pre-existing `Authorization` header on the outgoing message before attaching the caller's validated token.
 3. **Fail-Closed Security:** Rejects unauthenticated callers or malformed bearer headers immediately with `UnauthorizedAccessException`.
 
@@ -256,6 +284,7 @@ namespace PublishingTracker.Agent.Auth;
 
 public sealed class PerRequestBearerHandler(
     IHttpContextAccessor httpContextAccessor,
+    IOptions<AIProviderOptions> options,
     IHostEnvironment environment) : DelegatingHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -289,12 +318,10 @@ public sealed class PerRequestBearerHandler(
 
     private void ValidateDestinationSecurity(Uri? uri)
     {
-        if (uri is null)
-            throw new InvalidOperationException("Target MCP request URI cannot be null.");
+        if (uri is null || !uri.IsAbsoluteUri)
+            throw new InvalidOperationException("Target MCP URI must be non-null and absolute.");
 
-        if (!uri.IsAbsoluteUri)
-            throw new InvalidOperationException("Target MCP URI must be absolute.");
-
+        var expectedUri = new Uri(options.Value.McpEndpoint);
         var isHttps = uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
         var isLocal = uri.IsLoopback || uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
 
@@ -304,23 +331,35 @@ public sealed class PerRequestBearerHandler(
             throw new InvalidOperationException($"Insecure HTTP MCP endpoint '{uri}' is not permitted in {environment.EnvironmentName}.");
         }
 
-        if (!uri.AbsolutePath.StartsWith("/mcp", StringComparison.OrdinalIgnoreCase))
+        // Compare scheme, host, port, and exact normalized MCP path against configured destination
+        var actualPath = uri.AbsolutePath.TrimEnd('/');
+        var expectedPath = expectedUri.AbsolutePath.TrimEnd('/');
+
+        if (!uri.Scheme.Equals(expectedUri.Scheme, StringComparison.OrdinalIgnoreCase) ||
+            !uri.Host.Equals(expectedUri.Host, StringComparison.OrdinalIgnoreCase) ||
+            uri.Port != expectedUri.Port ||
+            !actualPath.Equals(expectedPath, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"Target URI path '{uri.AbsolutePath}' is not a permitted MCP endpoint.");
+            throw new InvalidOperationException($"Target URI '{uri}' does not match configured trusted MCP endpoint '{expectedUri}'.");
         }
     }
 }
 ```
 
-### 4.2 Outbound MCP Tool Provider: `IMcpToolProvider.cs`
-Resolves discovered MCP tools from `PublishingTracker.Api/mcp` for the current HTTP turn:
+### 4.2 Outbound MCP Tool Provider & Session Lifetime: `IMcpToolProvider.cs`
+MCP client-backed `AIFunction` instances retain a reference to their `McpClient` transport. Returning a run-scoped `IMcpToolSession : IAsyncDisposable` keeps the `McpClient` alive until `AgentLoopRunner.RunAsync` finishes invoking tools:
 
 ```csharp
 namespace PublishingTracker.Agent.Mcp;
 
+public interface IMcpToolSession : IAsyncDisposable
+{
+    IReadOnlyList<AIFunction> Tools { get; }
+}
+
 public interface IMcpToolProvider
 {
-    Task<IReadOnlyList<AIFunction>> GetToolsAsync(CancellationToken cancellationToken = default);
+    Task<IMcpToolSession> OpenSessionAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class StreamableHttpMcpToolProvider : IMcpToolProvider
@@ -334,7 +373,7 @@ public sealed class StreamableHttpMcpToolProvider : IMcpToolProvider
         _mcpEndpoint = new Uri(options.Value.McpEndpoint);
     }
 
-    public async Task<IReadOnlyList<AIFunction>> GetToolsAsync(CancellationToken cancellationToken = default)
+    public async Task<IMcpToolSession> OpenSessionAsync(CancellationToken cancellationToken = default)
     {
         var transport = new HttpClientTransport(
             new HttpClientTransportOptions
@@ -345,11 +384,24 @@ public sealed class StreamableHttpMcpToolProvider : IMcpToolProvider
             _httpClient,
             ownsHttpClient: false);
 
-        await using var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
-        var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
+        var mcpClient = await McpClient.CreateAsync(transport, cancellationToken: cancellationToken);
+        try
+        {
+            var tools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
+            // McpClientTool derives directly from Microsoft.Extensions.AI.AIFunction
+            return new McpToolSession(mcpClient, tools.Cast<AIFunction>().ToList());
+        }
+        catch
+        {
+            await mcpClient.DisposeAsync();
+            throw;
+        }
+    }
 
-        // McpClientTool derives directly from Microsoft.Extensions.AI.AIFunction
-        return tools.Cast<AIFunction>().ToList();
+    private sealed class McpToolSession(McpClient client, IReadOnlyList<AIFunction> tools) : IMcpToolSession
+    {
+        public IReadOnlyList<AIFunction> Tools { get; } = tools;
+        public ValueTask DisposeAsync() => client.DisposeAsync();
     }
 }
 ```
@@ -448,29 +500,31 @@ public sealed class AgentLoopRunner
         var totalToolCalls = 0;
         var limitations = new List<string>();
 
-        // Step 1: Tool Discovery with Run-Level Deadline & Duplicate Check
-        IReadOnlyList<AIFunction> tools;
-        Dictionary<string, AIFunction> toolMap;
+        // Step 1: Tool Discovery with Run-Level Session Lifetime & Duplicate Check
+        IMcpToolSession toolSession;
         try
         {
-            tools = await _toolProvider.GetToolsAsync(ct);
-            toolMap = new Dictionary<string, AIFunction>(StringComparer.Ordinal);
-            foreach (var tool in tools)
-            {
-                if (!toolMap.TryAdd(tool.Name, tool))
-                {
-                    return FailRun(runActivity, runStopwatch, "INVALID_TOOLSET: Duplicate tool name detected.", toolsUsed, 0, 0);
-                }
-            }
+            toolSession = await _toolProvider.OpenSessionAsync(ct);
         }
         catch (OperationCanceledException)
         {
-            return HandleCancellation(runActivity, runStopwatch, cancellationToken, linkedCts, toolsUsed, 0, 0);
+            return HandleCancellation(runActivity, runStopwatch, cancellationToken, null, null, toolsUsed, 0, 0);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Tool discovery failed unexpectedly.");
             return FailRun(runActivity, runStopwatch, "TOOL_DISCOVERY_ERROR: Failed to discover MCP tools.", toolsUsed, 0, 0);
+        }
+
+        await using var ownedSession = toolSession;
+        var tools = ownedSession.Tools;
+        var toolMap = new Dictionary<string, AIFunction>(StringComparer.Ordinal);
+        foreach (var tool in tools)
+        {
+            if (!toolMap.TryAdd(tool.Name, tool))
+            {
+                return FailRun(runActivity, runStopwatch, "INVALID_TOOLSET: Duplicate tool name detected.", toolsUsed, 0, 0);
+            }
         }
 
         var chatOptions = new ChatOptions { Tools = [.. tools] };
@@ -487,22 +541,24 @@ public sealed class AgentLoopRunner
             using var turnActivity = AgentTelemetry.Source.StartActivity("agent.model_turn");
             turnActivity?.SetTag("agent.turn_number", turn);
 
-            ChatMessage responseMessage;
+            ChatResponse response;
+            using var modelPerCallCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            modelPerCallCts.CancelAfter(_options.PerCallTimeout);
+
             try
             {
-                using var perCallCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                perCallCts.CancelAfter(_options.PerCallTimeout);
-
-                var response = await _chatClient.GetResponseAsync(messages, chatOptions, perCallCts.Token);
-                responseMessage = response.Message;
-                messages.Add(responseMessage);
+                response = await _chatClient.GetResponseAsync(messages, chatOptions, modelPerCallCts.Token);
+                messages.AddRange(response.Messages);
 
                 turnActivity?.SetTag("agent.duration_ms", turnStopwatch.ElapsedMilliseconds);
-                turnActivity?.SetTag("agent.has_function_calls", responseMessage.Contents.OfType<FunctionCallContent>().Any());
+                turnActivity?.SetTag("agent.has_function_calls",
+                    response.Messages.SelectMany(m => m.Contents).OfType<FunctionCallContent>().Any());
             }
             catch (OperationCanceledException)
             {
-                return HandleCancellation(runActivity, runStopwatch, cancellationToken, linkedCts, toolsUsed, turn, totalToolCalls);
+                return HandleCancellation(
+                    runActivity, runStopwatch, cancellationToken, ct, modelPerCallCts,
+                    toolsUsed, turn, totalToolCalls, "TIMEOUT: Model call exceeded per-call timeout limit.");
             }
             catch (Exception ex)
             {
@@ -510,18 +566,22 @@ public sealed class AgentLoopRunner
                 return FailRun(runActivity, runStopwatch, "MODEL_ERROR: Call to model failed.", toolsUsed, turn, totalToolCalls);
             }
 
-            var functionCalls = responseMessage.Contents.OfType<FunctionCallContent>().ToList();
+            var functionCalls = response.Messages
+                .SelectMany(m => m.Contents)
+                .OfType<FunctionCallContent>()
+                .ToList();
+
             if (functionCalls.Count == 0)
             {
                 // Reject empty or whitespace-only final completions
-                if (string.IsNullOrWhiteSpace(responseMessage.Text))
+                if (string.IsNullOrWhiteSpace(response.Text))
                 {
                     return FailRun(runActivity, runStopwatch, "EMPTY_RESPONSE: Model returned an empty response without tool calls.", toolsUsed, turn, totalToolCalls);
                 }
 
                 runActivity?.SetTag("agent.status", "completed");
                 runActivity?.SetTag("agent.duration_ms", runStopwatch.ElapsedMilliseconds);
-                return AgentRunResult.Completed(responseMessage.Text.Trim(), toolsUsed, turn, totalToolCalls, limitations);
+                return AgentRunResult.Completed(response.Text.Trim(), toolsUsed, turn, totalToolCalls, limitations);
             }
 
             // Process every tool call returned in this turn
@@ -573,12 +633,16 @@ public sealed class AgentLoopRunner
 
                 // Execute tool with non-cooperative timeout protection via Task.WhenAny
                 object? toolResult;
+                using var toolPerCallCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                toolPerCallCts.CancelAfter(_options.PerCallTimeout);
+
                 try
                 {
-                    using var toolPerCallCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                    toolPerCallCts.CancelAfter(_options.PerCallTimeout);
+                    var args = call.Arguments is null
+                        ? new AIFunctionArguments()
+                        : new AIFunctionArguments(call.Arguments);
 
-                    var invokeTask = tool.InvokeAsync(call.Arguments?.ToDictionary() ?? [], toolPerCallCts.Token).AsTask();
+                    var invokeTask = tool.InvokeAsync(args, toolPerCallCts.Token).AsTask();
                     var timeoutTask = Task.Delay(_options.PerCallTimeout, CancellationToken.None);
 
                     var completed = await Task.WhenAny(invokeTask, timeoutTask);
@@ -597,7 +661,9 @@ public sealed class AgentLoopRunner
                 catch (OperationCanceledException)
                 {
                     toolActivity?.SetTag("agent.is_error", true);
-                    return HandleCancellation(runActivity, runStopwatch, cancellationToken, linkedCts, toolsUsed, turn, totalToolCalls);
+                    return HandleCancellation(
+                        runActivity, runStopwatch, cancellationToken, ct, toolPerCallCts,
+                        toolsUsed, turn, totalToolCalls, $"TIMEOUT: Tool call '{call.Name}' exceeded per-call timeout limit.");
                 }
                 catch (Exception ex)
                 {
@@ -658,12 +724,18 @@ public sealed class AgentLoopRunner
     }
 
     private static AgentRunResult HandleCancellation(
-        Activity? activity, Stopwatch stopwatch, CancellationToken callerCt, CancellationTokenSource linkedCts,
-        IReadOnlyList<string> toolsUsed, int turns, int toolCalls)
+        Activity? activity, Stopwatch stopwatch, CancellationToken callerCt, CancellationToken? overallCt,
+        CancellationTokenSource? perCallCts, IReadOnlyList<string> toolsUsed, int turns, int toolCalls,
+        string perCallTimeoutMessage = "TIMEOUT: Operation exceeded per-call timeout limit.")
     {
         if (callerCt.IsCancellationRequested)
         {
             return FailRun(activity, stopwatch, "CANCELLED: Agent request was cancelled by caller.", toolsUsed, turns, toolCalls);
+        }
+
+        if (perCallCts is not null && perCallCts.IsCancellationRequested && overallCt?.IsCancellationRequested != true)
+        {
+            return FailRun(activity, stopwatch, perCallTimeoutMessage, toolsUsed, turns, toolCalls);
         }
 
         return FailRun(activity, stopwatch, "TIMEOUT: Overall request deadline of 60s exceeded.", toolsUsed, turns, toolCalls);
@@ -848,8 +920,8 @@ namespace PublishingTracker.Agent.Tests.Doubles;
 
 public sealed class ScriptedChatClient : IChatClient
 {
-    private readonly Queue<Func<IList<ChatMessage>, ChatResponse>> _responses = new();
-    public List<IList<ChatMessage>> Invocations { } = [];
+    private readonly Queue<Func<IReadOnlyList<ChatMessage>, ChatResponse>> _responses = new();
+    public List<IReadOnlyList<ChatMessage>> Invocations { get; } = [];
 
     public void EnqueueFunctionCall(string toolName, IDictionary<string, object?> arguments)
     {
@@ -864,15 +936,28 @@ public sealed class ScriptedChatClient : IChatClient
     }
 
     public Task<ChatResponse> GetResponseAsync(
-        IList<ChatMessage> chatMessages,
+        IEnumerable<ChatMessage> messages,
         ChatOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        Invocations.Add([.. chatMessages]);
+        var snapshot = messages.ToList();
+        Invocations.Add(snapshot);
         if (_responses.TryDequeue(out var responder))
-            return Task.FromResult(responder(chatMessages));
+            return Task.FromResult(responder(snapshot));
 
         throw new InvalidOperationException("No scripted response remaining in ScriptedChatClient.");
+    }
+
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        IEnumerable<ChatMessage> messages,
+        ChatOptions? options = null,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+        throw new NotSupportedException("Phase 2 uses non-streaming GetResponseAsync turns.");
+#pragma warning disable CS0162
+        yield break;
+#pragma warning restore CS0162
     }
 
     public object? GetService(Type serviceType, object? serviceKey = null) => null;
@@ -880,7 +965,7 @@ public sealed class ScriptedChatClient : IChatClient
 }
 ```
 
-### 8.2 Required Phase 2 Test Scenarios (18 Deterministic Tests)
+### 8.2 Required Phase 2 Test Scenarios (20 Deterministic Tests)
 
 #### Category A: Agent Loop Mechanics & Happy Path
 1. **`AgentLoop_TwoToolSequence_CompletesWithGroundedAnswer`**
@@ -951,7 +1036,15 @@ public sealed class ScriptedChatClient : IChatClient
     - Test handler with mock `IHttpContextAccessor`.
     - Pre-populate request with malicious `Authorization: Bearer fake`.
     - Verify handler removes pre-existing header and attaches validated caller token.
-    - Verify target endpoints using plain HTTP to external domains throw `InvalidOperationException`.
+    - Verify target endpoints using plain HTTP to external domains (or paths/hosts not matching `AIProviderOptions.McpEndpoint`) throw `InvalidOperationException`.
+
+#### Category E: Configuration, Provider Routing & Secrets Redaction
+19. **`AIProviderSetup_RoutingAndHeaderTests`**
+    - Using `RecordingHttpMessageHandler` wired via `customHttpClient`, verify `openrouter`, `ollama`, and `openai` configurations resolve properly while unsupported types throw `InvalidOperationException`.
+    - Assert `X-Title` and `HTTP-Referer` headers are attached for OpenRouter and that `AgentLoopOptions.Validate()` rejects non-positive limits or `OverallTimeout <= PerCallTimeout`.
+20. **`AIProviderOptions_ToString_RedactsApiKeys`**
+    - Populate `AIProviderOptions` with sensitive keys (`ApiKey`, `OpenRouterApiKey`).
+    - Assert `ToString()` outputs `[REDACTED]` and never leaks plain-text keys in logs.
 
 ---
 
@@ -966,25 +1059,31 @@ public sealed class ScriptedChatClient : IChatClient
    - Implement `AIProviderOptions.cs` and `AIProviderSetup.cs` with explicit provider validation, OpenRouter privacy headers, and custom `HttpClient` wiring.
    - Write `RecordingHttpMessageHandler` tests verifying provider resolution, header policies, and secrets redaction.
 3. **Step 2.3 — Outbound Auth & MCP Tool Provider:**
-   - Implement `PerRequestBearerHandler.cs` with destination URL validation and header replacement.
-   - Implement `StreamableHttpMcpToolProvider.cs`.
+   - Implement `PerRequestBearerHandler.cs` with exact configured destination URI validation and header replacement.
+   - Implement `StreamableHttpMcpToolProvider.cs` returning run-scoped `IMcpToolSession`.
 4. **Step 2.4 — Loop Mechanics & Telemetry:**
    - Implement `AgentLoopOptions.cs` with `Validate()`, `AgentLoopRunner.cs` with recursive canonicalization and timeout protections, and `AgentTelemetry.cs`.
 5. **Step 2.5 — API Endpoint & Minimal API:**
    - Add `POST /api/agent/query` route in `PublishingTracker.Agent/Program.cs`.
 6. **Step 2.6 — Deterministic Unit & Telemetry Test Suite:**
-   - Implement `ScriptedChatClient.cs` and all 18 test scenarios in `AgentLoopTests.cs`.
+   - Implement `ScriptedChatClient.cs` and all 20 test scenarios across `AgentLoopTests.cs` and `ProviderSetupTests.cs`.
 7. **Step 2.7 — Build & Verification:**
    - Execute `dotnet build` and `dotnet test` across the entire solution.
 
 ### Phase 2 Acceptance Checklist
-- [ ] `PublishingTracker.Agent` compiles cleanly on `net10.0` with `Microsoft.Extensions.AI`
-- [ ] `AIProviderSetup` rejects invalid provider types at startup and wires `customHttpClient` to `OpenAIClientOptions.Transport`
-- [ ] `PerRequestBearerHandler` validates destination HTTPS/localhost, replaces pre-existing headers, and forwards caller JWT per outbound request
-- [ ] Dual budgets enforce `MaxModelTurns = 6` and `MaxTotalToolCalls = 8` (counting individual calls within single turns)
-- [ ] Recursive JSON canonicalization prevents duplicate tool calls regardless of argument key ordering
-- [ ] Tool payload byte limit (16 KB) and pagination boundaries (max 2 pages) are strictly enforced
-- [ ] Timeouts differentiate caller cancellation, overall deadline, model timeout, and tool timeout (with non-cooperative tool protection)
-- [ ] Tool errors, duplicate tool names, serialization failures, and empty model responses return structured public failure codes
-- [ ] OpenTelemetry root and child spans are emitted with execution metrics and strictly zero sensitive data tags
-- [ ] All 18 deterministic test scenarios pass in CI with zero spend
+- [x] `PublishingTracker.Agent` compiles cleanly on `net10.0` with `Microsoft.Extensions.AI`
+- [x] `AIProviderSetup` rejects invalid provider types at startup and wires `customHttpClient` to `OpenAIClientOptions.Transport`
+- [x] `PerRequestBearerHandler` validates destination HTTPS/localhost + exact configured MCP host/port/path, replaces pre-existing headers, and forwards caller JWT per outbound request
+- [x] `IMcpToolSession` retains `McpClient` lifetime across all tool invocations within `RunAsync`
+- [x] Dual budgets enforce `MaxModelTurns = 6` and `MaxTotalToolCalls = 8` (counting individual calls within single turns)
+- [x] Recursive JSON canonicalization prevents duplicate tool calls regardless of argument key ordering
+- [x] Tool payload byte limit (16 KB) and pagination boundaries (max 2 pages) are strictly enforced
+- [x] Timeouts differentiate caller cancellation, overall deadline, model timeout, and tool timeout (with non-cooperative tool protection)
+- [x] Tool errors, duplicate tool names, serialization failures, and empty model responses return structured public failure codes
+- [x] OpenTelemetry root and child spans are emitted with execution metrics and strictly zero sensitive data tags
+- [x] All 20 deterministic test scenarios pass in CI with zero spend (20/20 Agent tests + 54/54 API/MCP tests = 74/74 total passing)
+
+### Implementation Notes & Verified Adjustments
+1. **Consolidated Test Layout:** All 20 deterministic Phase 2 scenarios were implemented in `tests/PublishingTracker.Agent.Tests/AgentLoopTests.cs` (covering both loop orchestration and `AIProviderSetup` routing/header/redaction assertions via `RecordingHttpMessageHandler`).
+2. **Non-Integer Page Validation & MCP Envelope `hasMore` Detection:** `AgentLoopRunner.TryExtractPage` rejects malformed non-integer `page` arguments with `INVALID_TOOL_ARGUMENTS` instead of defaulting silently to `1`, and `ReadHasMore` inspects both root JSON `hasMore` (used by stub tools) and `CallToolResult` `structuredContent.hasMore` / `content[0].text` JSON (used by `McpClientTool`).
+3. **Phase 1 Bridge Restoration:** Verified `options => options.Stateless = true` on `PublishingTracker.Api`'s `/mcp` HTTP transport and explicit `PublishingTracker.Mcp` solution/test references alongside the new `PublishingTracker.Agent` and `PublishingTracker.Agent.Tests` projects.

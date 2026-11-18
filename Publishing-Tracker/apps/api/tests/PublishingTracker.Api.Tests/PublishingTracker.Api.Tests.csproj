@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="ModelContextProtocol" />
     <PackageReference Include="Moq" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
@@ -26,6 +27,7 @@
     <ProjectReference Include="..\..\src\PublishingTracker.Domain\PublishingTracker.Domain.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Application\PublishingTracker.Application.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Mcp\PublishingTracker.Mcp.csproj" />
   </ItemGroup>
 
 </Project>
