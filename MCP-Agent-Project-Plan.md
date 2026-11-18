@@ -230,7 +230,7 @@ Layer the 15–25 xUnit cases across three explicit test tiers:
 |---|---|:---:|---|:---:|
 | **Phase 0** | Baseline, `.NET 10`, Auth & Contracts | ✅ **Completed** | [Phase-0-Baseline-and-Contracts.md](docs/Phase-0-Baseline-and-Contracts.md)<br>Reconciled entities, Postgres migration, `TokenService` `iat` + 60m expiry | 41/41 |
 | **Phase 1** | Read-Only Catalogue & Hosted `/mcp` | ✅ **Completed** | [Phase-1-Read-Only-Catalogue-and-MCP.md](docs/Phase-1-Read-Only-Catalogue-and-MCP.md)<br>`PublishingTracker.Mcp`, `find_titles_missing_metadata`, `get_title_details`, `/mcp` streamable HTTP, 2-user isolation | 54/54 |
-| **Phase 2** | Agent Loop, Dual Budgets & Tracing | 🟡 **Designed** | [Phase-2-Agent-Loop-and-Tracing.md](docs/Phase-2-Agent-Loop-and-Tracing.md)<br>`PublishingTracker.Agent`, OpenRouter + Claude, dual loop budgets (6 turns, 8 tool calls), `ActivitySource` tracing | 16 planned |
+| **Phase 2** | Agent Loop, Dual Budgets & Tracing | 🟡 **Designed** | [Phase-2-Agent-Loop-and-Tracing.md](docs/Phase-2-Agent-Loop-and-Tracing.md)<br>`PublishingTracker.Agent`, OpenRouter + Claude, dual loop budgets (6 turns, 8 tool calls), `ActivitySource` tracing | 18 planned |
 | **Phase 3** | Evidence Ledger & Reliable Outputs | ⚪ Planned | Per-run `EvidenceLedger` tracking linked source fields, Stage 2 structured repair turns | 6 planned |
 | **Phase 4** | RAG Module with `pgvector` | ⚪ Planned | `PublishingTracker.Rag`, `search_publishing_guidelines`, host-bound user scoping | 6 planned |
 | **Phase 5** | Layered CI Evaluation Suites | ⚪ Planned | Fast unit evals (`ScriptedChatClient`) + DB/HTTP integration tests + opt-in live smoke | 15–20 total |
