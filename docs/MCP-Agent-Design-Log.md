@@ -7,7 +7,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 1 — Read-Only Catalogue Capabilities & Hosted `/mcp` Endpoint](Phase-1-Read-Only-Catalogue-and-MCP.md) — ✅ **Completed** (54/54 tests passing)
 - [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 74/74 total passing)
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
-- Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval — ⚪ *Planned*
+- [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — 📝 **Spec Ready** (16 deterministic tests planned)
 - Phase 5 — Layered Evaluation Strategy & Continuous Verification — ⚪ *Planned*
 - Phase 6 — Deployment, Containerization, & Operational Readiness — ⚪ *Planned*
 

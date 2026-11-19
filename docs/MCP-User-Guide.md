@@ -1,21 +1,32 @@
-# PublishingTracker MCP Server — User & Integration Guide
+# PublishingTracker MCP & Agent — User & Integration Guide
 
-This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`.
+This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and upcoming Phase 4 RAG capabilities.
 
 ---
 
 ## 1. Overview & Architecture
 
-The PublishingTracker MCP server exposes authenticated, read-only catalogue querying capabilities to AI agents, IDEs, and desktop clients via the open **Model Context Protocol (MCP)** specification.
+The PublishingTracker MCP server exposes authenticated, read-only catalogue querying capabilities to AI agents, IDEs, desktop clients, and `PublishingTracker.Agent` via the open **Model Context Protocol (MCP)** specification.
 
 ```
-┌─────────────────────────────────┐
-│ MCP Client (Claude Desktop,     │
-│ Cursor, Agent, or Custom CLI)   │
-└────────────────┬────────────────┘
-                 │ Streamable HTTP (POST /mcp)
-                 │ Header: Authorization: Bearer <jwt>
-                 ▼
+┌─────────────────────────────────┐      ┌───────────────────────────────────────────┐
+│ IDE / Desktop MCP Client        │      │ End User / API Client                     │
+│ (Claude Desktop, Cursor, CLI)   │      └─────────────────────┬─────────────────────┘
+└────────────────┬────────────────┘                            │ POST /api/agent/query
+                 │                                             │ Header: Authorization: Bearer <jwt>
+                 │                                             ▼
+                 │                        ┌───────────────────────────────────────────┐
+                 │                        │ PublishingTracker.Agent (Phases 2–3)      │
+                 │                        │   ├── JwtBearerEvents (identity + iat)    │
+                 │                        │   ├── Two-Stage AgentLoopRunner           │
+                 │                        │   ├── EvidenceLedger + Validator          │
+                 │                        │   └── PerRequestBearerHandler             │
+                 │                        └────────────────────┬──────────────────────┘
+                 │                                             │
+                 └──────────────────────┬──────────────────────┘
+                                        │ Streamable HTTP (POST /mcp)
+                                        │ Header: Authorization: Bearer <jwt>
+                                        ▼
 ┌────────────────────────────────────────────────────────┐
 │ PublishingTracker.Api                                  │
 │   ├── app.UseAuthentication()                          │
@@ -267,3 +278,127 @@ Both MCP tools are also exposed as standard REST endpoints on `PublishingTracker
 | `get_title_details` | `GET /api/books/{id:int}/details` |
 
 Both interfaces enforce identical authentication, input validation rules, and error formatting.
+
+---
+
+## 6. Using the Agent Host (`PublishingTracker.Agent` — Phases 2 & 3)
+
+`PublishingTracker.Agent` provides a natural-language question-answering endpoint (`POST /api/agent/query`) backed by `Microsoft.Extensions.AI`, an explicit two-stage orchestration loop, a per-run `EvidenceLedger`, and strict output validation.
+
+### 6.1 Host Configuration (`AIProvider` & `AgentLoop`)
+
+Configure `PublishingTracker.Agent` using user secrets, environment variables, or configuration files:
+
+```json
+{
+  "Jwt": {
+    "Key": "<same-signing-key-as-PublishingTracker.Api>",
+    "Issuer": "PublishingTracker.Api",
+    "Audience": "PublishingTracker.Api"
+  },
+  "AIProvider": {
+    "Type": "openrouter",
+    "ModelId": "anthropic/claude-sonnet-4",
+    "Endpoint": "https://openrouter.ai/api/v1",
+    "McpEndpoint": "https://localhost:7285/mcp"
+  },
+  "AgentLoop": {
+    "MaxModelTurns": 6,
+    "MaxTotalToolCalls": 8,
+    "MaxValidationRetries": 2,
+    "RepeatCallLimit": 2,
+    "MaxPaginationPages": 2,
+    "MaxToolPayloadBytes": 16384,
+    "PerCallTimeout": "00:00:20",
+    "OverallTimeout": "00:01:00"
+  }
+}
+```
+
+- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
+- **OpenRouter Privacy Headers:** Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
+- **Trusted MCP Endpoint:** `McpEndpoint` must point to an absolute `/mcp` URL over HTTPS (loopback HTTP is permitted only in `Development` or `Testing`).
+
+### 6.2 Authentication Requirements at `/api/agent/query`
+
+1. Obtain a JWT from `PublishingTracker.Api` (`/api/auth/login`).
+2. `PublishingTracker.Agent`'s `JwtBearerEvents.OnTokenValidated` validates the signature, issuer, audience, and expiry, **and** requires both a non-empty user identity claim (`NameIdentifier` / `nameid` / `sub`) and a positive integer `iat` claim before invoking any LLM turns.
+3. On outbound calls to `/mcp`, `PerRequestBearerHandler` rejects multi-value `Authorization` headers or tokens containing whitespace, strips any prior header, and attaches the caller's validated token strictly per `HttpRequestMessage`.
+
+### 6.3 Calling `POST /api/agent/query`
+
+Since `PublishingTracker.Agent` does not define a default `launchSettings.json` URL, start the host with an explicit URL (e.g., `--urls https://localhost:7290`) and send an authenticated request:
+
+```bash
+curl -k -X POST https://localhost:7290/api/agent/query \
+  -H "Authorization: Bearer $token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "Which audiobooks are missing metadata, and what fields do they need?"
+  }'
+```
+
+**Version `1.0` Response Envelope (`AgentQueryResponse`):**
+
+```json
+{
+  "schemaVersion": "1.0",
+  "status": "answered",
+  "answer": "Audiobook 'Audio Missing Narrator' (BookId 42, EditionId 105) is missing Narrator and Duration.",
+  "evidence": {
+    "catalogueSources": [
+      {
+        "bookId": 42,
+        "editionId": 105,
+        "fields": ["Narrator", "Duration"],
+        "claim": "Edition 105 is missing Narrator and Duration."
+      }
+    ],
+    "documentSources": []
+  },
+  "toolsUsed": [
+    {
+      "toolName": "find_titles_missing_metadata",
+      "turn": 1,
+      "durationMs": 38,
+      "succeeded": true
+    },
+    {
+      "toolName": "get_title_details",
+      "turn": 2,
+      "durationMs": 29,
+      "succeeded": true
+    }
+  ],
+  "turns": 3,
+  "totalToolCalls": 2,
+  "limitations": null,
+  "error": null
+}
+```
+
+- `toolsUsed` is always populated by the Agent Host from observed tool executions—never copied from model output.
+- If pagination truncation occurs (`hasMore == true`), `limitations` must disclose truncation and the host guarantees `Catalogue results were truncated at the page limit (hasMore=true); additional matching titles exist.` is present.
+
+### 6.4 Provenance Boundary & Closed Public Error Codes
+
+> **Provenance Boundary (`ADR-007`):** Validation guarantees **structural source and field provenance** against the run's `EvidenceLedger`—meaning every cited `bookId`, `(bookId, editionId)` pair, cited field name, and `(documentId, chunkId)` pair was genuinely returned in tool results during that run. Host validation does **not** perform natural-language semantic entailment on free-text `answer` or `claim` prose.
+
+Failures always return `status: "could_not_answer"`, empty `evidence`, host-recorded `toolsUsed`, and an approved public `error` prefixed by one of 18 closed `AgentErrorCode` values (internal stack traces and secrets stay strictly in host logs):
+
+| Category | Error Codes |
+|---|---|
+| **Cancellation & Timeouts** | `CANCELLED`, `TIMEOUT` |
+| **Setup, Model & Turns** | `TOOL_DISCOVERY_ERROR`, `INVALID_TOOLSET`, `MODEL_ERROR`, `EMPTY_RESPONSE`, `TURN_LIMIT_EXCEEDED` |
+| **Budgets, Tools & Paging** | `BUDGET_EXCEEDED`, `UNKNOWN_TOOL`, `INVALID_TOOL_ARGUMENTS`, `REPEAT_CALL_LIMIT`, `PAGINATION_LIMIT_EXCEEDED`, `PAGINATION_SEQUENCE_ERROR` |
+| **Payloads, Ledger & Output** | `TOOL_ERROR`, `SERIALIZATION_ERROR`, `PAYLOAD_LIMIT_EXCEEDED`, `EVIDENCE_INDEXING_ERROR`, `VALIDATION_RETRIES_EXHAUSTED` |
+
+---
+
+## 7. Planned Phase 4 RAG Capabilities (`PublishingTracker.Rag`)
+
+Phase 4 (specification ready at [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md)) extends the Agent Host with semantic document retrieval over publishing guidelines and user notes:
+
+- **Host-Bound Tool:** `search_publishing_guidelines(string query, int topK = 5)` searches shared repo guides (`Publishing-Tracker/apps/api/docs/rag-corpus/`, `OwnerUserId = null`) and private caller notes (`OwnerUserId = authenticatedUserId`), embedded with `openai/text-embedding-3-small` (`1536` dimensions) and queried via PostgreSQL `pgvector` `<=>` cosine distance.
+- **Strict Tenant Binding (`ADR-009`):** `authenticatedUserId` is resolved strictly from the caller's validated JWT in host code and never appears in tool parameters or schemas.
+- **Linked Citations:** Retrieved chunks populate `evidence.documentSources` (`documentId`, `chunkId`, `claim`) and are verified by `AgentOutputValidator` against `EvidenceLedger`.
