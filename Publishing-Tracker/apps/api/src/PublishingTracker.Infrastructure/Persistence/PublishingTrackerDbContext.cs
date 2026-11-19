@@ -5,13 +5,14 @@ using PublishingTracker.Domain;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Infrastructure.Persistence.Configurations;
+using PublishingTracker.Rag.Contracts;
+using PublishingTracker.Rag.Entities;
+using PublishingTracker.Rag.Persistence;
+using PublishingTracker.Rag.Services;
 
-
-
-    
 namespace PublishingTracker.Infrastructure.Persistence;
 
-public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
+public class PublishingTrackerDbContext : DbContext, IApplicationDbContext, IRagChunkStore
 {
     private readonly ICurrentUserService? _currentUserService;
     private int? CurrentUserId => _currentUserService?.UserId;
@@ -32,6 +33,7 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
     public DbSet<Sale> Sales { get; set; }
     public DbSet<Platform> Platforms { get; set; }
     public DbSet<ImportJob> ImportJobs { get; set; }
+    public DbSet<RagDocumentChunk> RagDocumentChunks { get; set; }
 
     IQueryable<User> IApplicationDbContext.Users => Users;
     IQueryable<Book> IApplicationDbContext.Books => Books;
@@ -50,6 +52,7 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
         modelBuilder.ApplyConfiguration(new BookConfiguration());
         modelBuilder.ApplyConfiguration(new EditionConfiguration());
         modelBuilder.ApplyConfiguration(new PlatformEditionMetadataConfiguration());
+        modelBuilder.ApplyConfiguration(new RagDocumentChunkConfiguration());
 
         // ═══════════════════════════════════════════════════════════════
         // Sale Configuration
@@ -120,6 +123,9 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
 
         modelBuilder.Entity<Sale>().HasQueryFilter(s =>
             CurrentUserId == null || s.Book.UserId == CurrentUserId);
+
+        modelBuilder.Entity<RagDocumentChunk>().HasQueryFilter(c =>
+            CurrentUserId == null || c.OwnerUserId == null || c.OwnerUserId == CurrentUserId);
     }
 
     public override int SaveChanges()
@@ -173,4 +179,66 @@ public class PublishingTrackerDbContext : DbContext, IApplicationDbContext
 
         setter.Invoke(entity, new object[] { value });
     }
+
+    // ── IRagChunkStore Implementation ───────────────────────────
+    public bool IsPostgreSql => Database.IsNpgsql();
+
+    public Task<List<RagDocumentChunk>> GetByDocumentAsync(
+        string documentId,
+        int? ownerUserId,
+        CancellationToken cancellationToken = default) =>
+        RagDocumentChunks
+            .Where(c => c.DocumentId == documentId && c.OwnerUserId == ownerUserId)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<RagChunkHitDto>> SearchByVectorAsync(
+        int authenticatedUserId,
+        ReadOnlyMemory<float> queryVector,
+        int topK,
+        CancellationToken cancellationToken = default)
+    {
+        VectorMath.ValidateEmbedding(queryVector.Span);
+
+        if (Database.IsNpgsql())
+        {
+            var vectorLiteral = VectorMath.FormatPgVectorLiteral(queryVector.Span);
+            return await Database.SqlQuery<RagChunkHitDto>($"""
+                SELECT "DocumentId", "ChunkId", "Title", "Excerpt",
+                       (("Embedding"::real[])::vector(1536) <=> CAST({vectorLiteral} AS vector(1536))) AS "CosineDistance"
+                FROM "RagDocumentChunks"
+                WHERE ("OwnerUserId" IS NULL OR "OwnerUserId" = {authenticatedUserId})
+                  AND "Embedding" IS NOT NULL
+                ORDER BY (("Embedding"::real[])::vector(1536) <=> CAST({vectorLiteral} AS vector(1536))) ASC, "Id" ASC
+                LIMIT {topK}
+                """)
+                .ToListAsync(cancellationToken);
+        }
+
+        var candidates = await RagDocumentChunks
+            .AsNoTracking()
+            .Where(c => c.OwnerUserId == null || c.OwnerUserId == authenticatedUserId)
+            .Select(c => new { c.Id, c.DocumentId, c.ChunkId, c.Title, c.Excerpt, c.Embedding })
+            .ToListAsync(cancellationToken);
+
+        return candidates
+            .Where(c => VectorMath.TryValidateEmbedding(c.Embedding))
+            .Select(c => new
+            {
+                c.Id,
+                Hit = new RagChunkHitDto(
+                    c.DocumentId,
+                    c.ChunkId,
+                    c.Title,
+                    c.Excerpt,
+                    VectorMath.CosineDistance(c.Embedding, queryVector.Span))
+            })
+            .OrderBy(entry => entry.Hit.CosineDistance)
+            .ThenBy(entry => entry.Id)
+            .Take(topK)
+            .Select(entry => entry.Hit)
+            .ToList();
+    }
+
+    public void AddChunks(IEnumerable<RagDocumentChunk> chunks) => RagDocumentChunks.AddRange(chunks);
+    public void RemoveChunks(IEnumerable<RagDocumentChunk> chunks) => RagDocumentChunks.RemoveRange(chunks);
 }

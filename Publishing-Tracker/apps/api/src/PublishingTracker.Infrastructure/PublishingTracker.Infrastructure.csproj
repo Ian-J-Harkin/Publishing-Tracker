@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PublishingTracker.Application\PublishingTracker.Application.csproj" />
     <ProjectReference Include="..\PublishingTracker.Domain\PublishingTracker.Domain.csproj" />
+    <ProjectReference Include="..\PublishingTracker.Rag\PublishingTracker.Rag.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using PublishingTracker.Agent.Tests.Doubles;
+using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Rag.Services;
 
 namespace PublishingTracker.Agent.Tests;
@@ -128,5 +131,101 @@ public sealed class Phase4RagRetrievalAndIsolationTests
         Assert.Contains("## This is another comment", chunks[1].Excerpt);
         Assert.Equal("Final Active Section", chunks[2].Heading);
         Assert.All(chunks, c => Assert.False(string.IsNullOrWhiteSpace(c.Excerpt)));
+    }
+
+    private static PublishingTrackerDbContext CreateInMemoryDbContext([System.Runtime.CompilerServices.CallerMemberName] string testName = "test")
+    {
+        var options = new DbContextOptionsBuilder<PublishingTrackerDbContext>()
+            .UseInMemoryDatabase($"TestRagDb_{testName}_{Guid.NewGuid()}")
+            .Options;
+        return new PublishingTrackerDbContext(options);
+    }
+
+    [Fact]
+    public async Task RagIngestion_IdempotentUpsert_UpdatesChangedChunks_AndRemovesStaleChunksOnVersionUpdate()
+    {
+        await using var db = CreateInMemoryDbContext();
+        var embeddings = new DeterministicTestEmbeddingGenerator();
+        var ingestion = new RagIngestionService(db, embeddings);
+
+        const string v1 = """
+        # Guideline
+        ## First Section
+        First section body.
+        ## Second Section
+        Second section body that will be removed in v2.
+        """;
+
+        await ingestion.UpsertDocumentAsync("doc-test", "v1", v1);
+        Assert.Equal(2, embeddings.CallCount);
+        Assert.Equal(2, db.RagDocumentChunks.Count());
+
+        // Re-running same v1 content skips all embedding calls
+        await ingestion.UpsertDocumentAsync("doc-test", "v1", v1);
+        Assert.Equal(2, embeddings.CallCount);
+
+        // Upgrading to v2 removes stale second chunk and embeds updated content
+        const string v2 = """
+        # Guideline
+        ## Updated First Section
+        Updated rule body.
+        """;
+        await ingestion.UpsertDocumentAsync("doc-test", "v2", v2);
+        Assert.Equal(3, embeddings.CallCount);
+        var stored = Assert.Single(db.RagDocumentChunks.ToList());
+        Assert.Equal("v2", stored.Version);
+        Assert.Equal("doc-test#c1", stored.ChunkId);
+    }
+
+    [Fact]
+    public async Task RagIngestion_EmbeddingFailureMidDocument_LeavesExistingChunksUntouched()
+    {
+        await using var db = CreateInMemoryDbContext();
+        var ingestion = new RagIngestionService(db, new DeterministicTestEmbeddingGenerator());
+
+        const string v1 = """
+        # Guideline
+        ## First Section
+        First section body.
+        ## Second Section
+        Second section body.
+        """;
+        await ingestion.UpsertDocumentAsync("doc-resilient", "v1", v1);
+        var before = db.RagDocumentChunks.AsNoTracking()
+            .Where(c => c.DocumentId == "doc-resilient")
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new { c.ChunkId, c.Version, c.ContentHash })
+            .ToList();
+        Assert.Equal(2, before.Count);
+
+        // v2 has TWO changed chunks; the generator succeeds on the first and throws on the second,
+        // proving no partial removal/mutation is flushed when embedding fails mid-document.
+        var calls = 0;
+        var failingGenerator = new DeterministicTestEmbeddingGenerator(text =>
+            ++calls == 2
+                ? throw new InvalidOperationException("Simulated embedding provider failure")
+                : DeterministicTestEmbeddingGenerator.EncodeText(text));
+        var failingIngestion = new RagIngestionService(db, failingGenerator);
+
+        const string v2 = """
+        # Guideline
+        ## Rewritten First Section
+        Rewritten first body.
+        ## Rewritten Second Section
+        Rewritten second body.
+        """;
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            failingIngestion.UpsertDocumentAsync("doc-resilient", "v2", v2));
+        Assert.Equal(2, calls);
+
+        // Same scoped DbContext: a later SaveChanges must not flush anything partial.
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        var after = db.RagDocumentChunks.AsNoTracking()
+            .Where(c => c.DocumentId == "doc-resilient")
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new { c.ChunkId, c.Version, c.ContentHash })
+            .ToList();
+        Assert.Equal(before, after);
     }
 }

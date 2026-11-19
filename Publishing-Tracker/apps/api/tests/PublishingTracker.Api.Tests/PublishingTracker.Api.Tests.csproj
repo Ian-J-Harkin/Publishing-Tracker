@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\PublishingTracker.Domain\PublishingTracker.Domain.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Application\PublishingTracker.Application.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Rag\PublishingTracker.Rag.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Mcp\PublishingTracker.Mcp.csproj" />
   </ItemGroup>
 
