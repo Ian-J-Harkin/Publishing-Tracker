@@ -5,8 +5,10 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using PublishingTracker.Agent.Configuration;
+using PublishingTracker.Agent.Contracts;
 using PublishingTracker.Agent.Mcp;
 using PublishingTracker.Agent.Telemetry;
+using PublishingTracker.Agent.Validation;
 
 namespace PublishingTracker.Agent.Orchestration;
 
@@ -15,96 +17,164 @@ public sealed class AgentLoopRunner
     private readonly IChatClient _chatClient;
     private readonly IMcpToolProvider _toolProvider;
     private readonly AgentLoopOptions _options;
+    private readonly AgentOutputValidator _validator;
     private readonly ILogger<AgentLoopRunner> _logger;
 
-    public AgentLoopRunner(IChatClient chatClient, IMcpToolProvider toolProvider, IOptions<AgentLoopOptions> options, ILogger<AgentLoopRunner> logger)
+    public AgentLoopRunner(
+        IChatClient chatClient,
+        IMcpToolProvider toolProvider,
+        IOptions<AgentLoopOptions> options,
+        ILogger<AgentLoopRunner> logger,
+        AgentOutputValidator? validator = null)
     {
         _chatClient = chatClient;
         _toolProvider = toolProvider;
         _options = options.Value;
         _options.Validate();
+        _validator = validator ?? new AgentOutputValidator();
         _logger = logger;
     }
 
+    /// <summary>Phase 2 explicit dual-budget orchestration loop returning Stage 1 text completion.</summary>
     public async Task<AgentRunResult> RunAsync(string userPrompt, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(userPrompt);
-        var stopwatch = Stopwatch.StartNew();
-        using var runActivity = AgentTelemetry.Source.StartActivity("agent.run");
-        runActivity?.SetTag("agent.max_turns", _options.MaxModelTurns);
-        runActivity?.SetTag("agent.max_tool_calls", _options.MaxTotalToolCalls);
-        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        runCts.CancelAfter(_options.OverallTimeout);
-        var runToken = runCts.Token;
+        var state = await ExecuteStage1Async(userPrompt, strictEvidenceMode: false, cancellationToken);
+        try
+        {
+            if (!state.Succeeded)
+            {
+                var errorMessage = state.Phase2TimeoutDetail is not null && state.ErrorCode == AgentErrorCode.TIMEOUT
+                    ? state.Phase2TimeoutDetail
+                    : AgentErrorCatalog.GetPublicMessage(state.ErrorCode);
+                return AgentRunResult.Failed(
+                    errorMessage,
+                    state.ToolsUsedNames,
+                    state.ModelTurns,
+                    state.TotalToolCalls);
+            }
 
-        var toolsUsed = new List<string>();
-        var callCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-        var paginationState = new Dictionary<string, (int Page, bool HasMore)>(StringComparer.Ordinal);
-        var totalToolCalls = 0;
-        var cataloguePagesUsed = 0;
-        var modelTurns = 0;
+            state.RunActivity?.SetTag("agent.total_tool_calls", state.TotalToolCalls);
+            state.RunActivity?.SetTag("agent.status", "completed");
+            state.RunActivity?.SetTag("agent.duration_ms", state.Stopwatch.ElapsedMilliseconds);
+
+            return AgentRunResult.Completed(
+                state.FinalStage1Text!,
+                state.ToolsUsedNames,
+                state.ModelTurns,
+                state.TotalToolCalls,
+                state.Phase2Limitations);
+        }
+        finally
+        {
+            await state.DisposeAsync();
+        }
+    }
+
+    /// <summary>Phase 3 two-stage orchestration with EvidenceLedger provenance and schema repair.</summary>
+    public async Task<AgentQueryResponse> RunVerifiedAsync(string userPrompt, CancellationToken cancellationToken = default)
+    {
+        var state = await ExecuteStage1Async(userPrompt, strictEvidenceMode: true, cancellationToken);
+        try
+        {
+            if (!state.Succeeded)
+            {
+                return AgentQueryResponse.Failure(
+                    state.ErrorCode,
+                    state.Ledger.ToolsUsed,
+                    state.ModelTurns,
+                    state.TotalToolCalls,
+                    state.Ledger.HasPaginationTruncation);
+            }
+
+            return await ExecuteStage2Async(state, cancellationToken);
+        }
+        finally
+        {
+            await state.DisposeAsync();
+        }
+    }
+
+    private async Task<LoopRunState> ExecuteStage1Async(
+        string userPrompt,
+        bool strictEvidenceMode,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userPrompt);
+        var state = new LoopRunState(
+            Stopwatch.StartNew(),
+            AgentTelemetry.Source.StartActivity("agent.run"),
+            CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
+
+        state.RunActivity?.SetTag("agent.max_turns", _options.MaxModelTurns);
+        state.RunActivity?.SetTag("agent.max_tool_calls", _options.MaxTotalToolCalls);
+        state.RunCts.CancelAfter(_options.OverallTimeout);
+        var runToken = state.RunCts.Token;
 
         IMcpToolSession session;
         try
         {
             session = await _toolProvider.OpenSessionAsync(runToken);
+            state.Session = session;
         }
         catch (OperationCanceledException)
         {
-            return FinishFailure(cancellationToken.IsCancellationRequested ? "CANCELLED" : "TIMEOUT",
-                "The request was cancelled or exceeded its overall deadline.", toolsUsed, modelTurns, totalToolCalls, runActivity, stopwatch);
+            var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+            return FailState(state, code, "TIMEOUT: The request exceeded its overall deadline.");
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "MCP tool discovery failed.");
-            return FinishFailure("TOOL_DISCOVERY_ERROR", "MCP tools could not be loaded.", toolsUsed, modelTurns, totalToolCalls, runActivity, stopwatch);
+            return FailState(state, AgentErrorCode.TOOL_DISCOVERY_ERROR);
         }
 
-        await using var ownedSession = session;
         var toolMap = new Dictionary<string, AIFunction>(StringComparer.Ordinal);
         foreach (var tool in session.Tools)
         {
             if (!toolMap.TryAdd(tool.Name, tool))
-                return FinishFailure("INVALID_TOOLSET", "The MCP server returned duplicate tool names.", toolsUsed, modelTurns, totalToolCalls, runActivity, stopwatch);
+                return FailState(state, AgentErrorCode.INVALID_TOOLSET);
         }
 
-        var messages = new List<ChatMessage>
-        {
-            new(ChatRole.System, AgentPrompts.SystemPromptV1),
-            new(ChatRole.User, userPrompt)
-        };
+        state.Messages.Add(new ChatMessage(ChatRole.System, AgentPrompts.SystemPromptV1));
+        state.Messages.Add(new ChatMessage(ChatRole.User, userPrompt));
+
         var chatOptions = new ChatOptions { Tools = [.. session.Tools] };
+        var callCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var paginationState = new Dictionary<string, (int Page, bool HasMore)>(StringComparer.Ordinal);
+        var cataloguePagesUsed = 0;
 
         for (var turn = 1; turn <= _options.MaxModelTurns; turn++)
         {
-            modelTurns = turn;
+            state.ModelTurns = turn;
             var turnWatch = Stopwatch.StartNew();
             using var turnActivity = AgentTelemetry.Source.StartActivity("agent.model_turn");
             turnActivity?.SetTag("agent.turn_number", turn);
+            if (strictEvidenceMode)
+                turnActivity?.SetTag("agent.stage", "tool_selection");
+
             using var modelCts = CancellationTokenSource.CreateLinkedTokenSource(runToken);
             modelCts.CancelAfter(_options.PerCallTimeout);
 
             ChatResponse response;
             try
             {
-                response = await _chatClient.GetResponseAsync(messages, chatOptions, modelCts.Token);
-                messages.AddRange(response.Messages);
+                response = await _chatClient.GetResponseAsync(state.Messages, chatOptions, modelCts.Token);
+                state.Messages.AddRange(response.Messages);
                 turnActivity?.SetTag("agent.duration_ms", turnWatch.ElapsedMilliseconds);
             }
             catch (OperationCanceledException)
             {
-                var code = cancellationToken.IsCancellationRequested ? "CANCELLED" :
-                    runToken.IsCancellationRequested ? "TIMEOUT" : "TIMEOUT";
-                var message = cancellationToken.IsCancellationRequested ? "The request was cancelled by the caller." :
-                    runToken.IsCancellationRequested ? "The request exceeded its overall deadline." : "The model call exceeded its per-call timeout.";
-                turnActivity?.SetTag("agent.error_code", code);
-                return FinishFailure(code, message, toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+                var detail = runToken.IsCancellationRequested
+                    ? "TIMEOUT: The request exceeded its overall deadline."
+                    : "TIMEOUT: The model call exceeded its per-call timeout.";
+                turnActivity?.SetTag("agent.error_code", code.ToString());
+                return FailState(state, code, detail);
             }
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Model invocation failed on turn {Turn}.", turn);
-                turnActivity?.SetTag("agent.error_code", "MODEL_ERROR");
-                return FinishFailure("MODEL_ERROR", "The model call failed.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
+                return FailState(state, AgentErrorCode.MODEL_ERROR);
             }
 
             var functionCalls = response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>().ToArray();
@@ -112,29 +182,30 @@ public sealed class AgentLoopRunner
             if (functionCalls.Length == 0)
             {
                 if (string.IsNullOrWhiteSpace(response.Text))
-                    return FinishFailure("EMPTY_RESPONSE", "The model returned an empty final answer.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    return FailState(state, AgentErrorCode.EMPTY_RESPONSE);
 
-                var limitations = paginationState.Values.Any(state => state.HasMore)
+                state.Phase2Limitations = paginationState.Values.Any(entry => entry.HasMore)
                     ? ["Catalogue results remain incomplete because the last fetched page indicated more results."]
                     : Array.Empty<string>();
-                runActivity?.SetTag("agent.total_tool_calls", totalToolCalls);
-                runActivity?.SetTag("agent.status", "completed");
-                runActivity?.SetTag("agent.duration_ms", stopwatch.ElapsedMilliseconds);
-                return AgentRunResult.Completed(response.Text.Trim(), toolsUsed.ToArray(), turn, totalToolCalls, limitations);
+                state.FinalStage1Text = response.Text.Trim();
+                state.Succeeded = true;
+                return state;
             }
 
-            if (turn == _options.MaxModelTurns)
-                return FinishFailure("TURN_LIMIT_EXCEEDED", "The maximum model-turn budget was reached before the requested tools could run.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+            var maxStage1Turns = strictEvidenceMode ? Math.Max(1, _options.MaxModelTurns - 1) : _options.MaxModelTurns;
+            if (turn >= maxStage1Turns)
+                return FailState(state, AgentErrorCode.TURN_LIMIT_EXCEEDED);
 
             foreach (var call in functionCalls)
             {
-                if (totalToolCalls >= _options.MaxTotalToolCalls)
-                    return FinishFailure("BUDGET_EXCEEDED", "The maximum tool-call budget was exceeded.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
-                totalToolCalls++;
-                runActivity?.SetTag("agent.total_tool_calls", totalToolCalls);
+                if (state.TotalToolCalls >= _options.MaxTotalToolCalls)
+                    return FailState(state, AgentErrorCode.BUDGET_EXCEEDED);
+
+                state.TotalToolCalls++;
+                state.RunActivity?.SetTag("agent.total_tool_calls", state.TotalToolCalls);
 
                 if (!toolMap.TryGetValue(call.Name, out var tool))
-                    return FinishFailure("UNKNOWN_TOOL", "The model requested a tool that is not available.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    return FailState(state, AgentErrorCode.UNKNOWN_TOOL);
 
                 string signature;
                 try
@@ -144,29 +215,42 @@ public sealed class AgentLoopRunner
                 catch (Exception exception)
                 {
                     _logger.LogError(exception, "Tool arguments could not be canonicalized.");
-                    return FinishFailure("INVALID_TOOL_ARGUMENTS", "The tool arguments could not be processed.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    return FailState(state, AgentErrorCode.INVALID_TOOL_ARGUMENTS);
                 }
+
                 var callCount = callCounts.GetValueOrDefault(signature) + 1;
                 callCounts[signature] = callCount;
                 if (callCount > _options.RepeatCallLimit)
-                    return FinishFailure("REPEAT_CALL_LIMIT", "An identical tool call exceeded its repeat limit.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    return FailState(state, AgentErrorCode.REPEAT_CALL_LIMIT);
 
                 var page = 1;
-                if (call.Name == "find_titles_missing_metadata")
+                if (strictEvidenceMode)
+                {
+                    if (!state.Ledger.TryValidatePaginationRequest(
+                        call.Name, call.Arguments, _options.MaxPaginationPages, out var pageErrorCode, out var pageDiagnostic))
+                    {
+                        _logger.LogWarning("Pagination pre-check failed for {ToolName}: {Diagnostic}", call.Name, pageDiagnostic);
+                        return FailState(state, pageErrorCode);
+                    }
+                }
+                else if (call.Name == "find_titles_missing_metadata")
                 {
                     if (!TryExtractPage(call.Arguments, out page))
-                        return FinishFailure("INVALID_TOOL_ARGUMENTS", "The requested catalogue page argument must be a valid integer.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                        return FailState(state, AgentErrorCode.INVALID_TOOL_ARGUMENTS);
                     if (page < 1 || page > _options.MaxPaginationPages || cataloguePagesUsed >= _options.MaxPaginationPages)
-                        return FinishFailure("PAGINATION_LIMIT_EXCEEDED", "The requested catalogue page exceeds the configured page limit.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                        return FailState(state, AgentErrorCode.PAGINATION_LIMIT_EXCEEDED);
                     cataloguePagesUsed++;
                 }
 
-                if (!toolsUsed.Contains(call.Name, StringComparer.Ordinal)) toolsUsed.Add(call.Name);
+                if (!state.ToolsUsedNames.Contains(call.Name, StringComparer.Ordinal))
+                    state.ToolsUsedNames.Add(call.Name);
+
                 var toolWatch = Stopwatch.StartNew();
                 using var toolActivity = AgentTelemetry.Source.StartActivity("agent.tool_call");
                 toolActivity?.SetTag("agent.tool_name", call.Name);
                 using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(runToken);
                 toolCts.CancelAfter(_options.PerCallTimeout);
+
                 object? result;
                 try
                 {
@@ -180,12 +264,14 @@ public sealed class AgentLoopRunner
                         _ = invokeTask.ContinueWith(task => _ = task.Exception, CancellationToken.None,
                             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                         toolActivity?.SetTag("agent.is_error", true);
-                        if (cancellationToken.IsCancellationRequested)
-                            return FinishFailure("CANCELLED", "The request was cancelled by the caller.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
-                        if (runToken.IsCancellationRequested)
-                            return FinishFailure("TIMEOUT", "The request exceeded its overall deadline.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
-                        return FinishFailure("TIMEOUT", "The tool call exceeded its per-call timeout.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                        state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                        var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+                        var detail = runToken.IsCancellationRequested
+                            ? "TIMEOUT: The request exceeded its overall deadline."
+                            : "TIMEOUT: The tool call exceeded its per-call timeout.";
+                        return FailState(state, code, detail);
                     }
+
                     result = await invokeTask;
                     toolActivity?.SetTag("agent.duration_ms", toolWatch.ElapsedMilliseconds);
                     toolActivity?.SetTag("agent.is_error", false);
@@ -193,16 +279,19 @@ public sealed class AgentLoopRunner
                 catch (OperationCanceledException)
                 {
                     toolActivity?.SetTag("agent.is_error", true);
-                    var code = cancellationToken.IsCancellationRequested ? "CANCELLED" : runToken.IsCancellationRequested ? "TIMEOUT" : "TIMEOUT";
-                    var message = code == "CANCELLED" ? "The request was cancelled by the caller." :
-                        runToken.IsCancellationRequested ? "The request exceeded its overall deadline." : "The tool call exceeded its per-call timeout.";
-                    return FinishFailure(code, message, toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                    var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+                    var detail = runToken.IsCancellationRequested
+                        ? "TIMEOUT: The request exceeded its overall deadline."
+                        : "TIMEOUT: The tool call exceeded its per-call timeout.";
+                    return FailState(state, code, detail);
                 }
                 catch (Exception exception)
                 {
                     _logger.LogError(exception, "MCP tool invocation failed for {ToolName}.", call.Name);
                     toolActivity?.SetTag("agent.is_error", true);
-                    return FinishFailure("TOOL_ERROR", "A catalogue tool failed.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                    return FailState(state, AgentErrorCode.TOOL_ERROR);
                 }
 
                 string serialized;
@@ -213,30 +302,175 @@ public sealed class AgentLoopRunner
                 catch (Exception exception)
                 {
                     _logger.LogError(exception, "MCP tool output serialization failed for {ToolName}.", call.Name);
-                    return FinishFailure("SERIALIZATION_ERROR", "A catalogue tool result could not be serialized.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                    return FailState(state, AgentErrorCode.SERIALIZATION_ERROR);
                 }
 
                 var payloadBytes = Encoding.UTF8.GetByteCount(serialized);
                 toolActivity?.SetTag("agent.payload_bytes", payloadBytes);
                 if (payloadBytes > _options.MaxToolPayloadBytes)
-                    return FinishFailure("PAYLOAD_LIMIT_EXCEEDED", "A catalogue tool result exceeded the allowed payload size.", toolsUsed, turn, totalToolCalls, runActivity, stopwatch);
+                {
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                    return FailState(state, AgentErrorCode.PAYLOAD_LIMIT_EXCEEDED);
+                }
 
-                if (call.Name == "find_titles_missing_metadata")
-                    paginationState[CreatePaginationQuerySignature(call)] = (page, ReadHasMore(result, serialized));
-                messages.Add(new ChatMessage(ChatRole.Tool, [new FunctionResultContent(call.CallId, serialized)]));
+                if (strictEvidenceMode)
+                {
+                    if (!state.Ledger.TryRecordToolOutput(
+                        call.Name, call.Arguments, result, serialized, out var indexErrorCode, out var indexDiagnostic))
+                    {
+                        _logger.LogWarning("Evidence indexing failed for {ToolName}: {Diagnostic}", call.Name, indexDiagnostic);
+                        state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
+                        return FailState(state, indexErrorCode);
+                    }
+
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: true);
+                }
+                else
+                {
+                    if (call.Name == "find_titles_missing_metadata")
+                        paginationState[CreatePaginationQuerySignature(call)] = (page, ReadHasMore(result, serialized));
+                }
+
+                state.Messages.Add(new ChatMessage(ChatRole.Tool, [new FunctionResultContent(call.CallId, serialized)]));
             }
         }
 
-        return FinishFailure("TURN_LIMIT_EXCEEDED", "The maximum model-turn budget was reached.", toolsUsed, modelTurns, totalToolCalls, runActivity, stopwatch);
+        return FailState(state, AgentErrorCode.TURN_LIMIT_EXCEEDED);
     }
 
-    private static AgentRunResult FinishFailure(string code, string message, IReadOnlyList<string> toolsUsed, int turns, int toolCalls, Activity? activity, Stopwatch stopwatch)
+    private async Task<AgentQueryResponse> ExecuteStage2Async(LoopRunState state, CancellationToken cancellationToken)
     {
-        activity?.SetTag("agent.total_tool_calls", toolCalls);
-        activity?.SetTag("agent.status", "failed");
-        activity?.SetTag("agent.error_code", code);
-        activity?.SetTag("agent.duration_ms", stopwatch.ElapsedMilliseconds);
-        return AgentRunResult.Failed($"{code}: {message}", toolsUsed.ToArray(), turns, toolCalls);
+        var runToken = state.RunCts.Token;
+
+        // Stage 1 ended with a ChatRole.Assistant message in state.Messages.
+        // Append the Stage 2 User formatting instruction once before attempt = 0.
+        state.Messages.Add(new ChatMessage(ChatRole.User, AgentPrompts.Stage2FormattingPrompt));
+
+        var schemaOptions = new ChatOptions
+        {
+            Tools = null,
+            ResponseFormat = ChatResponseFormat.ForJsonSchema<AgentModelDraft>(JsonSerializerOptions.Web)
+        };
+
+        for (var attempt = 0; attempt <= _options.MaxValidationRetries; attempt++)
+        {
+            if (state.ModelTurns >= _options.MaxModelTurns)
+            {
+                return FinishVerifiedFailure(state, AgentErrorCode.TURN_LIMIT_EXCEEDED);
+            }
+
+            state.ModelTurns++;
+            var stage2Watch = Stopwatch.StartNew();
+            using var turnActivity = AgentTelemetry.Source.StartActivity("agent.model_turn");
+            turnActivity?.SetTag("agent.turn_number", state.ModelTurns);
+            turnActivity?.SetTag("agent.stage", "structured_output");
+            turnActivity?.SetTag("agent.validation_attempt", attempt);
+
+            using var stage2CallCts = CancellationTokenSource.CreateLinkedTokenSource(runToken);
+            stage2CallCts.CancelAfter(_options.PerCallTimeout);
+
+            ChatResponse stage2Response;
+            try
+            {
+                stage2Response = await _chatClient.GetResponseAsync(state.Messages, schemaOptions, stage2CallCts.Token);
+                turnActivity?.SetTag("agent.duration_ms", stage2Watch.ElapsedMilliseconds);
+            }
+            catch (OperationCanceledException)
+            {
+                var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+                turnActivity?.SetTag("agent.error_code", code.ToString());
+                return FinishVerifiedFailure(state, code);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Stage 2 structured model call failed on turn {Turn}, attempt {Attempt}.", state.ModelTurns, attempt);
+                turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
+                return FinishVerifiedFailure(state, AgentErrorCode.MODEL_ERROR);
+            }
+
+            var validation = _validator.Validate(stage2Response.Text, state.Ledger);
+            turnActivity?.SetTag("agent.validation_passed", validation.IsValid);
+
+            if (validation.IsValid && validation.Draft is not null)
+            {
+                state.RunActivity?.SetTag("agent.validation_retries_used", attempt);
+                state.RunActivity?.SetTag("agent.status", "completed");
+                state.RunActivity?.SetTag("agent.total_tool_calls", state.TotalToolCalls);
+                state.RunActivity?.SetTag("agent.duration_ms", state.Stopwatch.ElapsedMilliseconds);
+
+                return AgentQueryResponse.Answered(
+                    validation.Draft,
+                    state.Ledger.HasPaginationTruncation,
+                    state.Ledger.ToolsUsed,
+                    state.ModelTurns,
+                    state.TotalToolCalls);
+            }
+
+            if (attempt == _options.MaxValidationRetries)
+            {
+                _logger.LogWarning("Stage 2 validation exhausted retries: {ValidationError}", validation.Error);
+                return FinishVerifiedFailure(state, AgentErrorCode.VALIDATION_RETRIES_EXHAUSTED);
+            }
+
+            // Preserve alternating User -> Assistant -> User conversation ordering on repair retry.
+            state.Messages.Add(new ChatMessage(ChatRole.Assistant, stage2Response.Text ?? string.Empty));
+            state.Messages.Add(new ChatMessage(ChatRole.User, AgentPrompts.BuildStage2RepairPrompt(validation.Error!)));
+        }
+
+        return FinishVerifiedFailure(state, AgentErrorCode.VALIDATION_RETRIES_EXHAUSTED);
+    }
+
+    private static LoopRunState FailState(LoopRunState state, AgentErrorCode errorCode, string? phase2TimeoutDetail = null)
+    {
+        state.Succeeded = false;
+        state.ErrorCode = errorCode;
+        state.Phase2TimeoutDetail = errorCode == AgentErrorCode.TIMEOUT ? phase2TimeoutDetail : null;
+        state.RunActivity?.SetTag("agent.total_tool_calls", state.TotalToolCalls);
+        state.RunActivity?.SetTag("agent.status", "failed");
+        state.RunActivity?.SetTag("agent.error_code", errorCode.ToString());
+        state.RunActivity?.SetTag("agent.duration_ms", state.Stopwatch.ElapsedMilliseconds);
+        return state;
+    }
+
+    private static AgentQueryResponse FinishVerifiedFailure(LoopRunState state, AgentErrorCode errorCode)
+    {
+        FailState(state, errorCode);
+        return AgentQueryResponse.Failure(
+            errorCode,
+            state.Ledger.ToolsUsed,
+            state.ModelTurns,
+            state.TotalToolCalls,
+            state.Ledger.HasPaginationTruncation);
+    }
+
+    private sealed class LoopRunState(Stopwatch stopwatch, Activity? runActivity, CancellationTokenSource runCts) : IAsyncDisposable
+    {
+        public Stopwatch Stopwatch { get; } = stopwatch;
+        public Activity? RunActivity { get; } = runActivity;
+        public CancellationTokenSource RunCts { get; } = runCts;
+        public IMcpToolSession? Session { get; set; }
+        public EvidenceLedger Ledger { get; } = new();
+        public List<ChatMessage> Messages { get; } = [];
+        public List<string> ToolsUsedNames { get; } = [];
+        public IReadOnlyList<string> Phase2Limitations { get; set; } = Array.Empty<string>();
+        public string? FinalStage1Text { get; set; }
+        public int ModelTurns { get; set; }
+        public int TotalToolCalls { get; set; }
+        public bool Succeeded { get; set; }
+        public AgentErrorCode ErrorCode { get; set; }
+        public string? Phase2TimeoutDetail { get; set; }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Session is not null)
+            {
+                await Session.DisposeAsync();
+                Session = null;
+            }
+            RunCts.Dispose();
+            RunActivity?.Dispose();
+        }
     }
 
     private static string CanonicalizeSignature(string name, IDictionary<string, object?>? arguments)

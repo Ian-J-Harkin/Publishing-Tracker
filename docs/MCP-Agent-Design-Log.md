@@ -6,7 +6,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 0 — Baseline, `.NET 10` Upgrade, Auth Hygiene, and Contracts](Phase-0-Baseline-and-Contracts.md) — ✅ **Completed** (41/41 tests passing)
 - [Phase 1 — Read-Only Catalogue Capabilities & Hosted `/mcp` Endpoint](Phase-1-Read-Only-Catalogue-and-MCP.md) — ✅ **Completed** (54/54 tests passing)
 - [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 74/74 total passing)
-- [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — 🟡 **Specification Ready** (22 deterministic tests planned)
+- [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval — ⚪ *Planned*
 - Phase 5 — Layered Evaluation Strategy & Continuous Verification — ⚪ *Planned*
 - Phase 6 — Deployment, Containerization, & Operational Readiness — ⚪ *Planned*
@@ -14,6 +14,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
 - [MCP Testing & Verification Guide](MCP-Testing-Guide.md) — How to run the automated xUnit suite and perform manual JSON-RPC verification with curl/PowerShell.
+- [MCP & Agent Programming Guide](MCP-Agent-Programming-Guide.md) — Reference inventory of functions, contracts, endpoints, and file locations added across Phases 0–3.
 
 This log records Architecture Decision Records (ADRs), design Q&As, and concrete technical contracts (tool I/O schemas, metadata completeness rules, identity propagation, output schemas, and evaluation specs) so the master project plan stays concise while implementation details remain explicit and traceable.
 

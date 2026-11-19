@@ -1287,12 +1287,17 @@ Add `tests/PublishingTracker.Agent.Tests/Phase3EvidenceAndValidationTests.cs` ex
    - Run `dotnet build` and `dotnet test` across `PublishingTracker.Api.sln` confirming Phases 0–3 pass with zero external calls.
 
 ### Phase 3 Acceptance Checklist
-- [ ] `AgentQueryResponse.Failure` accepts only `AgentErrorCode`; internal exception details are never emitted to API callers
-- [ ] Draft types (`AgentModelDraft`, `AgentEvidenceDraft`, citations) enforce `[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]`, and `AgentOutputValidator` rejects duplicate JSON keys and >32,768-byte post-materialization drafts
-- [ ] `EvidenceLedger` unwraps real MCP `CallToolResult` envelopes cleanly and halts fail-closed with `EVIDENCE_INDEXING_ERROR` on unparseable or malformed tool outputs
-- [ ] Sequential pagination rules reject out-of-order first pages (`PAGINATION_SEQUENCE_ERROR`), mid-query page-size changes, calls after `hasMore=false`, and inconsistent `totalCount`/`page` responses
-- [ ] Zero-citation `"answered"` responses are authorized only for a single scoped empty search with zero indexed books/chunks and filter echoed in `Answer`
-- [ ] Pagination truncation (`hasMore=true`) rejects unrelated `Limitations` text until explicit truncation disclosure is present
-- [ ] Stage 2 applies `PerCallTimeout`, separates tools from `ResponseFormat`, reserves Stage 2 budget within `MaxModelTurns`, and preserves `User -> Assistant -> User` repair ordering
-- [ ] Provenance validation explicitly documents its boundary (source/field linkage only, not semantic entailment)
-- [ ] All 22 deterministic Phase 3 test scenarios pass in CI without external spend
+- [x] `AgentQueryResponse.Failure` accepts only `AgentErrorCode`; internal exception details are never emitted to API callers
+- [x] Draft types (`AgentModelDraft`, `AgentEvidenceDraft`, citations) enforce `[JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]`, and `AgentOutputValidator` rejects duplicate JSON keys and >32,768-byte post-materialization drafts
+- [x] `EvidenceLedger` unwraps real MCP `CallToolResult` envelopes cleanly and halts fail-closed with `EVIDENCE_INDEXING_ERROR` on unparseable or malformed tool outputs
+- [x] Sequential pagination rules reject out-of-order first pages (`PAGINATION_SEQUENCE_ERROR`), mid-query page-size changes, calls after `hasMore=false`, and inconsistent `totalCount`/`page` responses
+- [x] Zero-citation `"answered"` responses are authorized only for a single scoped empty search with zero indexed books/chunks and filter echoed in `Answer`
+- [x] Pagination truncation (`hasMore=true`) rejects unrelated `Limitations` text until explicit truncation disclosure is present
+- [x] Stage 2 applies `PerCallTimeout`, separates tools from `ResponseFormat`, reserves Stage 2 budget within `MaxModelTurns`, and preserves `User -> Assistant -> User` repair ordering
+- [x] Provenance validation explicitly documents its boundary (source/field linkage only, not semantic entailment)
+- [x] All 22 deterministic Phase 3 test scenarios pass in CI without external spend (`42/42` Agent tests, `96/96` solution tests passing)
+
+### Implementation Notes & Verified Adjustments
+1. **Verified `ChatResponseFormat.ForJsonSchema<AgentModelDraft>(JsonSerializerOptions.Web)`:** Confirmed against `Microsoft.Extensions.AI.Abstractions` `10.10.0` so Stage 2 requests camelCase schemas matching `StrictJsonOptions` (`PropertyNameCaseInsensitive = true`, `UnmappedMemberHandling.Disallow`, `AllowTrailingCommas = false`, `ReadCommentHandling = JsonCommentHandling.Disallow`).
+2. **Async Loop State Disposal (`LoopRunState : IAsyncDisposable`):** Updated `AgentLoopRunner` so `IMcpToolSession`, `RunCts`, and `RunActivity` dispose asynchronously in `finally` blocks prior to returning results, ensuring OpenTelemetry `agent.run` activities stop before task completion.
+3. **Phase 2 Backwards Compatibility:** Preserved `AgentLoopRunner.RunAsync` for the 20 existing Phase 2 unit tests while switching `POST /api/agent/query` in `PublishingTracker.Agent/Program.cs` to `RunVerifiedAsync`, backed by `EvidenceLedger` and `AgentOutputValidator`.

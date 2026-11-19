@@ -10,6 +10,7 @@ using PublishingTracker.Agent.Contracts;
 using PublishingTracker.Agent.Mcp;
 using PublishingTracker.Agent.Orchestration;
 using PublishingTracker.Agent.Telemetry;
+using PublishingTracker.Agent.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +53,7 @@ builder.Services.AddHttpClient<StreamableHttpMcpToolProvider>()
 builder.Services.AddTransient<IMcpToolProvider>(services => services.GetRequiredService<StreamableHttpMcpToolProvider>());
 builder.Services.AddSingleton<IChatClient>(services =>
     AIProviderSetup.CreateChatClient(services.GetRequiredService<IOptions<AIProviderOptions>>().Value));
+builder.Services.AddSingleton<AgentOutputValidator>();
 builder.Services.AddTransient<AgentLoopRunner>();
 builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(AgentTelemetry.ActivitySourceName));
 
@@ -64,15 +66,7 @@ app.MapPost("/api/agent/query", async (AgentQueryRequest request, AgentLoopRunne
     if (string.IsNullOrWhiteSpace(request.Question))
         return Results.BadRequest(new { error = "Question must not be empty." });
 
-    var outcome = await runner.RunAsync(request.Question, cancellationToken);
-    var response = new AgentQueryResponse(
-        outcome.IsSuccess ? "answered" : "could_not_answer",
-        outcome.Answer,
-        outcome.ToolsUsed,
-        outcome.Turns,
-        outcome.TotalToolCalls,
-        outcome.Limitations,
-        outcome.ErrorMessage);
+    var response = await runner.RunVerifiedAsync(request.Question, cancellationToken);
     return Results.Ok(response);
 }).RequireAuthorization();
 
