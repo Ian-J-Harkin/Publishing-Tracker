@@ -2,6 +2,7 @@ using System.ClientModel;
 using System.ClientModel.Primitives;
 using Microsoft.Extensions.AI;
 using OpenAI;
+using PublishingTracker.Agent.Telemetry;
 
 namespace PublishingTracker.Agent.Configuration;
 
@@ -76,13 +77,20 @@ public static class AIProviderSetup
             clientOptions.Transport = new HttpClientPipelineTransport(customHttpClient);
         }
 
-        if (options.Type == "openrouter")
+        if (string.Equals(options.Type?.Trim(), "openrouter", StringComparison.OrdinalIgnoreCase))
         {
             clientOptions.AddPolicy(new OpenRouterHeadersPolicy(), PipelinePosition.PerCall);
         }
 
         var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
-        return client.GetChatClient(options.ModelId).AsIChatClient();
+        return client
+            .GetChatClient(options.ModelId)
+            .AsIChatClient()
+            .AsBuilder()
+            .UseOpenTelemetry(
+                sourceName: AgentTelemetry.ActivitySourceName,
+                configure: telemetry => telemetry.EnableSensitiveData = false)
+            .Build();
     }
 
     private static string? ConfiguredOpenAiEndpoint(AIProviderOptions options) =>

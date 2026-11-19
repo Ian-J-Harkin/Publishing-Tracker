@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.AI;
@@ -43,6 +45,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var principal = context.Principal;
+                var hasUserId = !string.IsNullOrWhiteSpace(
+                    principal?.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                    principal?.FindFirstValue(JwtRegisteredClaimNames.NameId) ??
+                    principal?.FindFirstValue(JwtRegisteredClaimNames.Sub));
+                var iatRaw = principal?.FindFirstValue(JwtRegisteredClaimNames.Iat);
+                var hasValidIat = !string.IsNullOrWhiteSpace(iatRaw) &&
+                                  long.TryParse(iatRaw, out var iatSeconds) &&
+                                  iatSeconds > 0;
+                if (!hasUserId || !hasValidIat)
+                {
+                    context.Fail("JWT is missing required user identity or integer iat claim.");
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 builder.Services.AddAuthorization();

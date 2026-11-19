@@ -8,6 +8,7 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Primitives;
 using PublishingTracker.Agent.Auth;
 using PublishingTracker.Agent.Configuration;
 using PublishingTracker.Agent.Mcp;
@@ -224,14 +225,17 @@ public sealed class AgentLoopTests
     {
         var chat = new ScriptedChatClient();
         chat.EnqueueFunctionCalls(Call("get_title_details", ("bookId", 1)));
-        var provider = new StubToolProvider(Tool("get_title_details", async (_, _, _, _) =>
+        var toolToken = CancellationToken.None;
+        var provider = new StubToolProvider(Tool("get_title_details", async (_, _, _, cancellationToken) =>
         {
+            toolToken = cancellationToken;
             await Task.Delay(Timeout.InfiniteTimeSpan);
             return new { };
         }));
         var result = await Runner(chat, provider, perCall: 25, overall: 200).RunAsync("Question");
         Assert.StartsWith("TIMEOUT:", result.ErrorMessage);
         Assert.Contains("tool call", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.True(toolToken.IsCancellationRequested);
     }
 
     [Fact]
@@ -272,6 +276,7 @@ public sealed class AgentLoopTests
         Assert.Equal(2, modelTurns.Length);
         Assert.Contains(root.TagObjects, tag => tag.Key == "agent.status" && Equals(tag.Value, "completed"));
         Assert.Contains(root.TagObjects, tag => tag.Key == "agent.duration_ms");
+        Assert.Contains(root.TagObjects, tag => tag.Key == "agent.prompt_version" && Equals(tag.Value, "v1"));
         Assert.All(modelTurns, modelTurn => Assert.Contains(modelTurn.TagObjects, tag => tag.Key == "agent.turn_number"));
         Assert.All(modelTurns, modelTurn => Assert.Contains(modelTurn.TagObjects, tag => tag.Key == "agent.duration_ms"));
         Assert.Contains(toolCall.TagObjects, tag => tag.Key == "agent.tool_name");
@@ -307,6 +312,14 @@ public sealed class AgentLoopTests
             using var secondResponse = await client.SendAsync(secondRequest);
             Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
             Assert.Equal(new[] { "Bearer caller-token", "Bearer second-caller-token" }, recorder.Authorizations);
+
+            context.Request.Headers.Authorization = new StringValues(["Bearer token1", "Bearer token2"]);
+            using var duplicateHeaderReq = new HttpRequestMessage(HttpMethod.Post, "https://trusted.example/mcp");
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => client.SendAsync(duplicateHeaderReq));
+
+            context.Request.Headers.Authorization = "Bearer bad token";
+            using var whitespaceTokenReq = new HttpRequestMessage(HttpMethod.Post, "https://trusted.example/mcp");
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => client.SendAsync(whitespaceTokenReq));
         }
 
         var insecureHandler = new PerRequestBearerHandler(accessor, Options.Create(new AIProviderOptions { McpEndpoint = "http://external.example/mcp" }), Environment("Production"))
@@ -347,6 +360,7 @@ public sealed class AgentLoopTests
                 Assert.Contains("deny", recording.Requests[0].Headers.GetValues("data_collection"));
             }
         }
+        Assert.Null(new AIProviderOptions { Type = "OpenRouter", ApiKey = "test-key" }.Validate());
         Assert.Throws<InvalidOperationException>(() => AIProviderSetup.Resolve(new AIProviderOptions { Type = "azureopenai" }, _ => null));
         Assert.Throws<InvalidOperationException>(() => new AgentLoopOptions { MaxTotalToolCalls = 0 }.Validate());
         Assert.Throws<InvalidOperationException>(() => new AgentLoopOptions { OverallTimeout = TimeSpan.FromSeconds(20) }.Validate());

@@ -107,6 +107,7 @@ public sealed class AgentLoopRunner
 
         state.RunActivity?.SetTag("agent.max_turns", _options.MaxModelTurns);
         state.RunActivity?.SetTag("agent.max_tool_calls", _options.MaxTotalToolCalls);
+        state.RunActivity?.SetTag("agent.prompt_version", "v1");
         state.RunCts.CancelAfter(_options.OverallTimeout);
         var runToken = state.RunCts.Token;
 
@@ -167,12 +168,14 @@ public sealed class AgentLoopRunner
                 var detail = runToken.IsCancellationRequested
                     ? "TIMEOUT: The request exceeded its overall deadline."
                     : "TIMEOUT: The model call exceeded its per-call timeout.";
+                turnActivity?.SetTag("agent.duration_ms", turnWatch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", code.ToString());
                 return FailState(state, code, detail);
             }
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Model invocation failed on turn {Turn}.", turn);
+                turnActivity?.SetTag("agent.duration_ms", turnWatch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
                 return FailState(state, AgentErrorCode.MODEL_ERROR);
             }
@@ -261,14 +264,17 @@ public sealed class AgentLoopRunner
                     var completed = await Task.WhenAny(invokeTask, perCallDelay, overallCancellation);
                     if (completed != invokeTask)
                     {
+                        toolCts.Cancel();
                         _ = invokeTask.ContinueWith(task => _ = task.Exception, CancellationToken.None,
                             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                        toolActivity?.SetTag("agent.is_error", true);
-                        state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                         var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
                         var detail = runToken.IsCancellationRequested
                             ? "TIMEOUT: The request exceeded its overall deadline."
                             : "TIMEOUT: The tool call exceeded its per-call timeout.";
+                        toolActivity?.SetTag("agent.duration_ms", toolWatch.ElapsedMilliseconds);
+                        toolActivity?.SetTag("agent.is_error", true);
+                        toolActivity?.SetTag("agent.error_code", code.ToString());
+                        state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                         return FailState(state, code, detail);
                     }
 
@@ -278,18 +284,22 @@ public sealed class AgentLoopRunner
                 }
                 catch (OperationCanceledException)
                 {
-                    toolActivity?.SetTag("agent.is_error", true);
-                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                     var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
                     var detail = runToken.IsCancellationRequested
                         ? "TIMEOUT: The request exceeded its overall deadline."
                         : "TIMEOUT: The tool call exceeded its per-call timeout.";
+                    toolActivity?.SetTag("agent.duration_ms", toolWatch.ElapsedMilliseconds);
+                    toolActivity?.SetTag("agent.is_error", true);
+                    toolActivity?.SetTag("agent.error_code", code.ToString());
+                    state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                     return FailState(state, code, detail);
                 }
                 catch (Exception exception)
                 {
                     _logger.LogError(exception, "MCP tool invocation failed for {ToolName}.", call.Name);
+                    toolActivity?.SetTag("agent.duration_ms", toolWatch.ElapsedMilliseconds);
                     toolActivity?.SetTag("agent.is_error", true);
+                    toolActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.TOOL_ERROR));
                     state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                     return FailState(state, AgentErrorCode.TOOL_ERROR);
                 }
@@ -302,6 +312,8 @@ public sealed class AgentLoopRunner
                 catch (Exception exception)
                 {
                     _logger.LogError(exception, "MCP tool output serialization failed for {ToolName}.", call.Name);
+                    toolActivity?.SetTag("agent.is_error", true);
+                    toolActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.SERIALIZATION_ERROR));
                     state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                     return FailState(state, AgentErrorCode.SERIALIZATION_ERROR);
                 }
@@ -310,6 +322,8 @@ public sealed class AgentLoopRunner
                 toolActivity?.SetTag("agent.payload_bytes", payloadBytes);
                 if (payloadBytes > _options.MaxToolPayloadBytes)
                 {
+                    toolActivity?.SetTag("agent.is_error", true);
+                    toolActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.PAYLOAD_LIMIT_EXCEEDED));
                     state.Ledger.RecordToolExecution(call.Name, turn, toolWatch.ElapsedMilliseconds, succeeded: false);
                     return FailState(state, AgentErrorCode.PAYLOAD_LIMIT_EXCEEDED);
                 }
@@ -379,12 +393,14 @@ public sealed class AgentLoopRunner
             catch (OperationCanceledException)
             {
                 var code = cancellationToken.IsCancellationRequested ? AgentErrorCode.CANCELLED : AgentErrorCode.TIMEOUT;
+                turnActivity?.SetTag("agent.duration_ms", stage2Watch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", code.ToString());
                 return FinishVerifiedFailure(state, code);
             }
             catch (Exception exception)
             {
                 _logger.LogError(exception, "Stage 2 structured model call failed on turn {Turn}, attempt {Attempt}.", state.ModelTurns, attempt);
+                turnActivity?.SetTag("agent.duration_ms", stage2Watch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
                 return FinishVerifiedFailure(state, AgentErrorCode.MODEL_ERROR);
             }

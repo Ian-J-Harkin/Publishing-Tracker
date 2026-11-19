@@ -22,7 +22,8 @@ public sealed class AIProviderOptions
 
     public string? Validate()
     {
-        if (!SupportedTypes.Contains(Type, StringComparer.Ordinal))
+        var normalizedType = Type?.Trim() ?? string.Empty;
+        if (!SupportedTypes.Contains(normalizedType, StringComparer.OrdinalIgnoreCase))
             return $"Unsupported AIProvider:Type '{Type}'. Supported values: {string.Join(", ", SupportedTypes)}.";
 
         if (string.IsNullOrWhiteSpace(ModelId) || !Uri.TryCreate(Endpoint, UriKind.Absolute, out var providerUri) ||
@@ -32,10 +33,10 @@ public sealed class AIProviderOptions
 
         var providerUsesInsecureHttp = providerUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
         var isOllamaLoopback = providerUri.IsLoopback || providerUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
-        if (providerUsesInsecureHttp && (Type != "ollama" || !isOllamaLoopback))
+        if (providerUsesInsecureHttp && (!string.Equals(normalizedType, "ollama", StringComparison.OrdinalIgnoreCase) || !isOllamaLoopback))
             return "Only loopback Ollama endpoints may use HTTP; hosted providers must use HTTPS.";
 
-        if (Type != "ollama" && string.IsNullOrWhiteSpace(ApiKey))
+        if (!string.Equals(normalizedType, "ollama", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(ApiKey))
             return $"API key is required for provider '{Type}'. Configure its key using a secret source.";
 
         if (!Uri.TryCreate(McpEndpoint, UriKind.Absolute, out var mcpUri) ||

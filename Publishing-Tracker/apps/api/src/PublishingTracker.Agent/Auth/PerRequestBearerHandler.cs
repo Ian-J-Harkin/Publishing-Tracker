@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using Microsoft.Extensions.Options;
 using PublishingTracker.Agent.Configuration;
 
@@ -17,15 +18,20 @@ public sealed class PerRequestBearerHandler(
         if (context.User.Identity?.IsAuthenticated != true)
             throw new UnauthorizedAccessException("Caller must be authenticated.");
 
-        var rawAuthorization = context.Request.Headers.Authorization.ToString();
+        if (context.Request.Headers.Authorization.Count != 1)
+            throw new UnauthorizedAccessException("Exactly one Authorization header is required.");
+
+        var rawAuthorization = context.Request.Headers.Authorization[0];
         if (string.IsNullOrWhiteSpace(rawAuthorization) ||
-            !rawAuthorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(rawAuthorization[7..]))
+            !rawAuthorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             throw new UnauthorizedAccessException("Missing or invalid bearer credential.");
 
+        var token = rawAuthorization[7..].Trim();
+        if (string.IsNullOrWhiteSpace(token) || token.Any(char.IsWhiteSpace))
+            throw new UnauthorizedAccessException("Bearer token must not be empty or contain whitespace.");
+
         request.Headers.Remove("Authorization");
-        if (!request.Headers.TryAddWithoutValidation("Authorization", rawAuthorization))
-            throw new InvalidOperationException("Could not attach caller authorization to MCP request.");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         return base.SendAsync(request, cancellationToken);
     }
