@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -13,6 +14,12 @@ using PublishingTracker.Agent.Mcp;
 using PublishingTracker.Agent.Orchestration;
 using PublishingTracker.Agent.Telemetry;
 using PublishingTracker.Agent.Validation;
+using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Infrastructure.Authentication;
+using PublishingTracker.Infrastructure.Persistence;
+using PublishingTracker.Rag.Persistence;
+using PublishingTracker.Rag.Services;
+using PublishingTracker.Rag.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,17 +58,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             OnTokenValidated = context =>
             {
                 var principal = context.Principal;
-                var hasUserId = !string.IsNullOrWhiteSpace(
-                    principal?.FindFirstValue(ClaimTypes.NameIdentifier) ??
-                    principal?.FindFirstValue(JwtRegisteredClaimNames.NameId) ??
-                    principal?.FindFirstValue(JwtRegisteredClaimNames.Sub));
+                var userIdRaw = principal?.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? principal?.FindFirstValue(JwtRegisteredClaimNames.NameId)
+                             ?? principal?.FindFirstValue(JwtRegisteredClaimNames.Sub);
+                var hasUserId = int.TryParse(userIdRaw, out var parsedUserId) && parsedUserId > 0;
                 var iatRaw = principal?.FindFirstValue(JwtRegisteredClaimNames.Iat);
                 var hasValidIat = !string.IsNullOrWhiteSpace(iatRaw) &&
                                   long.TryParse(iatRaw, out var iatSeconds) &&
                                   iatSeconds > 0;
                 if (!hasUserId || !hasValidIat)
                 {
-                    context.Fail("JWT is missing required user identity or integer iat claim.");
+                    context.Fail("JWT is missing required positive integer user identity or integer iat claim.");
                 }
                 return Task.CompletedTask;
             }
@@ -69,10 +76,35 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+var connectionString = builder.Configuration.GetConnectionString("NeonConnection")
+                    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (builder.Environment.IsEnvironment("Testing") || string.IsNullOrWhiteSpace(connectionString))
+{
+    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+        options.UseInMemoryDatabase("PublishingTrackerInMemoryDb"));
+}
+else
+{
+    builder.Services.AddDbContext<PublishingTrackerDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
+
+builder.Services.AddScoped<IRagChunkStore>(sp => sp.GetRequiredService<PublishingTrackerDbContext>());
+builder.Services.AddSingleton<IEmbeddingGenerator<string, Embedding<float>>>(services =>
+    AIProviderSetup.CreateEmbeddingGenerator(services.GetRequiredService<IOptions<AIProviderOptions>>().Value));
+builder.Services.AddScoped<RagIngestionService>();
+builder.Services.AddScoped<RagRetrievalService>();
+builder.Services.AddScoped<IRagSearchToolProvider, RagSearchToolFactory>();
+
 builder.Services.AddTransient<PerRequestBearerHandler>();
 builder.Services.AddHttpClient<StreamableHttpMcpToolProvider>()
     .AddHttpMessageHandler<PerRequestBearerHandler>();
-builder.Services.AddTransient<IMcpToolProvider>(services => services.GetRequiredService<StreamableHttpMcpToolProvider>());
+builder.Services.AddScoped<IMcpToolProvider>(sp => new CompositeToolProvider(
+    sp.GetRequiredService<StreamableHttpMcpToolProvider>(),
+    sp.GetRequiredService<IRagSearchToolProvider>()));
 builder.Services.AddSingleton<IChatClient>(services =>
     AIProviderSetup.CreateChatClient(services.GetRequiredService<IOptions<AIProviderOptions>>().Value));
 builder.Services.AddSingleton<AgentOutputValidator>();
@@ -80,6 +112,26 @@ builder.Services.AddTransient<AgentLoopRunner>();
 builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(AgentTelemetry.ActivitySourceName));
 
 var app = builder.Build();
+
+if (builder.Configuration.GetValue<bool>("Rag:AutoSeedOnStartup") &&
+    !builder.Environment.IsEnvironment("Testing"))
+{
+    using var scope = app.Services.CreateScope();
+    var store = scope.ServiceProvider.GetRequiredService<IRagChunkStore>();
+    if (store.IsPostgreSql)
+    {
+        var corpusDir = Path.Combine(app.Environment.ContentRootPath, "..", "PublishingTracker.Api", "docs", "rag-corpus");
+        if (!Directory.Exists(corpusDir))
+        {
+            corpusDir = Path.Combine(app.Environment.ContentRootPath, "docs", "rag-corpus");
+        }
+        if (Directory.Exists(corpusDir))
+        {
+            var ingestion = scope.ServiceProvider.GetRequiredService<RagIngestionService>();
+            await ingestion.SeedLockedCorpusAsync(corpusDir);
+        }
+    }
+}
 app.UseAuthentication();
 app.UseAuthorization();
 

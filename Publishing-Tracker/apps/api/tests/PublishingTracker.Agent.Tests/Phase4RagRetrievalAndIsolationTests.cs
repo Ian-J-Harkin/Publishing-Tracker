@@ -1,8 +1,13 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using PublishingTracker.Agent.Configuration;
+using PublishingTracker.Agent.Mcp;
 using PublishingTracker.Agent.Tests.Doubles;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Rag.Services;
+using PublishingTracker.Rag.Tools;
 
 namespace PublishingTracker.Agent.Tests;
 
@@ -266,5 +271,98 @@ public sealed class Phase4RagRetrievalAndIsolationTests
                 Assert.Contains("deny", recorder.Requests[0].Headers.GetValues("data_collection"));
             }
         }
+    }
+
+    [Fact]
+    public void RagSearchTool_SchemaInspection_ExposesOnlyQueryAndTopK_NeverUserIdOrTenantParameters()
+    {
+        var accessor = new HttpContextAccessor();
+        var factory = new RagSearchToolFactory(null!, accessor);
+        var tools = factory.CreateToolsForCaller(1);
+        var tool = Assert.Single(tools);
+
+        Assert.Equal(RagSearchToolFactory.ToolName, tool.Name);
+        var schemaJson = tool.JsonSchema.ToString();
+
+        Assert.Contains("query", schemaJson);
+        Assert.Contains("topK", schemaJson);
+        Assert.DoesNotContain("userId", schemaJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ownerId", schemaJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("callerUserId", schemaJson, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("tenantId", schemaJson, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RagSearchTool_TwoUserIsolation_ReturnsSharedGuidelinesAndCallerNotes_NeverOtherUsersNotes()
+    {
+        await using var db = CreateInMemoryDbContext();
+        var embeddings = new DeterministicTestEmbeddingGenerator();
+        var ingestion = new RagIngestionService(db, embeddings);
+
+        // Seed shared guide, User 1 note, and User 2 note
+        await ingestion.UpsertDocumentAsync("doc-shared", "v1", "# Shared\n## Rules\nStandard platform rules.", ownerUserId: null);
+        await ingestion.UpsertDocumentAsync("doc-user1", "v1", "# Note U1\n## Secret 1\nUser 1 personal pricing note.", ownerUserId: 1);
+        await ingestion.UpsertDocumentAsync("doc-user2", "v1", "# Note U2\n## Secret 2\nUser 2 personal strategy note.", ownerUserId: 2);
+
+        var retrieval = new RagRetrievalService(db, embeddings);
+
+        var user1Hits = await retrieval.SearchAsync(authenticatedUserId: 1, query: "note rules", topK: 5);
+        var user2Hits = await retrieval.SearchAsync(authenticatedUserId: 2, query: "note rules", topK: 5);
+
+        Assert.Contains(user1Hits.Hits, h => h.DocumentId == "doc-shared");
+        Assert.Contains(user1Hits.Hits, h => h.DocumentId == "doc-user1");
+        Assert.DoesNotContain(user1Hits.Hits, h => h.DocumentId == "doc-user2");
+
+        Assert.Contains(user2Hits.Hits, h => h.DocumentId == "doc-shared");
+        Assert.Contains(user2Hits.Hits, h => h.DocumentId == "doc-user2");
+        Assert.DoesNotContain(user2Hits.Hits, h => h.DocumentId == "doc-user1");
+    }
+
+    [Fact]
+    public async Task CompositeToolProvider_UnauthenticatedCaller_AndDownstreamFailure_DisposesMcpSessionCleanly()
+    {
+        // Case A: unauthenticated / non-positive / non-integer caller -> rejected BEFORE /mcp is opened.
+        foreach (var principal in new[]
+                 {
+                     new ClaimsPrincipal(new ClaimsIdentity()), // unauthenticated
+                     AuthenticatedAs("abc"),
+                     AuthenticatedAs("0"),
+                     AuthenticatedAs("-5")
+                 })
+        {
+            var stubMcp = new StubToolProvider();
+            var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = principal } };
+            var composite = new CompositeToolProvider(stubMcp, new RagSearchToolFactory(null!, accessor));
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => composite.OpenSessionAsync());
+            Assert.Equal(0, stubMcp.OpenCount);
+        }
+
+        // Case B: /mcp opens, then RAG tool construction throws -> the remote session is disposed (no leak).
+        var leakProbe = new StubToolProvider();
+        var throwing = new CompositeToolProvider(leakProbe, new ThrowingRagToolProvider(userId: 1));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => throwing.OpenSessionAsync());
+        Assert.Equal(1, leakProbe.OpenCount);
+        Assert.Equal(1, leakProbe.DisposeCount);
+
+        // Case C: happy path composes both tool sets and disposes the inner session exactly once.
+        var okMcp = new StubToolProvider();
+        var okAccessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = AuthenticatedAs("1") } };
+        var ok = new CompositeToolProvider(okMcp, new RagSearchToolFactory(null!, okAccessor));
+        await using (var session = await ok.OpenSessionAsync())
+        {
+            Assert.Contains(session.Tools, t => t.Name == RagSearchToolFactory.ToolName);
+        }
+        Assert.Equal(1, okMcp.DisposeCount);
+    }
+
+    private static ClaimsPrincipal AuthenticatedAs(string nameIdentifier) =>
+        new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, nameIdentifier)], "TestAuth"));
+
+    private sealed class ThrowingRagToolProvider(int userId) : IRagSearchToolProvider
+    {
+        public int ResolveAuthenticatedUserId() => userId;
+        public IReadOnlyList<AIFunction> CreateToolsForCaller(int authenticatedUserId) =>
+            throw new InvalidOperationException("Simulated RAG tool construction failure");
     }
 }
