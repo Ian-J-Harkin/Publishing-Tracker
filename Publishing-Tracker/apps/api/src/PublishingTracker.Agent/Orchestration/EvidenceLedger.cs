@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Text.Json;
 using PublishingTracker.Agent.Contracts;
 using PublishingTracker.Application.Books.Queries;
+using PublishingTracker.Rag.Contracts;
+using PublishingTracker.Rag.Services;
 
 namespace PublishingTracker.Agent.Orchestration;
 
@@ -45,12 +47,53 @@ public sealed class EvidenceLedger
     private readonly List<ToolExecutionRecord> _toolsUsed = new();
 
     private int _totalCataloguePagesFetched;
+    private int _ragSearchesExecuted;
 
     public IReadOnlyList<ToolExecutionRecord> ToolsUsed => _toolsUsed;
     public bool HasPaginationTruncation => _paginationByFilter.Values.Any(state => state.HasMore);
 
     public void RecordToolExecution(string toolName, int turn, long durationMs, bool succeeded) =>
         _toolsUsed.Add(new ToolExecutionRecord(toolName, turn, durationMs, succeeded));
+
+    public bool TryValidateToolRequest(
+        string toolName,
+        IDictionary<string, object?>? arguments,
+        int maxPaginationPages,
+        out AgentErrorCode errorCode,
+        out string diagnosticError)
+    {
+        if (string.Equals(toolName, "search_publishing_guidelines", StringComparison.Ordinal))
+            return TryValidateRagSearchRequest(arguments, out errorCode, out diagnosticError);
+
+        return TryValidatePaginationRequest(toolName, arguments, maxPaginationPages, out errorCode, out diagnosticError);
+    }
+
+    private static bool TryValidateRagSearchRequest(
+        IDictionary<string, object?>? arguments,
+        out AgentErrorCode errorCode,
+        out string diagnosticError)
+    {
+        if (arguments is null || !arguments.TryGetValue("query", out var rawQuery) ||
+            !TryExtractStringArgument(rawQuery, out var query) ||
+            string.IsNullOrWhiteSpace(query) || query.Trim().Length > RagRetrievalService.MaxQueryLength)
+        {
+            errorCode = AgentErrorCode.INVALID_TOOL_ARGUMENTS;
+            diagnosticError = $"Tool argument 'query' must be a non-empty string up to {RagRetrievalService.MaxQueryLength} characters.";
+            return false;
+        }
+
+        if (!TryExtractIntArgument(arguments, "topK", defaultValue: 5, out var topK) ||
+            topK < 1 || topK > RagRetrievalService.MaxTopK)
+        {
+            errorCode = AgentErrorCode.INVALID_TOOL_ARGUMENTS;
+            diagnosticError = $"Tool argument 'topK' must be an integer between 1 and {RagRetrievalService.MaxTopK}.";
+            return false;
+        }
+
+        errorCode = default;
+        diagnosticError = string.Empty;
+        return true;
+    }
 
     public bool TryValidatePaginationRequest(
         string toolName,
@@ -151,6 +194,14 @@ public sealed class EvidenceLedger
             return TryIndexTitleDetails(arguments, detailsDto, out errorCode, out diagnosticError);
         }
 
+        if (string.Equals(toolName, "search_publishing_guidelines", StringComparison.Ordinal))
+        {
+            if (!TryUnwrapRagSearchResult(rawResult, serializedJson, out var ragDto, out errorCode, out diagnosticError) || ragDto is null)
+                return false;
+
+            return TryIndexRagSearchResult(arguments, ragDto, out errorCode, out diagnosticError);
+        }
+
         errorCode = default;
         diagnosticError = string.Empty;
         return true;
@@ -172,9 +223,9 @@ public sealed class EvidenceLedger
             return false;
         }
 
-        if (_catalogue.Count > 0 || _documents.Count > 0)
+        if (_catalogue.Count > 0 || _documents.Count > 0 || _ragSearchesExecuted > 0)
         {
-            error = "Status 'answered' requires citations whenever catalogue titles or documents were returned in the run.";
+            error = "Status 'answered' requires citations whenever catalogue titles or guideline searches occurred in the run.";
             return false;
         }
 
@@ -683,5 +734,131 @@ public sealed class EvidenceLedger
             return elem.ValueKind == JsonValueKind.Number && elem.TryGetInt32(out value);
 
         return raw is string text && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static bool TryExtractStringArgument(object? value, out string result)
+    {
+        if (value is string s)
+        {
+            result = s;
+            return true;
+        }
+
+        if (value is JsonElement { ValueKind: JsonValueKind.String } jsonString)
+        {
+            result = jsonString.GetString() ?? string.Empty;
+            return true;
+        }
+
+        result = string.Empty;
+        return false;
+    }
+
+    private static bool TryUnwrapRagSearchResult(
+        object? rawResult,
+        string serializedJson,
+        out RagSearchResultDto? ragResult,
+        out AgentErrorCode errorCode,
+        out string diagnosticError)
+    {
+        if (rawResult is RagSearchResultDto typedDto)
+        {
+            ragResult = typedDto;
+            errorCode = default;
+            diagnosticError = string.Empty;
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(serializedJson))
+        {
+            try
+            {
+                ragResult = JsonSerializer.Deserialize<RagSearchResultDto>(serializedJson, JsonSerializerOptions.Web);
+                if (ragResult is not null)
+                {
+                    errorCode = default;
+                    diagnosticError = string.Empty;
+                    return true;
+                }
+            }
+            catch (JsonException ex)
+            {
+                errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+                diagnosticError = $"Failed to deserialize search_publishing_guidelines payload: {ex.Message}";
+                ragResult = null;
+                return false;
+            }
+        }
+
+        errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+        diagnosticError = "search_publishing_guidelines returned an unrecognized or empty payload.";
+        ragResult = null;
+        return false;
+    }
+
+    private bool TryIndexRagSearchResult(
+        IDictionary<string, object?>? arguments,
+        RagSearchResultDto ragDto,
+        out AgentErrorCode errorCode,
+        out string diagnosticError)
+    {
+        if (string.IsNullOrWhiteSpace(ragDto.Query) || ragDto.Hits is null)
+        {
+            errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+            diagnosticError = "search_publishing_guidelines result missing required Query or Hits collection.";
+            return false;
+        }
+
+        TryExtractIntArgument(arguments, "topK", defaultValue: 5, out var requestedTopK);
+        if (ragDto.TopK != requestedTopK || ragDto.Hits.Count > ragDto.TopK)
+        {
+            errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+            diagnosticError = $"search_publishing_guidelines returned topK {ragDto.TopK} or count {ragDto.Hits.Count} exceeding requested {requestedTopK}.";
+            return false;
+        }
+
+        var seenChunkKeys = new HashSet<string>(StringComparer.Ordinal);
+        var validated = new List<(string DocumentId, string ChunkId, string Excerpt)>(ragDto.Hits.Count);
+        foreach (var hit in ragDto.Hits)
+        {
+            if (string.IsNullOrWhiteSpace(hit.DocumentId) ||
+                string.IsNullOrWhiteSpace(hit.ChunkId) ||
+                string.IsNullOrWhiteSpace(hit.Title) ||
+                string.IsNullOrWhiteSpace(hit.Excerpt) ||
+                !double.IsFinite(hit.CosineDistance) || hit.CosineDistance < 0)
+            {
+                errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+                diagnosticError = $"search_publishing_guidelines hit '{hit.ChunkId}' contains invalid or missing metadata.";
+                return false;
+            }
+
+            var docId = hit.DocumentId.Trim();
+            var chunkId = hit.ChunkId.Trim();
+            if (!chunkId.StartsWith($"{docId}#c", StringComparison.Ordinal))
+            {
+                errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+                diagnosticError = $"ChunkId '{chunkId}' does not belong to DocumentId '{docId}'.";
+                return false;
+            }
+
+            var chunkKey = $"{docId}::{chunkId}";
+            if (!seenChunkKeys.Add(chunkKey))
+            {
+                errorCode = AgentErrorCode.EVIDENCE_INDEXING_ERROR;
+                diagnosticError = $"Duplicate chunk '{chunkId}' found in search_publishing_guidelines hits.";
+                return false;
+            }
+
+            validated.Add((docId, chunkId, hit.Excerpt));
+        }
+
+        // Second pass: only index once every hit has passed validation (no partial indexing).
+        foreach (var (validDocId, validChunkId, excerpt) in validated)
+            RecordDocumentHit(validDocId, validChunkId, excerpt);
+
+        _ragSearchesExecuted++;
+        errorCode = default;
+        diagnosticError = string.Empty;
+        return true;
     }
 }

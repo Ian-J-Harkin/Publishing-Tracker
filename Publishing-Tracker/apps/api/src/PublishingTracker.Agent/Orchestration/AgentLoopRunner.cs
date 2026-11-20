@@ -229,10 +229,10 @@ public sealed class AgentLoopRunner
                 var page = 1;
                 if (strictEvidenceMode)
                 {
-                    if (!state.Ledger.TryValidatePaginationRequest(
+                    if (!state.Ledger.TryValidateToolRequest(
                         call.Name, call.Arguments, _options.MaxPaginationPages, out var pageErrorCode, out var pageDiagnostic))
                     {
-                        _logger.LogWarning("Pagination pre-check failed for {ToolName}: {Diagnostic}", call.Name, pageDiagnostic);
+                        _logger.LogWarning("Tool request pre-check failed for {ToolName}: {Diagnostic}", call.Name, pageDiagnostic);
                         return FailState(state, pageErrorCode);
                     }
                 }
