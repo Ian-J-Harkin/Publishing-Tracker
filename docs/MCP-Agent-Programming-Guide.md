@@ -1,35 +1,37 @@
 # PublishingTracker MCP & Agent — Programming Guide
 
-Developer reference and walkthrough of the **PublishingTracker MCP Server** and **PublishingTracker.Agent** implementation across **Phases 0–3**. Companion to [MCP-User-Guide.md](MCP-User-Guide.md), [MCP-Testing-Guide.md](MCP-Testing-Guide.md), and [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md).
+Developer reference and walkthrough of the **PublishingTracker MCP Server**, **PublishingTracker.Agent**, and **PublishingTracker.Rag** implementation across **Phases 0–4 (Steps 4.1–4.5 implemented)**. Companion to [MCP-User-Guide.md](MCP-User-Guide.md), [MCP-Testing-Guide.md](MCP-Testing-Guide.md), and [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md).
 
 ---
 
 ## 1. Architecture & Solution Map
 
-All MCP and agent code lives inside the `.NET 10` solution at [PublishingTracker.Api.sln](../Publishing-Tracker/apps/api/PublishingTracker.Api.sln):
+All MCP, Agent, and RAG code lives inside the `.NET 10` solution at [PublishingTracker.Api.sln](../Publishing-Tracker/apps/api/PublishingTracker.Api.sln):
 
 ```text
 Publishing-Tracker/apps/api/
   src/
     PublishingTracker.Domain/           # Core Book / Edition entities & invariants
     PublishingTracker.Application/      # FormatCompletenessRules & MediatR catalogue queries
-    PublishingTracker.Infrastructure/   # PostgreSQL EF Core persistence & JWT TokenService
+    PublishingTracker.Infrastructure/   # PostgreSQL EF Core persistence, IRagChunkStore & JWT TokenService
     PublishingTracker.Mcp/              # [McpServerToolType] read-only MCP tools
+    PublishingTracker.Rag/              # VectorMath, MarkdownChunker, Ingestion, Retrieval, RagSearchToolFactory
     PublishingTracker.Api/              # REST endpoints + hosted Streamable HTTP /mcp endpoint
-    PublishingTracker.Agent/            # ASP.NET Core Agent Host, IChatClient loop, EvidenceLedger, validator
+    PublishingTracker.Agent/            # ASP.NET Core Agent Host, IChatClient loop, CompositeToolProvider, EvidenceLedger
   tests/
     PublishingTracker.Api.Tests/        # Phase 0 baseline + Phase 1 API & Streamable HTTP MCP integration tests (54 tests)
-    PublishingTracker.Agent.Tests/      # Phase 2 orchestration/provider + Phase 3 evidence/validation unit tests (42 tests)
+    PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (52 tests)
 ```
 
 | Project | Role | Key Entry Points |
 |---|---|---|
 | `PublishingTracker.Domain` | Book, Edition, and Platform metadata entities | [Book.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Book.cs), [Edition.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Edition.cs) |
 | `PublishingTracker.Application` | Format completeness rules and owner-scoped CQRS queries | [FormatCompletenessRules.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Services/FormatCompletenessRules.cs), [FindTitlesMissingMetadataQuery.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Queries/FindTitlesMissingMetadataQuery.cs), [GetTitleDetailsQuery.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Queries/GetTitleDetailsQuery.cs) |
-| `PublishingTracker.Infrastructure` | `Npgsql` DbContext and JWT generation (`iat` + UTC expiry) | [TokenService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Infrastructure/Authentication/TokenService.cs) |
+| `PublishingTracker.Infrastructure` | `Npgsql` DbContext, `RagDocumentChunk` store, and JWT generation | [TokenService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Infrastructure/Authentication/TokenService.cs), [PublishingTrackerDbContext.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Infrastructure/Persistence/PublishingTrackerDbContext.cs) |
 | `PublishingTracker.Mcp` | Read-only MCP tool definitions backed by `MediatR` | [CatalogueMcpTools.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Mcp/Tools/CatalogueMcpTools.cs) |
+| `PublishingTracker.Rag` | Vector math, markdown chunking, ingestion, and host-bound search tool | [VectorMath.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/VectorMath.cs), [MarkdownChunker.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/MarkdownChunker.cs), [RagIngestionService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagIngestionService.cs), [RagRetrievalService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagRetrievalService.cs), [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) |
 | `PublishingTracker.Api` | Maps `/api/books/*` REST routes and `/mcp` MCP transport | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs), [BookEndpoints.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/BookEndpoints.cs) |
-| `PublishingTracker.Agent` | Authenticated two-stage agent orchestrator & output verification | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs), [AgentLoopRunner.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/AgentLoopRunner.cs), [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs), [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) |
+| `PublishingTracker.Agent` | Authenticated two-stage agent orchestrator, composite tool provider & output verification | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs), [AgentLoopRunner.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/AgentLoopRunner.cs), [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs), [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs), [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) |
 
 ---
 
@@ -209,22 +211,19 @@ PublishingTracker.Agent (Program.cs)
 
 ---
 
-## 7. Extension Points & Planned Phase 4 Symbols (`PublishingTracker.Rag`)
+## 7. Extension Points & Implemented Phase 4 Symbols (`PublishingTracker.Rag`)
 
-Phase 3 contracts and validators already include the document provenance hooks needed for Phase 4 ([Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md)):
-1. When the host executes the owner-bound RAG search tool, call `ledger.RecordDocumentHit(chunk.DocumentId, chunk.ChunkId, chunk.Excerpt)` in [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs#L159-L165).
-2. `AgentOutputValidator.Validate` in [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs#L88-L98) already validates every `DocumentSourceCitation` against `ledger.HasDocumentEvidence(doc.DocumentId, doc.ChunkId)` before accepting the response.
+Phase 4 introduces semantic retrieval and composite tool provision (`Steps 4.1`–`4.5` implemented, `Step 4.6` pending):
 
-### Planned Phase 4 Types & Functions *(Spec Ready — Not Yet Implemented)*
-
-| Planned Symbol / Function | Target Module / File | Planned Responsibility |
+| Symbol / Function | Module / File Location | Status / Responsibility |
 |---|---|---|
-| `RagDocumentChunk` & `IRagChunkStore` | `src/PublishingTracker.Rag/Entities/RagDocumentChunk.cs` & `Persistence/IRagChunkStore.cs` | Portable entity + acyclic store contract (`Infrastructure -> Rag`) implemented by `PublishingTrackerDbContext` (with defense-in-depth `HasQueryFilter`). |
-| `RagChunkHitDto`, `RagSearchResultDto` | `src/PublishingTracker.Rag/Contracts/RagContracts.cs` | Structured return envelope for `search_publishing_guidelines` indexed and cross-checked by `EvidenceLedger`. |
-| `VectorMath` (`ValidateEmbedding`, `CosineSimilarity`, `FormatPgVectorLiteral`) | `src/PublishingTracker.Rag/Services/VectorMath.cs` | Enforces exact `1536`-dimension, finite, positive-norm vectors before persistence or similarity querying. |
-| `MarkdownChunker.Chunk(...)` | `src/PublishingTracker.Rag/Services/MarkdownChunker.cs` | Heading-aware markdown splitter capturing intro prose, skipping empty sections, bounding `1,000` chars / `1,500` UTF-8 bytes (`150` overlap), deterministic `{documentId}#c{index}` IDs, and SHA-256 `ContentHash`. |
-| `RagIngestionService.UpsertDocumentAsync(...)` | `src/PublishingTracker.Rag/Services/RagIngestionService.cs` | Idempotent ingestion over `docs/rag-corpus/` and caller notes, skipping unchanged hashes and pruning stale version chunks (`Rag:AutoSeedOnStartup` disabled during `Testing`). |
-| `RagRetrievalService.SearchAsync(int authenticatedUserId, string query, int topK, CancellationToken ct)` | `src/PublishingTracker.Rag/Services/RagRetrievalService.cs` | Executes PostgreSQL `pgvector` `<=>` distance SQL (`IsNpgsql()`) or C# cosine distance fallback (`!IsNpgsql()`), strictly filtering `OwnerUserId == null \|\| OwnerUserId == authenticatedUserId`. |
-| `RagSearchToolFactory` (`search_publishing_guidelines`) | `src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs` | Host-bound `AIFunction` exposing only `(string query, int topK = 5)` while capturing positive integer `authenticatedUserId` outside the model schema (pre-call validated as `INVALID_TOOL_ARGUMENTS`). |
-| `CompositeToolProvider` | `src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs` | Validates caller `userId > 0` before opening `/mcp`, disposes `/mcp` safely on failure, and merges `/mcp` tools with `RagSearchTool`. |
-| `AIProviderSetup.CreateEmbeddingGenerator(AIProviderOptions options, HttpClient? customHttpClient = null)` | `src/PublishingTracker.Agent/Configuration/AIProviderSetup.cs` | Configures `IEmbeddingGenerator<string, Embedding<float>>` (`OpenRouter`/`OpenAI`/`Ollama`, `1536` dims), OpenRouter privacy headers, `Program.Copy`, and `.UseOpenTelemetry(EnableSensitiveData = false)`. |
+| `RagDocumentChunk` & `IRagChunkStore` | [RagDocumentChunk.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Entities/RagDocumentChunk.cs) & [IRagChunkStore.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Persistence/IRagChunkStore.cs) | ✅ Implemented (Step 4.1). Portable entity + acyclic store contract implemented by `PublishingTrackerDbContext` (with defense-in-depth `HasQueryFilter`). |
+| `RagChunkHitDto`, `RagSearchResultDto` | [RagContracts.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Contracts/RagContracts.cs) | ✅ Implemented (Step 4.1). Structured return envelope for `search_publishing_guidelines`. |
+| `VectorMath` (`ValidateEmbedding`, `CosineDistance`, `FormatPgVectorLiteral`) | [VectorMath.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/VectorMath.cs) | ✅ Implemented (Step 4.1). Enforces exact `1536`-dimension, finite, positive-norm vectors before persistence or similarity querying. |
+| `MarkdownChunker.Chunk(...)` | [MarkdownChunker.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/MarkdownChunker.cs) | ✅ Implemented (Step 4.2). Heading-aware markdown splitter capturing intro prose, skipping empty sections, bounding `1,000` chars / `1,500` UTF-8 bytes (`150` overlap), deterministic `{documentId}#c{index}` IDs, and SHA-256 `ContentHash`. |
+| `RagIngestionService.UpsertDocumentAsync(...)` | [RagIngestionService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagIngestionService.cs) | ✅ Implemented (Step 4.3). Idempotent ingestion over `docs/rag-corpus/` and caller notes, skipping unchanged hashes and pruning stale version chunks (`Rag:AutoSeedOnStartup` disabled during `Testing`). |
+| `AIProviderSetup.CreateEmbeddingGenerator(...)` | [AIProviderSetup.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Configuration/AIProviderSetup.cs) | ✅ Implemented (Step 4.4). Configures `IEmbeddingGenerator<string, Embedding<float>>` (`OpenRouter`/`OpenAI`/`Ollama`, `1536` dims), OpenRouter privacy headers (`data_collection: "deny"`), and `.UseOpenTelemetry(EnableSensitiveData = false)`. |
+| `RagRetrievalService.SearchAsync(...)` | [RagRetrievalService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagRetrievalService.cs) | ✅ Implemented (Step 4.5). Executes PostgreSQL `pgvector` `<=>` distance SQL (`IsNpgsql()`) or C# cosine distance fallback (`!IsNpgsql()`), strictly filtering `OwnerUserId == null \|\| OwnerUserId == authenticatedUserId`. |
+| `RagSearchToolFactory` (`search_publishing_guidelines`) | [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) | ✅ Implemented (Step 4.5). Host-bound `AIFunction` exposing only `(string query, int topK = 5)` while capturing positive integer `authenticatedUserId` outside the model schema. |
+| `CompositeToolProvider` | [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs) | ✅ Implemented (Step 4.5). Validates caller `userId > 0` before opening `/mcp`, disposes `/mcp` safely on failure, and merges `/mcp` tools with `RagSearchTool`. |
+| `EvidenceLedger` RAG Indexing & Stage 2 Document Citation Verification | `EvidenceLedger.cs` & `AgentOutputValidator.cs` | 🟡 Step 4.6 (Pending). Indexes `search_publishing_guidelines` hits, validates Stage 2 document citations, and verifies prompt-injection defense. |

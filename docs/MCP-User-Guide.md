@@ -1,12 +1,12 @@
 # PublishingTracker MCP & Agent — User & Integration Guide
 
-This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and upcoming Phase 4 RAG capabilities.
+This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and the **PublishingTracker.Rag** retrieval capabilities (Steps 4.1–4.5 implemented).
 
 ---
 
 ## 1. Overview & Architecture
 
-The PublishingTracker MCP server exposes authenticated, read-only catalogue querying capabilities to AI agents, IDEs, desktop clients, and `PublishingTracker.Agent` via the open **Model Context Protocol (MCP)** specification.
+The PublishingTracker MCP server exposes authenticated, read-only catalogue querying capabilities to AI agents, IDEs, desktop clients, and `PublishingTracker.Agent` via the open **Model Context Protocol (MCP)** specification. In addition, the integrated RAG module enables semantic guideline retrieval over markdown guides and caller notes.
 
 ```
 ┌─────────────────────────────────┐      ┌───────────────────────────────────────────┐
@@ -16,9 +16,12 @@ The PublishingTracker MCP server exposes authenticated, read-only catalogue quer
                  │                                             │ Header: Authorization: Bearer <jwt>
                  │                                             ▼
                  │                        ┌───────────────────────────────────────────┐
-                 │                        │ PublishingTracker.Agent (Phases 2–3)      │
+                 │                        │ PublishingTracker.Agent (Phases 2–4)      │
                  │                        │   ├── JwtBearerEvents (identity + iat)    │
                  │                        │   ├── Two-Stage AgentLoopRunner           │
+                 │                        │   ├── CompositeToolProvider:              │
+                 │                        │   │     ├── StreamableHttpMcpToolProvider │
+                 │                        │   │     └── RagSearchToolFactory (RAG)    │
                  │                        │   ├── EvidenceLedger + Validator          │
                  │                        │   └── PerRequestBearerHandler             │
                  │                        └────────────────────┬──────────────────────┘
@@ -395,10 +398,11 @@ Failures always return `status: "could_not_answer"`, empty `evidence`, host-reco
 
 ---
 
-## 7. Planned Phase 4 RAG Capabilities (`PublishingTracker.Rag`)
+## 7. Phase 4 RAG Capabilities (`PublishingTracker.Rag`)
 
-Phase 4 (specification ready at [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md)) extends the Agent Host with semantic document retrieval over publishing guidelines and user notes:
+Phase 4 (specification detailed at [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md); Steps 4.1–4.5 implemented) extends the Agent Host with semantic document retrieval over publishing guidelines and user notes:
 
-- **Host-Bound Tool:** `search_publishing_guidelines(string query, int topK = 5)` searches shared repo guides (`Publishing-Tracker/apps/api/docs/rag-corpus/`, `OwnerUserId = null`) and private caller notes (`OwnerUserId = authenticatedUserId`), embedded with `openai/text-embedding-3-small` (`1536` dimensions) and queried via PostgreSQL `pgvector` `<=>` cosine distance.
+- **Host-Bound Tool:** `search_publishing_guidelines(string query, int topK = 5)` searches shared repo guides (`Publishing-Tracker/apps/api/docs/rag-corpus/`, `OwnerUserId = null`) and private caller notes (`OwnerUserId = authenticatedUserId`), embedded with `openai/text-embedding-3-small` (`1536` dimensions) and queried via PostgreSQL `pgvector` `<=>` cosine distance (or in-memory cosine similarity fallback in test environments).
 - **Strict Tenant Binding (`ADR-009`):** `authenticatedUserId` is resolved strictly from the caller's validated JWT in host code and never appears in tool parameters or schemas.
-- **Linked Citations:** Retrieved chunks populate `evidence.documentSources` (`documentId`, `chunkId`, `claim`) and are verified by `AgentOutputValidator` against `EvidenceLedger`.
+- **Composite Tooling:** The agent dynamically presents both MCP catalogue tools (`find_titles_missing_metadata`, `get_title_details`) and the in-process RAG tool (`search_publishing_guidelines`) to the model via `CompositeToolProvider`.
+- **Linked Citations & Verification:** Retrieved chunks populate `evidence.documentSources` (`documentId`, `chunkId`, `claim`) and are cross-verified by `AgentOutputValidator` against `EvidenceLedger` (Step 4.6).

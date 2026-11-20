@@ -1,10 +1,10 @@
 # PublishingTracker MCP & Agent — Testing & Verification Guide
 
-This guide details how to verify, test, and troubleshoot both the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`) and **PublishingTracker.Agent** (`POST /api/agent/query`) across **Phases 0–3**, along with the planned **Phase 4** RAG test matrix.
+This guide details how to verify, test, and troubleshoot both the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`), **PublishingTracker.Agent** (`POST /api/agent/query`), and the **PublishingTracker.Rag** module across **Phases 0–4 (Steps 4.1–4.5 implemented)**.
 
 ---
 
-## 1. Test Architecture & Coverage (`96/96` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`106/106` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
@@ -12,7 +12,8 @@ This guide details how to verify, test, and troubleshoot both the **PublishingTr
 | `Phase1McpAndCatalogueTests` | Phase 1 Hosted `/mcp` & REST parity | `13` *(executions across 8 methods)* | Real `ModelContextProtocol.Client.McpClient` over Streamable HTTP against `TestWebAppFactory` + `TwoUserSeedCatalog` |
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
-| **Total Implemented CI Suite** | **Phases 0–3** | **`96`** | **100% deterministic offline execution** |
+| `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 Steps 4.1–4.5 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, and Composite Provider Isolation | `10` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
+| **Total Implemented CI Suite** | **Phases 0–4 (Steps 4.1–4.5)** | **`106`** | **100% deterministic offline execution** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -47,7 +48,7 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–3 — `96/96` Passing)
+### Running All Implemented Tests (Phases 0–4 Steps 4.1–4.5 — `106/106` Passing)
 Run the full solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -58,7 +59,7 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 
 **Expected Output:**
 - `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
-- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 42, Skipped: 0, Total: 42`
+- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 52, Skipped: 0, Total: 52` (including `10/10` Phase 4 RAG tests)
 
 ### Running Filtered Suites by Phase
 
@@ -71,6 +72,9 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore -
 
 # Phase 3: Linked EvidenceLedger, Stage 2 repair & strict output validation (22 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase3EvidenceAndValidationTests"
+
+# Phase 4: RAG VectorMath, MarkdownChunker, Ingestion, Embeddings, Retrieval, and Composite Tool Provider (10 tests)
+dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase4RagRetrievalAndIsolationTests"
 ```
 
 *(Note: `Phase1McpAndCatalogueTests` contains 8 test methods, with `McpClient_InvalidArguments_ReturnsActionableErrors` running as an xUnit theory with 6 test cases, totaling 13 executions.)*
@@ -297,20 +301,23 @@ All 42 Agent tests run offline with zero API keys or outbound network traffic vi
 
 ---
 
-## 8. Planned Phase 4 RAG Test Matrix (`16` Scenarios)
+## 8. Phase 4 RAG Test Matrix (`16` Total Scenarios, `10/16` Implemented)
 
-Specified in [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md) (`Phase4RagRetrievalAndIsolationTests.cs`, offline via `DeterministicTestEmbeddingGenerator`, bringing total solution suite to `112/112` tests):
+Specified in [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md) (`Phase4RagRetrievalAndIsolationTests.cs`, offline via `DeterministicTestEmbeddingGenerator` and `TestWebAppFactory`/EF Core doubles):
 
-1. `VectorMath_ValidatesDimensions_ComputesCosineDistance_AndFormatsSqlLiterals` *(Step 4.1)*
-2. `MarkdownChunker_SplitsHeadingsDeterministically_AssignsStableChunkIds_AndComputesContentHash` *(Step 4.2)*
-3. `MarkdownChunker_OversizedSection_SplitsWithBoundedWindowAndOverlap` *(Step 4.2)*
-4. `MarkdownChunker_FencedCodeBlocksWithHashComments_AndEmptySections_HandledSafely` *(Step 4.2)*
-5. `RagIngestion_IdempotentUpsert_UpdatesChangedChunks_AndRemovesStaleChunksOnVersionUpdate` *(Step 4.3)*
-6. `RagIngestion_EmbeddingFailureMidDocument_LeavesExistingChunksUntouched` *(Step 4.3)*
-7. `AIProviderSetup_CreateEmbeddingGenerator_ConfiguresEndpointAndOpenRouterPrivacyHeaders` *(Step 4.4)*
-8. `RagSearchTool_SchemaInspection_ExposesOnlyQueryAndTopK_NeverUserIdOrTenantParameters` *(Step 4.5)*
-9. `RagSearchTool_TwoUserIsolation_ReturnsSharedGuidelinesAndCallerNotes_NeverOtherUsersNotes` *(Step 4.5)*
-10. `CompositeToolProvider_UnauthenticatedCaller_AndDownstreamFailure_DisposesMcpSessionCleanly` *(Step 4.5)*
+### Implemented & Passing Tests (`10/10`):
+1. `VectorMath_ValidatesDimensions_ComputesCosineDistance_AndFormatsSqlLiterals` *(Step 4.1)* — Verifies 1536 dimension check, unit normalization, cosine distance bounds [0, 2], and PostgreSQL `<=>` vector formatting.
+2. `MarkdownChunker_SplitsHeadingsDeterministically_AssignsStableChunkIds_AndComputesContentHash` *(Step 4.2)* — Verifies heading chunking, SHA-256 hash stability, and deterministic `{docId}#c{index}` IDs.
+3. `MarkdownChunker_OversizedSection_SplitsWithBoundedWindowAndOverlap` *(Step 4.2)* — Verifies bounded 1,000 char / 1,500 UTF-8 byte chunking with 150 char sliding overlap.
+4. `MarkdownChunker_FencedCodeBlocksWithHashComments_AndEmptySections_HandledSafely` *(Step 4.2)* — Verifies `# comments` inside triple-backtick fences do not split headers, and empty sections are ignored.
+5. `RagIngestion_IdempotentUpsert_UpdatesChangedChunks_AndRemovesStaleChunksOnVersionUpdate` *(Step 4.3)* — Verifies unchanged content hashes are not re-embedded, and stale chunks from older versions are deleted.
+6. `RagIngestion_EmbeddingFailureMidDocument_LeavesExistingChunksUntouched` *(Step 4.3)* — Verifies transactional rollback/safety if embedding generation fails mid-document.
+7. `AIProviderSetup_CreateEmbeddingGenerator_ConfiguresEndpointAndOpenRouterPrivacyHeaders` *(Step 4.4)* — Verifies OpenRouter privacy headers (`HTTP-Referer`, `X-Title`), `data_collection: "deny"`, and OpenTelemetry without sensitive data.
+8. `RagSearchTool_SchemaInspection_ExposesOnlyQueryAndTopK_NeverUserIdOrTenantParameters` *(Step 4.5)* — Verifies tool schema exposes only `(string query, int topK = 5)` and strictly hides `userId` from model schemas.
+9. `RagSearchTool_TwoUserIsolation_ReturnsSharedGuidelinesAndCallerNotes_NeverOtherUsersNotes` *(Step 4.5)* — Verifies caller with `userId = 1` receives shared guidelines (`OwnerUserId = null`) and their own private notes, but never User 2's notes.
+10. `CompositeToolProvider_UnauthenticatedCaller_AndDownstreamFailure_DisposesMcpSessionCleanly` *(Step 4.5)* — Verifies invalid/unauthenticated caller (`userId <= 0`) is blocked prior to downstream MCP queries, and inner MCP session is disposed cleanly on error.
+
+### Planned for Step 4.6 (`6` Scenarios):
 11. `RagSearchTool_InvalidQueryOrTopKArguments_FailsWithStructuredError` *(Step 4.6)*
 12. `EvidenceLedger_IndexesSearchPublishingGuidelinesOutput_AndFailsClosedOnMalformedPayload` *(Step 4.6)*
 13. `Stage2_CombinedCatalogueAndDocumentCitations_VerifiedAgainstEvidenceLedger_Succeeds` *(Step 4.6)*
