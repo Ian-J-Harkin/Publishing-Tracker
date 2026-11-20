@@ -51,9 +51,12 @@ Provide a production-ready, security-hardened containerization and deployment ar
 2. **Minimal Surface & Non-Root Execution:**
    - Docker images build on `.NET 10` SDK and execute on minimal, hardened `.NET 10 Chiseled` runtime images (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`), running strictly under non-root users (`UID 1654:1654`) with read-only root filesystems and a mounted volume/tmpfs for `/tmp` and `temp_uploads`.
 3. **Container-to-Container Transport Policy (Decision 1 Resolution):**
-   - **Code Changes in Step 6.2:** Add `AllowInsecureInternalHttp` (bool) to `AIProviderOptions.cs` and update `IsMcpEndpointSecure()` / `PerRequestBearerHandler.cs` to allow plain HTTP *only* if `AllowInsecureInternalHttp == true` AND the endpoint host matches an allowlisted internal container host (e.g., `api`).
-   - **Production Guard:** `IsMcpEndpointSecure()` and `Program.cs` startup validation **fail fast and abort startup** if `AllowInsecureInternalHttp == true` while `environment.IsProduction()`.
-   - **Production Requirement:** In production, container-to-container calls must use real TLS (`https://...`), provided by service mesh mTLS or TLS termination.
+   - **Code Changes in Step 6.2:**
+     - Add `AllowInsecureInternalHttp` (bool) to `AIProviderOptions.cs`.
+     - Consolidate the TLS-allowlist logic into a single authoritative shared helper (e.g. `AIProviderOptions.IsEndpointTrusted(Uri endpoint, IHostEnvironment env)`), eliminating drift between `IsMcpEndpointSecure()` in `Program.cs` and `PerRequestBearerHandler.ValidateDestination()`.
+     - Allow plain HTTP *only* if `AllowInsecureInternalHttp == true` AND the endpoint host matches an allowlisted internal container host (e.g., `api`), AND `environment.IsDevelopment() || environment.IsEnvironment("Testing")`.
+   - **Production & Staging Guard:** Following the strict allow-list convention in `PerRequestBearerHandler.cs`, startup validation **fails fast and aborts startup** if `AllowInsecureInternalHttp == true` in any environment **outside Development or Testing** (blocking `Production`, `Staging`, etc.).
+   - **Production Requirement:** In production and staging, container-to-container calls must use real TLS (`https://...`), provided by service mesh mTLS or TLS termination.
 4. **Database Migration Lifecycle (Decision 2 Resolution):**
    - **Code Changes in Step 6.2:** In `PublishingTracker.Api/Program.cs`, replace the hardcoded `app.Environment.IsDevelopment()` migration check with `builder.Configuration.GetValue<bool>("Database:MigrateOnStartup", builder.Environment.IsDevelopment())` so that `Database:MigrateOnStartup=true` explicitly governs startup migrations in any environment.
    - **Startup Synchronization:** `PublishingTracker.Agent` does **not** execute schema migrations. On startup, the Agent verifies database readiness; if required tables (`rag_document_chunks`) are absent, it fails fast with a clear diagnostic message.
@@ -62,7 +65,7 @@ Provide a production-ready, security-hardened containerization and deployment ar
    - **Code Changes in Step 6.3:** 
      - In `PublishingTracker.Api/Program.cs`: Evolve the existing flat `MapHealthChecks("/health")` to tagged endpoints: `/health/live` (process responsiveness) and `/health/ready` (deep check: database connectivity + `temp_uploads` writability).
      - In `PublishingTracker.Agent/Program.cs`: Register `AddHealthChecks()` and map `/health/live` and `/health/ready` (checking database connectivity and a non-authenticated TCP ping/anonymous probe to the API).
-   - In chiseled containers (which lack curl/wget/shell), containers compile a tiny lightweight native C# health probe executable (or dotnet tool) `healthcheck` in the publish stage, invoked as `CMD ["/app/healthcheck"]`, or rely on orchestrator HTTP probes (Docker 26+ / Kubernetes / ACA).
+   - In chiseled containers (which lack curl/wget/shell), a dedicated lightweight standalone console tool `tools/PublishingTracker.HealthProbe` is compiled during the build stage and copied to `/app/healthcheck` (with executable permissions), invoked via `CMD ["/app/healthcheck"] http://localhost:8080/health/ready`.
 6. **Graceful Shutdown & Budget Alignment:**
    - Align shutdown durations: `HostOptions.ShutdownTimeout` is set to `75s` (exceeding `AgentLoopOptions.OverallTimeout = 60s`), and compose `stop_grace_period` is set to `80s` so in-flight queries complete cleanly without mid-turn SIGKILL corruption.
 7. **RAG Corpus Packaging:**
@@ -77,10 +80,12 @@ Both services utilize Docker multi-stage builds rooted in the solution directory
 
 1. **Build Stage (`mcr.microsoft.com/dotnet/sdk:10.0`):**
    - Restores dependencies using solution-level `Directory.Build.props`, `Directory.Packages.props`, and `.csproj` files to optimize Docker cache layer reuse.
-   - Compiles with `-c Release` and `/p:UseSharedCompilation=false`.
+   - Compiles target service with `-c Release` and `/p:UseSharedCompilation=false`.
+   - Compiles `tools/PublishingTracker.HealthProbe` into `/build/healthcheck` as an AOT or trimmed lightweight console executable.
 2. **Publish Stage:**
    - Executes `dotnet publish` targeting `net10.0` with `--no-restore` and `-o /app/publish`.
    - Copies `docs/rag-corpus/` into `/app/publish/docs/rag-corpus/` for the Agent.
+   - Copies `/build/healthcheck` into `/app/publish/healthcheck`.
 3. **Runtime Stage (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`):**
    - Copies `/app/publish` to `/app`.
    - Runs as non-root user `app` (`1654:1654`).
@@ -209,19 +214,21 @@ Step 6.4: Environment Configuration, Secret Management & Operations Runbook
 ## 5. Work Package Specifications
 
 ### Step 6.1 — Dockerfiles, .dockerignore & Multi-Stage Images
-- **Goal:** Create standardized, secure Dockerfiles for both `.NET 10` ASP.NET Core services.
+- **Goal:** Create standardized, secure Dockerfiles for both `.NET 10` ASP.NET Core services, plus a shared health probe.
 - **Deliverables:**
   - `Publishing-Tracker/apps/api/src/PublishingTracker.Api/Dockerfile`
   - `Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Dockerfile`
+  - `Publishing-Tracker/apps/api/tools/PublishingTracker.HealthProbe/` (single-file minimal C# console tool using `HttpClient` to probe HTTP status codes and exit 0 or 1)
   - `Publishing-Tracker/apps/api/.dockerignore` (excluding build caches, `.vs/`, `.cr/`, but retaining `docs/rag-corpus/`)
   - Images run under UID 1654:1654 without root permissions.
 
 ### Step 6.2 — Compose Stack, Migration Gating & Config Alignment
 - **Goal:** Expand `docker-compose.yml` to spin up the complete local environment and verify service discovery.
 - **Deliverables:**
-  - Multi-container `docker-compose.yml` using correct `AIProvider:McpEndpoint` configuration.
+  - Multi-container `docker-compose.yml` using correct `AIProvider:McpEndpoint` configuration and `stop_grace_period: 80s`.
+  - Consolidated TLS allowlist helper `AIProviderOptions.IsEndpointTrusted(...)` shared between `Program.cs` and `PerRequestBearerHandler.cs`.
   - Startup synchronization: Api applies EF migrations; Agent waits for Api healthy check.
-  - Verification that Agent queries resolve catalogue via internal Docker network (`http://api:8080/mcp`) when permitted.
+  - Verification that Agent queries resolve catalogue via internal Docker network (`http://api:8080/mcp`) when permitted in Development/Testing.
 
 ### Step 6.3 — Health Probes, Shutdown Budgets & Security Guards
 - **Goal:** Equip services with Kubernetes/Container Apps compatible health checks and shutdown budgets.
