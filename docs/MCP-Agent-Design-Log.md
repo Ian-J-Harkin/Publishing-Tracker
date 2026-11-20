@@ -8,7 +8,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 74/74 total passing)
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
-- [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — 📝 **Spec Ready** (4 incremental steps planned)
+- [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 151/151 total passing)
 - [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — 📝 **Spec Ready** (4 incremental steps planned)
 
 **Operational & Integration Guides:**
@@ -99,6 +99,22 @@ This log records Architecture Decision Records (ADRs), design Q&As, and concrete
   1. **Non-model-controlled tenant identity:** Never include `userId` or tenant parameters in any `[McpServerTool]` or `AIFunctionFactory.Create` schema (fixing the initial `RagSearchTool` sketch that exposed `callerUserId`). Always bind `authenticatedUserId` from validated `HttpContext.User` / `ICurrentUserService` in host code outside the model-visible signature.
   2. **Dual loop budgets & payload caps:** Enforce both `MaxModelTurns` and `MaxTotalToolCalls` (incremented on every tool execution inside a multi-tool response), plus maximum serialized tool-result size.
   3. **Layered evals:** Keep most of the 15–25 deterministic eval cases as fast in-memory `ScriptedChatClient` + stub-tool unit tests for orchestration/provenance, run a focused PostgreSQL + `/mcp` + Agent integration subset (`TestWebAppFactory`) for two-user isolation and real HTTP/DB plumbing, and keep live OpenRouter/Claude smoke tests opt-in (`[Trait("Category", "LiveEval")]`).
+
+### ADR-010: Multi-Provider Live Evaluation, Rate-Limited Backoff, Fail-Fast Timeouts, and Database Port Isolation
+- **Status:** Accepted (Phase 5 Implementation)
+- **Context:**
+  - Live smoke evaluation against remote models across public routers (such as Llama 3.3 70B via OpenRouter) produced extreme queuing latency (exceeding 10 minutes), leading to test stalls.
+  - High-concurrency or rapid consecutive calls to LLM endpoints encountered HTTP 429 rate limits.
+  - Models frequently omitted optional pagination arguments (`page`, `pageSize`) when calling `find_titles_missing_metadata`, causing `AIFunctionFactory` delegate reflection failures.
+  - Pure catalogue queries occasionally led models to hallucinate document citations in `evidence.documentSources`.
+  - Local PostgreSQL test execution on Windows risked collision with native Windows PostgreSQL instances on default port 5432.
+- **Decision:**
+  1. **Provider Resolution & Priority:** Live evaluation dynamically prioritizes local Ollama (`qwen2.5-coder:7b` + `nomic-embed-text`) when available, defaults to Google Gemini Flash (`gemini-2.5-flash` via Google's OpenAI-compatible endpoint with `GEMINI_API_KEY`) for online evaluation to achieve sub-second execution, and retains OpenRouter as a fallback.
+  2. **Fail-Fast Timeouts & Bounded Exponential Retry:** Enforce strict per-call timeouts (15s) and overall test timeouts (30s). Attach a custom `RateLimitedRetryHandler` that intercepts HTTP 429 status codes and performs bounded exponential backoff with jitter (up to 3 retries).
+  3. **Parameter Normalization:** In `AgentLoopRunner`, normalize tool call arguments to automatically supply missing pagination parameters (`page = 1`, `pageSize = 20`) when calling `find_titles_missing_metadata`.
+  4. **Document Citation Discipline:** In `AgentPrompts`, explicitly instruct the model that when answering questions using only catalogue metadata without retrieving guideline documents, `evidence.documentSources` must remain empty.
+  5. **PostgreSQL Port Isolation:** Run local Docker PostgreSQL on host port **5435** (`5435:5432`), configurable via `TEST_POSTGRES_CONNECTION`.
+- **Consequences:** Eliminates live test hangs, guarantees test resilience against intermittent provider rate limits, prevents tool reflection errors, and completely isolates test PostgreSQL state from host services.
 
 ---
 
@@ -503,14 +519,16 @@ public ValidationResult Validate(string? rawJson, EvidenceLedger ledger)
 }
 ```
 
-### 6. Layered Evaluation Strategy (`PublishingTracker.Evals`)
+### 6. Layered Evaluation Strategy (`PublishingTracker.Evals` — 39 Tests)
 
-1. **Unit Layer (`Unit/OrchestrationEvalTests.cs`) — ~12–18 fast in-memory cases:**
-   Uses `ScriptedChatClient` + in-memory stub `AIFunction` tools to test `MaxModelTurns`, `MaxTotalToolCalls` (including single turns emitting >N calls), payload size truncation, normalized repeat-call halting, Stage 2 JSON repair retries, linked Evidence Ledger rejections (swapped `bookId`/`editionId`, unreturned fields, swapped `documentId`/`chunkId`), and prompt-injection payloads.
-2. **Integration Layer (`Integration/AgentMcpIsolationTests.cs`) — ~4–6 real DB/HTTP cases:**
-   Uses `TestWebAppFactory` (PostgreSQL + `pgvector`) + real `/mcp` Streamable HTTP + `PublishingTracker.Agent` to test two-user isolation (User A vs. User B across both MCP tools and RAG chunks), pagination (`hasMore`), missing-`iat` / expired JWT rejection, and real multi-step tool execution.
-3. **Provider & Live Smoke Layer (`Routing/ProviderSetupTests.cs` + `Live/LiveSmokeEvalTests.cs`):**
-   `RecordingHttpMessageHandler` tests run in CI with zero spend; `[Trait("Category", "LiveEval")]` tests run opt-in against pinned OpenRouter + Claude credentials to confirm real tool-calling and Stage 2 structured output compatibility.
+Phase 5 implements a 3-layer verification harness fully documented in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md):
+
+1. **Layer 1: Deterministic Golden Scorecards ([Layer1DeterministicEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer1DeterministicEvalTests.cs) — 24 tests):**
+   Runs 100% offline with zero token spend using `ScriptedChatClient`, `RetrievalEvaluator` (Recall@k, MRR, NDCG@k), `ProvenanceEvaluator` (linked `bookId`, `editionId`, `fields`, `documentId`, `chunkId` checks), and `GroundingEvaluator` (negative constraint verification, prompt injection defense) across 5 golden author personas.
+2. **Layer 2: PostgreSQL + pgvector Integration ([Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) — 12 tests):**
+   Runs against a live PostgreSQL database equipped with the `vector` extension. Connects to local Docker PostgreSQL on port **5435** (`TEST_POSTGRES_CONNECTION`) to isolate tests from any native Windows PostgreSQL service on 5432. Proves SQL-level `<=>` cosine distance parity against C# `VectorMath.CosineDistance`, non-model-controlled tenant chunk isolation, and 1536-dimension schema validation.
+3. **Layer 3: Live Smoke Evals ([LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) — 3 tests, `Category=LiveEval`):**
+   Opt-in live end-to-end evaluation supporting local Ollama (`qwen2.5-coder:7b`), Google Gemini Flash (`gemini-2.5-flash`), and OpenRouter (`OPENROUTER_API_KEY`). Hardened with fail-fast timeouts (`15s` per-call, `30s` overall), `RateLimitedRetryHandler` for HTTP 429 backoff, automatic argument normalization (`page=1`, `pageSize=20`), and pure catalogue citation hygiene.
 
 ---
 

@@ -1,8 +1,8 @@
 # Phase 5 — Expanded Design: Layered Evaluation Strategy & Continuous Verification
 
 > [!NOTE]
-> **Status: Specification & Design Only — Unimplemented.**
-> Code implementation has not begun. The codebase is currently at Phase 4 (112/112 tests passing across Phases 0–4).
+> **Status: Implemented & Verified.**
+> All 4 steps (Steps 5.1 through 5.4) are complete. `PublishingTracker.Evals` contains 39 passing tests (151 tests passing across the solution). Layer 1 deterministic tests, Layer 2 real PostgreSQL + `pgvector` multi-tenant integration tests, and Layer 3 opt-in live smoke tests (`Category=LiveEval`) are fully implemented and verified.
 
 Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md), [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md), [Phase-0-Baseline-and-Contracts.md](Phase-0-Baseline-and-Contracts.md), [Phase-1-Read-Only-Catalogue-and-MCP.md](Phase-1-Read-Only-Catalogue-and-MCP.md), [Phase-2-Agent-Loop-and-Tracing.md](Phase-2-Agent-Loop-and-Tracing.md), [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md), and [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md).
 

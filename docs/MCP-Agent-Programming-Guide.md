@@ -21,7 +21,7 @@ Publishing-Tracker/apps/api/
   tests/
     PublishingTracker.Api.Tests/        # Phase 0 baseline + Phase 1 API & Streamable HTTP MCP integration tests (54 tests)
     PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (58 tests)
-    PublishingTracker.Evals/            # Phase 5 (Spec Ready): Multi-tiered continuous evaluation harness
+    PublishingTracker.Evals/            # Phase 5 (Complete): Multi-tiered continuous evaluation harness (39 tests)
   tools/
     PublishingTracker.HealthProbe/      # Phase 6 (Spec Ready): Standalone healthcheck probe for chiseled containers
 ```
@@ -35,7 +35,7 @@ Publishing-Tracker/apps/api/
 | `PublishingTracker.Rag` | Vector math, markdown chunking, ingestion, and host-bound search tool | [VectorMath.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/VectorMath.cs), [MarkdownChunker.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/MarkdownChunker.cs), [RagIngestionService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagIngestionService.cs), [RagRetrievalService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagRetrievalService.cs), [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) |
 | `PublishingTracker.Api` | Maps `/api/books/*` REST routes and `/mcp` MCP transport | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs), [BookEndpoints.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/BookEndpoints.cs) |
 | `PublishingTracker.Agent` | Authenticated two-stage agent orchestrator, composite tool provider & output verification | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs), [AgentLoopRunner.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/AgentLoopRunner.cs), [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs), [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs), [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) |
-| `PublishingTracker.Evals` | 📝 *Phase 5 (Spec Ready)*: Continuous offline & live evaluation harness | [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md) |
+| `PublishingTracker.Evals` | ✅ *Phase 5 (Complete)*: Continuous offline & live evaluation harness (39 tests) | [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md) |
 | `PublishingTracker.HealthProbe` | 📝 *Phase 6 (Spec Ready)*: Minimal native HTTP health check probe for chiseled containers | [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) |
 
 ---
@@ -213,12 +213,16 @@ PublishingTracker.Agent (Program.cs)
 | **Stub MCP Tool Provider** | [StubToolProvider.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Doubles/StubToolProvider.cs) | `OpenSessionAsync` and `CreateTool` factory for deterministic tool stubs. |
 | **Phase 2 Agent & Provider Tests** | [AgentLoopTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/AgentLoopTests.cs) | 20 unit tests covering dual budgets, timeouts (including `toolToken.IsCancellationRequested`), canonical repeat-call detection, OpenTelemetry span privacy (`agent.prompt_version == "v1"`), `PerRequestBearerHandler` (rejecting multi-header smuggling & whitespace tokens), case-insensitive `AIProviderOptions.Validate()`, `AIProviderSetup_RoutingAndHeaderTests`, and `AIProviderOptions_ToString_RedactsApiKeys`. |
 | **Phase 3 Evidence & Validation Tests** | [Phase3EvidenceAndValidationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase3EvidenceAndValidationTests.cs) | 22 unit tests covering linked `EvidenceLedger` indexing (conditional `PlatformSummaries` fields, `get_title_details` `bookId` check, trimmed field citations), `CallToolResult` unwrapping, pagination sequence/pageSize invariants, scoped empty-search isolation (including humanized `"series number"`), strict JSON/byte bounds, Stage 1 turn-5 reservation, Stage 2 repair conversation ordering, and failure envelopes. |
+| **Phase 4 RAG Tests** | [Phase4RagRetrievalAndIsolationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase4RagRetrievalAndIsolationTests.cs) | 16 unit & integration tests covering VectorMath, MarkdownChunker heading and fenced-block handling, idempotent ingestion, provider privacy headers, tenant isolation, composite tooling, and prompt injection defense. |
+| **Phase 5 Layer 1 Deterministic Evals** | [Layer1DeterministicEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer1DeterministicEvalTests.cs) | 24 unit tests covering evaluation metrics (`RetrievalEvaluator`), link provenance verification (`ProvenanceEvaluator`), negative constraints and injection checks (`GroundingEvaluator`), and 5 golden author scenario scorecards. |
+| **Phase 5 Layer 2 pgvector Integration** | [Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) | 12 integration tests verifying PostgreSQL `vector` `<=>` distance parity with C# `VectorMath.CosineDistance`, multi-tenant chunk isolation, and dimension constraints using local Docker on port 5435. |
+| **Phase 5 Layer 3 Live Smoke Evals** | [LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) | 3 opt-in live tests covering multi-provider resolution (Ollama, Gemini 2.5 Flash, OpenRouter), fail-fast timeouts (15s/30s), bounded 429 retries (`RateLimitedRetryHandler`), tool parameter normalization, and full Stage 2 validation. |
 
 ---
 
 ## 7. Extension Points & Implemented Phase 4 Symbols (`PublishingTracker.Rag`)
 
-Phase 4 introduces semantic retrieval and composite tool provision (`Steps 4.1`–`4.5` implemented, `Step 4.6` pending):
+Phase 4 introduces semantic retrieval and composite tool provision (`Steps 4.1`–`4.6` Implemented & Verified):
 
 | Symbol / Function | Module / File Location | Status / Responsibility |
 |---|---|---|
@@ -232,3 +236,19 @@ Phase 4 introduces semantic retrieval and composite tool provision (`Steps 4.1`�
 | `RagSearchToolFactory` (`search_publishing_guidelines`) | [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) | ✅ Implemented (Step 4.5). Host-bound `AIFunction` exposing only `(string query, int topK = 5)` while capturing positive integer `authenticatedUserId` outside the model schema. |
 | `CompositeToolProvider` | [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs) | ✅ Implemented (Step 4.5). Validates caller `userId > 0` before opening `/mcp`, disposes `/mcp` safely on failure, and merges `/mcp` tools with `RagSearchTool`. |
 | `EvidenceLedger` RAG Indexing, Pre-Call Validation & Stage 2 Document Citation Verification | [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs) & [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) | ✅ Implemented (Step 4.6). Pre-call argument validation (`TryValidateToolRequest`), two-pass fail-closed hit indexing (`TryIndexRagSearchResult`), `_ragSearchesExecuted` empty-search protection, and Stage 2 prompt injection defense. |
+
+---
+
+## 8. Phase 5 Evaluation Architecture & Provider Symbols (`PublishingTracker.Evals`)
+
+Phase 5 delivers a continuous verification suite across three testing layers:
+
+| Symbol / Component | File Location | Status / Responsibility |
+|---|---|---|
+| `RetrievalEvaluator` | [RetrievalEvaluator.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Metrics/RetrievalEvaluator.cs) | ✅ Implemented (Step 5.1). Computes Recall@k, Mean Reciprocal Rank (MRR), and NDCG@k metrics against golden and retrieved chunk sequences. |
+| `ProvenanceEvaluator` | [ProvenanceEvaluator.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Metrics/ProvenanceEvaluator.cs) | ✅ Implemented (Step 5.1). Validates structural catalogue and document evidence links against an `EvidenceLedger`, detecting uncorroborated IDs and unreturned fields. |
+| `GroundingEvaluator` | [GroundingEvaluator.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Metrics/GroundingEvaluator.cs) | ✅ Implemented (Step 5.1). Evaluates model answer grounding against retrieved evidence, verifies negative constraints, and flags potential prompt injections. |
+| `GoldenScenarioRunner` & `GoldenPersona` | [GoldenScenarioRunner.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Scenarios/GoldenScenarioRunner.cs) | ✅ Implemented (Step 5.1). Executes 5 offline golden persona evaluation runs with deterministic scoring and threshold asserts. |
+| `Layer2PgVectorIntegrationTests` | [Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) | ✅ Implemented (Step 5.2). Tests real PostgreSQL `pgvector` `<=>` distance parity against `VectorMath.CosineDistance` and verifies multi-tenant chunk isolation (Docker port 5435). |
+| `RateLimitedRetryHandler` | [RateLimitedRetryHandler.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Live/RateLimitedRetryHandler.cs) | ✅ Implemented (Step 5.4). Delegating HTTP handler that intercepts HTTP 429 status codes and performs bounded exponential backoff with jitter (up to 3 retries). |
+| Multi-Provider Resolution (`LiveSmokeEvalTests`) | [LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) | ✅ Implemented (Step 5.4). Dynamically resolves `ollama` (local), `gemini` (`gemini-2.5-flash`), or `openrouter` with fail-fast timeouts and parameter normalization. |

@@ -4,7 +4,7 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 
 ---
 
-## 1. Test Architecture & Coverage (`112/112` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`151/151` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
@@ -13,8 +13,8 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
-| **Total Implemented CI Suite** | **Phases 0–4** | **`112`** | **100% deterministic offline execution** |
-| `PublishingTracker.Evals` | 📝 *Phase 5 (Spec Ready)*: Multi-tiered evaluation harness | *Planned* | Offline deterministic evaluator + real pgvector integration + opt-in live smoke evals |
+| `PublishingTracker.Evals` | Phase 5 Layer 1 (Deterministic golden scorecards), Layer 2 (Real pgvector operator parity & multi-tenant isolation), Layer 3 (Opt-in live smoke evals) | `39` | Layer 1 deterministic evaluators + Layer 2 PostgreSQL test fixture (port 5435/env) + Layer 3 opt-in live smoke tests |
+| **Total Implemented CI Suite** | **Phases 0–5** | **`151`** | **100% deterministic offline & integration execution (Live tests opt-in)** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -49,7 +49,7 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–4 — `112/112` Passing)
+### Running All Implemented Tests (Phases 0–5 — `151/151` Passing)
 Run the full solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -61,6 +61,7 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 **Expected Output:**
 - `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
 - `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 58, Skipped: 0, Total: 58` (including all `16/16` Phase 4 RAG tests)
+- `PublishingTracker.Evals.dll`: `Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39` (Layer 1 deterministic scorecards + Layer 2 real pgvector integration; Layer 3 live smoke tests run conditionally/skip when no keys set)
 
 ### Running Filtered Suites by Phase
 
@@ -73,6 +74,18 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore -
 
 # Phase 3: Linked EvidenceLedger, Stage 2 repair & strict output validation (22 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase3EvidenceAndValidationTests"
+
+# Phase 4: RAG VectorMath, chunking, ingestion, retrieval, and composite tool provider (16 tests)
+dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase4RagRetrievalAndIsolationTests"
+
+# Phase 5: Continuous evaluation harness (Deterministic Layer 1 + Real pgvector Layer 2)
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --no-restore --filter "Category!=LiveEval"
+
+# Phase 5: Opt-in Live Smoke Evals (requires live AI provider credentials)
+$env:RUN_LIVE_EVALS="true"
+$env:GEMINI_API_KEY="<your-gemini-api-key>"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+```
 
 # Phase 4: RAG VectorMath, MarkdownChunker, Ingestion, Embeddings, Retrieval, Composite Tool Provider & Injection Defense (16 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase4RagRetrievalAndIsolationTests"
@@ -322,3 +335,93 @@ Specified in [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvec
 14. `Stage2_StaleOrUnreturnedDocumentChunkCitation_RejectedAndRepairedOnRetry` *(Step 4.6)* — Verifies unreturned chunk citations and case mismatches fail closed.
 15. `PromptInjection_InRetrievedChunk_RequestingUnknownToolOrFabricatedCitation_IsBlockedByHostGuards` *(Step 4.6)* — Verifies injected directives attempting to invoke unapproved tools or fabricate citations are blocked by host guards (`UNKNOWN_TOOL:`).
 16. `RagSearchTool_EmptyHitsSearch_BlocksUncitedAnsweredDraft_EvenWhenCatalogueSearchWasEmpty` *(Step 4.6)* — Verifies empty RAG search prevents uncited `"answered"` status, requiring evidence citations whenever guideline searches occurred.
+
+---
+
+## 9. Phase 5 Layered Evaluation Suite (`PublishingTracker.Evals` — 39 Tests)
+
+Specified in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md), the `PublishingTracker.Evals` project provides a continuous, multi-tiered verification harness across three layers:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        PublishingTracker.Evals                         │
+├────────────────────────────────────────────────────────────────────────┤
+│ Layer 1: Deterministic Golden Scorecards (24 tests)                    │
+│   ├── RetrievalEvaluator (Recall@k, MRR, NDCG@k)                       │
+│   ├── ProvenanceEvaluator (Catalogue & Document link validation)       │
+│   ├── GroundingEvaluator (Negative constraint & hallucination checks)  │
+│   └── Offline Golden Scenarios ($0 cost, 100% reproducible)            │
+├────────────────────────────────────────────────────────────────────────┤
+│ Layer 2: PostgreSQL & pgvector Integration (12 tests)                  │
+│   ├── Real pgvector <=> cosine distance operator parity                │
+│   ├── Strict multi-tenant isolation (User 1 vs User 2 vs Shared)       │
+│   ├── Dimension & schema bounds verification                           │
+│   └── Docker PostgreSQL port 5435 (TEST_POSTGRES_CONNECTION)          │
+├────────────────────────────────────────────────────────────────────────┤
+│ Layer 3: Opt-In Live Smoke Evals (3 tests, Category=LiveEval)          │
+│   ├── Multi-provider support: Ollama (local), Gemini 2.5 Flash,        │
+│   │   OpenRouter (Anthropic/Meta)                                      │
+│   ├── Fail-fast timeouts (15s per-call, 30s overall)                   │
+│   ├── RateLimitedRetryHandler (bounded 429 exponential backoff)        │
+│   └── Parameter normalization for tool delegates                       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### 9.1 Layer 1 Deterministic Evaluator Tests ([Layer1DeterministicEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer1DeterministicEvalTests.cs) — 24 Tests)
+Runs 100% offline with zero external network dependencies or token consumption:
+- **Retrieval Metrics:** Verifies exact computation of Recall@k, Mean Reciprocal Rank (MRR), and Normalized Discounted Cumulative Gain (NDCG@k) against synthetic and golden benchmark rankings.
+- **Provenance Verification:** Tests `ProvenanceEvaluator` with exact `(bookId, editionId, fields)` catalogue links and `(documentId, chunkId)` document citations, enforcing strict rejection of fabricated IDs, unreturned fields, and cross-document link errors.
+- **Grounding & Hallucination Defense:** Tests `GroundingEvaluator` with negative constraints, verifying that empty searches block uncited answers, and checking prompt injection payload detection.
+- **Scenario Scorecards:** Executes golden end-to-end evaluation runs across 5 synthetic author personas (`IncompleteAudiobookAuthor`, `CompleteCatalogueAuthor`, `FormattingGuidelineAuthor`, `MultiTenantCrossAuthor`, `AdversarialPromptInjection`).
+
+### 9.2 Layer 2 PostgreSQL & pgvector Integration Tests ([Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) — 12 Tests)
+Runs against a live PostgreSQL database equipped with the `vector` extension:
+- **Port 5435 Setup:** Local Docker runs PostgreSQL on host port **5435** (`5435:5432` container mapping) to avoid port collision with any native Windows PostgreSQL service running on standard port 5432.
+- **Connection Configuration:** Configurable via environment variable:
+  ```powershell
+  $env:TEST_POSTGRES_CONNECTION="Host=localhost;Port=5435;Database=publishingtracker_evals;Username=postgres;Password=postgres"
+  ```
+  If no PostgreSQL instance is reachable at the target connection, tests skip cleanly with an informative skip reason.
+- **Integration Coverage:**
+  - `pgvector <=> Cosine Operator Parity`: Proves that SQL-executed `<=>` vector distance strictly matches C# `VectorMath.CosineDistance` within float epsilon tolerance.
+  - `Multi-Tenant Isolation`: Confirms User 1 cannot retrieve User 2's private chunks, while both users retrieve shared guidelines (`OwnerUserId == null`).
+  - `Dimension Enforcement`: Confirms attempts to persist non-1536 dimension vectors are rejected by PostgreSQL schema constraints.
+
+### 9.3 Layer 3 Opt-In Live Smoke Evals ([LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) — 3 Tests)
+Marked with `[Trait("Category", "LiveEval")]`. These tests are opt-in and execute real end-to-end LLM tool-calling and structured Stage 2 output validation.
+
+#### Supported Providers & Priority
+1. **Local Ollama (First Priority if available):**
+   - Configured via `OLLAMA_ENDPOINT` (defaults to `http://localhost:11434/v1`) or `LIVE_EVAL_PROVIDER=ollama`.
+   - Default model: `qwen2.5-coder:7b`.
+   - Embeddings: `nomic-embed-text`.
+2. **Google Gemini Flash (Recommended for Online Live Evals):**
+   - Configured via `GEMINI_API_KEY` (or `GOOGLE_API_KEY`).
+   - Default model: `gemini-2.5-flash` via Google's Generative Language OpenAI-compatible endpoint (`https://generativelanguage.googleapis.com/v1beta/openai`).
+   - Fast token generation and high concurrency limits.
+3. **OpenRouter:**
+   - Configured via `OPENROUTER_API_KEY`.
+   - Default model: `anthropic/claude-sonnet-4` (or `OPENROUTER_MODEL_NAME`).
+   - Endpoint: `https://openrouter.ai/api/v1` with mandatory privacy headers (`data_collection: deny`, `HTTP-Referer`, `X-Title`).
+
+#### Live Resilience & Guardrails
+- **Fail-Fast Timeouts:** Live evals enforce strict per-call timeouts (`15s`) and overall turn timeouts (`30s`) to prevent runaway queued requests.
+- **Bounded 429 Retry Handler:** `RateLimitedRetryHandler` automatically intercepts HTTP 429 responses from LLM endpoints, applying bounded exponential backoff with jitter (up to 3 retries) before failing cleanly.
+- **Parameter Normalization:** Delegates automatically inject default values (e.g., `page=1`, `pageSize=20`) if the model omits optional query arguments.
+- **Pure Catalogue Citation Discipline:** In queries referencing only catalog items, models are instructed that `evidence.documentSources` must remain empty if no guideline chunks were retrieved, preventing uncorroborated document hallucinations.
+
+#### Execution Commands
+```powershell
+# Run only deterministic & integration evals (offline, default in CI)
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category!=LiveEval"
+
+# Run live smoke evals with Gemini Flash
+$env:RUN_LIVE_EVALS="true"
+$env:GEMINI_API_KEY="<your-gemini-key>"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+
+# Run live smoke evals with local Ollama
+$env:RUN_LIVE_EVALS="true"
+$env:LIVE_EVAL_PROVIDER="ollama"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+```

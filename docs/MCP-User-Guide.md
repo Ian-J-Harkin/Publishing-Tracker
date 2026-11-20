@@ -318,8 +318,11 @@ Configure `PublishingTracker.Agent` using user secrets, environment variables, o
 }
 ```
 
-- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
-- **OpenRouter Privacy Headers:** Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
+- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"` / `"gemini"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via environment variables or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
+  - **Local Ollama:** Set `AIProvider:Type="ollama"`, or configure `OLLAMA_ENDPOINT` (defaults to `http://localhost:11434/v1`) and `OLLAMA_MODEL_NAME` (defaults to `qwen2.5-coder:7b`). Zero cloud spend and fully local.
+  - **Google Gemini Flash (Recommended for Cloud Live Evals):** Set `AIProvider:Type="openai"` with `Endpoint="https://generativelanguage.googleapis.com/v1beta/openai"`, `ModelId="gemini-2.5-flash"`, and provide `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
+  - **OpenRouter:** Set `AIProvider:Type="openrouter"`, `Endpoint="https://openrouter.ai/api/v1"`, and provide `OPENROUTER_API_KEY`. Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
+- **Resilience & Timeouts:** Configure `PerCallTimeout` (e.g., 15s–20s) and `OverallTimeout` (e.g., 30s–60s). `PublishingTracker.Evals` attaches `RateLimitedRetryHandler` to intercept HTTP 429 rate-limiting responses and back off exponentially.
 - **Trusted MCP Endpoint:** `McpEndpoint` must point to an absolute `/mcp` URL over HTTPS (loopback HTTP is permitted only in `Development` or `Testing`).
 
 ### 6.2 Authentication Requirements at `/api/agent/query`
@@ -398,11 +401,43 @@ Failures always return `status: "could_not_answer"`, empty `evidence`, host-reco
 
 ---
 
-## 7. Phase 4 RAG Capabilities (`PublishingTracker.Rag`)
+## 7. Phase 4 RAG Capabilities (`PublishingTracker.Rag` — Implemented & Verified)
 
-Phase 4 (specification detailed at [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md); Steps 4.1–4.5 implemented) extends the Agent Host with semantic document retrieval over publishing guidelines and user notes:
+Phase 4 (specification detailed at [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md); Steps 4.1–4.6 implemented and verified with 16 tests) extends the Agent Host with semantic document retrieval over publishing guidelines and user notes:
 
 - **Host-Bound Tool:** `search_publishing_guidelines(string query, int topK = 5)` searches shared repo guides (`Publishing-Tracker/apps/api/docs/rag-corpus/`, `OwnerUserId = null`) and private caller notes (`OwnerUserId = authenticatedUserId`), embedded with `openai/text-embedding-3-small` (`1536` dimensions) and queried via PostgreSQL `pgvector` `<=>` cosine distance (or in-memory cosine similarity fallback in test environments).
 - **Strict Tenant Binding (`ADR-009`):** `authenticatedUserId` is resolved strictly from the caller's validated JWT in host code and never appears in tool parameters or schemas.
 - **Composite Tooling:** The agent dynamically presents both MCP catalogue tools (`find_titles_missing_metadata`, `get_title_details`) and the in-process RAG tool (`search_publishing_guidelines`) to the model via `CompositeToolProvider`.
 - **Linked Citations & Verification:** Retrieved chunks populate `evidence.documentSources` (`documentId`, `chunkId`, `claim`) and are cross-verified by `AgentOutputValidator` against `EvidenceLedger` (Step 4.6).
+
+---
+
+## 8. Continuous Evaluation Harness (`PublishingTracker.Evals` — Phase 5)
+
+Phase 5 (detailed in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md)) provides a 3-layer continuous verification harness to ensure retrieval quality, hallucination resistance, multi-tenant database isolation, and live LLM tool-calling reliability.
+
+### 8.1 Running Evaluations
+
+```powershell
+# 1. Deterministic & DB Integration Evals (Default CI mode, $0 spend)
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category!=LiveEval"
+
+# 2. Local PostgreSQL + pgvector Integration (Docker on port 5435)
+$env:TEST_POSTGRES_CONNECTION="Host=localhost;Port=5435;Database=publishingtracker_evals;Username=postgres;Password=postgres"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "FullyQualifiedName~Layer2"
+
+# 3. Live Smoke Evals with Gemini 2.5 Flash (Opt-in)
+$env:RUN_LIVE_EVALS="true"
+$env:GEMINI_API_KEY="<your-gemini-api-key>"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+
+# 4. Live Smoke Evals with Local Ollama (Opt-in)
+$env:RUN_LIVE_EVALS="true"
+$env:LIVE_EVAL_PROVIDER="ollama"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+```
+
+### 8.2 What the Layers Verify
+- **Layer 1 (Offline):** Exact Recall@k, MRR, and NDCG@k metrics; link provenance against `EvidenceLedger`; refusal of uncited answers when searches return empty; rejection of adversarial prompt injection directives across 5 synthetic personas.
+- **Layer 2 (PostgreSQL):** Cosine distance parity between PostgreSQL `pgvector` `<=>` SQL operations and C# in-memory `VectorMath.CosineDistance`; non-model-controlled tenant isolation ensuring User A never sees User B's private notes.
+- **Layer 3 (Live Smoke):** Real end-to-end tool calling against live LLMs, validating JSON Schema conformance, parameter normalization (`page=1`, `pageSize=20`), pure catalogue citation hygiene, and HTTP 429 backoff handling.
