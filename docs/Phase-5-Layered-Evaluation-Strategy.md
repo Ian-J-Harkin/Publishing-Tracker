@@ -39,7 +39,9 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
 ```
 
 ### Key Architectural Invariants & Hardening Adjustments
-1. **Real `pgvector` SQL Path Verification:** Unlike Phase 4 unit tests (which run offline against EF Core `InMemoryDatabase` when Postgres is absent), Layer 2 explicitly provisions a PostgreSQL instance with `pgvector` (via local Docker compose service or CI service container). It executes the `IsNpgsql()` branch of `RagRetrievalService.cs`, verifying the formatted vector SQL literal, `<=>` cosine distance sorting, and the SQL-level `OwnerUserId` filter.
+1. **Real `pgvector` SQL Path & CI Hard-Fail Gate:**
+   - Unlike Phase 4 unit tests (which run offline against EF Core `InMemoryDatabase` when Postgres is absent), Layer 2 explicitly executes the `IsNpgsql()` branch of `PublishingTrackerDbContext.cs` (which implements `IRagChunkStore.SearchByVectorAsync`), verifying the formatted vector SQL literal, `<=>` cosine distance sorting, and the SQL-level `OwnerUserId` filter.
+   - **Hard-Fail Requirement:** Layer 2 tests must **hard-fail** (not degrade to InMemory or skip) if PostgreSQL with `pgvector` is unavailable. This test suite relies on the repository's established `TEST_POSTGRES_CONNECTION` environment variable (already wired into `.github/workflows/api.yml`), avoiding redundant or conflicting provisioning tools.
 2. **Zero Unintentional API Spend in CI:** The default CI test workflow executes Layer 1 and Layer 2 suites exclusively using deterministic doubles and local PostgreSQL fixtures. Layer 3 tests are gated behind explicit traits (`[Trait("Category", "LiveEval")]`) requiring configured API secrets.
 3. **Live Eval Security & PR Policy:** **Live evals never execute on pull requests from forks** to prevent API key exfiltration. Live tests require explicit opt-in (`RUN_LIVE_EVALS=true`), enforce a per-run cost cap ($0.50 max), and handle provider rate limits (429/5xx) with bounded exponential backoff.
 4. **Structural Provenance vs. Hallucination Boundary (`ADR-007`):**
@@ -52,7 +54,7 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
 ## 2. Layered Evaluation Architecture
 
 ### 2.1 Layer 1: Deterministic Orchestration & Boundary Evals (In-Memory)
-- **Assembly:** `tests/PublishingTracker.Evals` (Unit).
+- **Assembly:** `Publishing-Tracker/apps/api/tests/PublishingTracker.Evals` (Unit).
 - **Tooling:** `ScriptedChatClient`, `StubToolProvider`, `DeterministicTestEmbeddingGenerator`.
 - **Target Coverage:**
   - Dual budgets (`MaxModelTurns = 6`, `MaxTotalToolCalls = 8`, `MaxPaginationPages = 2`, `RepeatCallLimit = 2`).
@@ -63,21 +65,21 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
   - **Indirect injection defense:** User notes containing injection payloads (e.g. attempting to override instructions or forge citations) cannot invoke unregistered tools or resolve invalid chunk citations.
 
 ### 2.2 Layer 2: Multi-Tenant Integration & Isolation Evals (Host + Real pgvector)
-- **Assembly:** `tests/PublishingTracker.Evals` (Integration).
-- **Tooling:** `TestWebAppFactory`, `HttpClientTransport`, real `McpClient`, PostgreSQL 17 + `pgvector` test container.
+- **Assembly:** `Publishing-Tracker/apps/api/tests/PublishingTracker.Evals` (Integration).
+- **Tooling:** `TestWebAppFactory`, `HttpClientTransport`, real `McpClient`, PostgreSQL 17 + `pgvector` test container via `TEST_POSTGRES_CONNECTION`.
 - **Wiring Architecture:**
   - `PublishingTracker.Api` runs under `TestWebAppFactory<PublishingTracker.Api.Program>`.
   - `PublishingTracker.Agent` is instantiated in the test harness with its `StreamableHttpMcpToolProvider` configured with an `HttpMessageHandler` pointing directly to the Api's in-memory `TestServer.CreateHandler()`.
-  - Both services point to the same PostgreSQL test database.
+  - Both services point to the same PostgreSQL test database specified by `TEST_POSTGRES_CONNECTION`. If unset or unreachable, Layer 2 tests **fail immediately**.
 - **Target Coverage:**
-  - **`pgvector` Operator Parity:** Asserts that PostgreSQL `<=>` vector ordering matches `VectorMath.CosineDistance` ranking across a test set of 20 document chunks.
+  - **`pgvector` Operator Parity:** Asserts that PostgreSQL `<=>` vector ordering in `PublishingTrackerDbContext.cs` matches `VectorMath.CosineDistance` ranking across a test set of 20 document chunks.
   - **Cross-Tenant Isolation:** Proving User A never sees User B's titles via `/mcp` or Agent Query, even when User A explicitly specifies User B's book IDs or note titles in the prompt.
   - **Concurrent Interleaved Users:** N=20 parallel requests alternating User A and User B asserting zero cross-contamination in answers, ledger state, or RAG hits.
   - **Mid-Run Token Expiry:** A token expiring mid-run during a multi-turn tool call produces an expected `TOOL_ERROR` or `UNAUTHORIZED` without leaking secrets.
   - **JWT Negative Matrix:** Tests against invalid issuer, audience, expired lifetime, missing `iat`, `alg=none`, and non-positive integer user IDs.
 
 ### 2.3 Layer 3: Live Smoke & Trajectory Quality Evals (Opt-In / Nightly)
-- **Assembly:** `tests/PublishingTracker.Evals` (Live).
+- **Assembly:** `Publishing-Tracker/apps/api/tests/PublishingTracker.Evals` (Live).
 - **Filter:** `[Trait("Category", "LiveEval")]`.
 - **Tooling:** Real `OpenRouter` or `OpenAI` client endpoints using `AIProviderSetup.CreateChatClient`.
 - **Target Coverage:**
@@ -93,7 +95,7 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
 
 ```
 Step 5.1: Eval Harness Foundation & Golden Trajectory Datasets
-   │  • Create tests/PublishingTracker.Evals/ project & solution registration
+   │  • Create Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/ project & sln registration
    │  • Implement EvalScenario, GoldenTrajectory, and EvaluationScorecard models
    │  • Define canonical evaluation scenarios (catalogue, RAG, mixed, adversarial)
    ▼
@@ -103,7 +105,7 @@ Step 5.2: Offline Trajectory, Provenance & Indirect Injection Evaluator
    │  • Add indirect prompt-injection and adversarial note fixtures
    ▼
 Step 5.3: Real pgvector & Multi-Tenant Integration Scenarios
-   │  • Configure PostgreSQL test container infrastructure for pgvector verification
+   │  • Wire to TEST_POSTGRES_CONNECTION (hard-fail if absent/down; no silent fallback)
    │  • Implement AgentMcpIntegrationEvalTests wiring Agent -> Api TestServer
    │  • Run concurrent two-user interleaving and mid-run token expiry suites
    ▼

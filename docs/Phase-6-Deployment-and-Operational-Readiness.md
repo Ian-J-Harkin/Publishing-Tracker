@@ -51,15 +51,18 @@ Provide a production-ready, security-hardened containerization and deployment ar
 2. **Minimal Surface & Non-Root Execution:**
    - Docker images build on `.NET 10` SDK and execute on minimal, hardened `.NET 10 Chiseled` runtime images (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`), running strictly under non-root users (`UID 1654:1654`) with read-only root filesystems and a mounted volume/tmpfs for `/tmp` and `temp_uploads`.
 3. **Container-to-Container Transport Policy (Decision 1 Resolution):**
-   - **Production:** Requires real TLS (`https://...`) between services, provided either by platform-level service mesh mTLS or internal certificates.
-   - **Local Compose Development:** Uses an explicit, narrowly scoped configuration setting: `AIProvider:AllowInsecureInternalHttp=true` combined with an allowlist restricting plain HTTP to the specific host `api` (`http://api:8080/mcp`). This setting is **strictly rejected at startup** if `ASPNETCORE_ENVIRONMENT == "Production"`.
+   - **Code Changes in Step 6.2:** Add `AllowInsecureInternalHttp` (bool) to `AIProviderOptions.cs` and update `IsMcpEndpointSecure()` / `PerRequestBearerHandler.cs` to allow plain HTTP *only* if `AllowInsecureInternalHttp == true` AND the endpoint host matches an allowlisted internal container host (e.g., `api`).
+   - **Production Guard:** `IsMcpEndpointSecure()` and `Program.cs` startup validation **fail fast and abort startup** if `AllowInsecureInternalHttp == true` while `environment.IsProduction()`.
+   - **Production Requirement:** In production, container-to-container calls must use real TLS (`https://...`), provided by service mesh mTLS or TLS termination.
 4. **Database Migration Lifecycle (Decision 2 Resolution):**
-   - **Migration Ownership:** `PublishingTracker.Api` maintains ownership of database schema migrations via `Database:MigrateOnStartup=true` (controlled via `db.Database.Migrate()` in `Api/Program.cs`).
+   - **Code Changes in Step 6.2:** In `PublishingTracker.Api/Program.cs`, replace the hardcoded `app.Environment.IsDevelopment()` migration check with `builder.Configuration.GetValue<bool>("Database:MigrateOnStartup", builder.Environment.IsDevelopment())` so that `Database:MigrateOnStartup=true` explicitly governs startup migrations in any environment.
    - **Startup Synchronization:** `PublishingTracker.Agent` does **not** execute schema migrations. On startup, the Agent verifies database readiness; if required tables (`rag_document_chunks`) are absent, it fails fast with a clear diagnostic message.
    - **Docker Compose Dependency:** In `docker-compose.yml`, the `agent` service depends on `api` with `condition: service_healthy`, ensuring the Api has completed migrations and its health endpoint returns healthy before the Agent attempts to boot or seed the RAG corpus.
 5. **Standardized Health & Readiness Probes:**
-   - Standardize on `/health` (aligning with existing `Api/Program.cs` registration) with separate health tags: `/health/live` (process alive) and `/health/ready` (deep check: database connectivity + MCP reachability).
-   - In chiseled containers (which lack curl/wget/shell), health probes are performed via ASP.NET Core built-in HTTP health endpoints probed by the Docker host or orchestrator.
+   - **Code Changes in Step 6.3:** 
+     - In `PublishingTracker.Api/Program.cs`: Evolve the existing flat `MapHealthChecks("/health")` to tagged endpoints: `/health/live` (process responsiveness) and `/health/ready` (deep check: database connectivity + `temp_uploads` writability).
+     - In `PublishingTracker.Agent/Program.cs`: Register `AddHealthChecks()` and map `/health/live` and `/health/ready` (checking database connectivity and a non-authenticated TCP ping/anonymous probe to the API).
+   - In chiseled containers (which lack curl/wget/shell), containers compile a tiny lightweight native C# health probe executable (or dotnet tool) `healthcheck` in the publish stage, invoked as `CMD ["/app/healthcheck"]`, or rely on orchestrator HTTP probes (Docker 26+ / Kubernetes / ACA).
 6. **Graceful Shutdown & Budget Alignment:**
    - Align shutdown durations: `HostOptions.ShutdownTimeout` is set to `75s` (exceeding `AgentLoopOptions.OverallTimeout = 60s`), and compose `stop_grace_period` is set to `80s` so in-flight queries complete cleanly without mid-turn SIGKILL corruption.
 7. **RAG Corpus Packaging:**
@@ -86,9 +89,9 @@ Both services utilize Docker multi-stage builds rooted in the solution directory
 
 ---
 
-## 3. Local & Staging Orchestration (`docker-compose.yml`)
+## 3. Local & Staging Orchestration (`Publishing-Tracker/apps/api/docker-compose.yml`)
 
-The root `docker-compose.yml` orchestrates the local stack:
+The compose stack at `Publishing-Tracker/apps/api/docker-compose.yml` orchestrates the local services:
 
 ```yaml
 services:
@@ -131,7 +134,7 @@ services:
     volumes:
       - temp_uploads:/app/temp_uploads
     healthcheck:
-      test: ["CMD", "/app/healthcheck"] # or HTTP probe from orchestrator
+      test: ["CMD", "/app/healthcheck"] # compiled in publish stage (or orchestrator HTTP probe)
       interval: 10s
       timeout: 5s
       retries: 5
@@ -149,6 +152,12 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=publishingtracker_dev;Username=postgres;Password=postgres"
