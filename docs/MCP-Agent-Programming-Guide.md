@@ -1,6 +1,6 @@
 # PublishingTracker MCP & Agent — Programming Guide
 
-Developer reference and walkthrough of the **PublishingTracker MCP Server**, **PublishingTracker.Agent**, and **PublishingTracker.Rag** implementation across **Phases 0–4 (Steps 4.1–4.5 implemented)**. Companion to [MCP-User-Guide.md](MCP-User-Guide.md), [MCP-Testing-Guide.md](MCP-Testing-Guide.md), and [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md).
+Developer reference and walkthrough of the **PublishingTracker MCP Server**, **PublishingTracker.Agent**, and **PublishingTracker.Rag** implementation across **Phases 0–4 (Complete)**. Companion to [MCP-User-Guide.md](MCP-User-Guide.md), [MCP-Testing-Guide.md](MCP-Testing-Guide.md), and [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md).
 
 ---
 
@@ -20,7 +20,7 @@ Publishing-Tracker/apps/api/
     PublishingTracker.Agent/            # ASP.NET Core Agent Host, IChatClient loop, CompositeToolProvider, EvidenceLedger
   tests/
     PublishingTracker.Api.Tests/        # Phase 0 baseline + Phase 1 API & Streamable HTTP MCP integration tests (54 tests)
-    PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (52 tests)
+    PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (58 tests)
 ```
 
 | Project | Role | Key Entry Points |
@@ -226,4 +226,4 @@ Phase 4 introduces semantic retrieval and composite tool provision (`Steps 4.1`�
 | `RagRetrievalService.SearchAsync(...)` | [RagRetrievalService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagRetrievalService.cs) | ✅ Implemented (Step 4.5). Executes PostgreSQL `pgvector` `<=>` distance SQL (`IsNpgsql()`) or C# cosine distance fallback (`!IsNpgsql()`), strictly filtering `OwnerUserId == null \|\| OwnerUserId == authenticatedUserId`. |
 | `RagSearchToolFactory` (`search_publishing_guidelines`) | [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) | ✅ Implemented (Step 4.5). Host-bound `AIFunction` exposing only `(string query, int topK = 5)` while capturing positive integer `authenticatedUserId` outside the model schema. |
 | `CompositeToolProvider` | [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs) | ✅ Implemented (Step 4.5). Validates caller `userId > 0` before opening `/mcp`, disposes `/mcp` safely on failure, and merges `/mcp` tools with `RagSearchTool`. |
-| `EvidenceLedger` RAG Indexing & Stage 2 Document Citation Verification | `EvidenceLedger.cs` & `AgentOutputValidator.cs` | 🟡 Step 4.6 (Pending). Indexes `search_publishing_guidelines` hits, validates Stage 2 document citations, and verifies prompt-injection defense. |
+| `EvidenceLedger` RAG Indexing, Pre-Call Validation & Stage 2 Document Citation Verification | [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs) & [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) | ✅ Implemented (Step 4.6). Pre-call argument validation (`TryValidateToolRequest`), two-pass fail-closed hit indexing (`TryIndexRagSearchResult`), `_ragSearchesExecuted` empty-search protection, and Stage 2 prompt injection defense. |
