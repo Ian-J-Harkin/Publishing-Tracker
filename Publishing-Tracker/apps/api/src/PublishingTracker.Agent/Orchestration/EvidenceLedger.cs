@@ -730,8 +730,34 @@ public sealed class EvidenceLedger
             return true;
         }
 
+        if (raw is double d && Math.Abs(d % 1) < double.Epsilon && d is >= int.MinValue and <= int.MaxValue)
+        {
+            value = (int)d;
+            return true;
+        }
+
+        if (raw is float f && Math.Abs(f % 1) < float.Epsilon && f is >= int.MinValue and <= int.MaxValue)
+        {
+            value = (int)f;
+            return true;
+        }
+
+        if (raw is decimal dec && dec == Math.Truncate(dec) && dec is >= int.MinValue and <= int.MaxValue)
+        {
+            value = (int)dec;
+            return true;
+        }
+
         if (raw is JsonElement elem)
-            return elem.ValueKind == JsonValueKind.Number && elem.TryGetInt32(out value);
+        {
+            if (elem.ValueKind == JsonValueKind.Number && elem.TryGetInt32(out value))
+                return true;
+
+            if (elem.ValueKind == JsonValueKind.String && int.TryParse(elem.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                return true;
+
+            return false;
+        }
 
         return raw is string text && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value);
     }

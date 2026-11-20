@@ -14,6 +14,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <None Update="eval_baseline.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\src\PublishingTracker.Agent\PublishingTracker.Agent.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Api\PublishingTracker.Api.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />

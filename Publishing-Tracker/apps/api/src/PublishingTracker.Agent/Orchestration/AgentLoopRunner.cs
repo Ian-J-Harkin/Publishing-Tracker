@@ -174,7 +174,7 @@ public sealed class AgentLoopRunner
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Model invocation failed on turn {Turn}.", turn);
+                _logger.LogError(exception, "Model invocation failed on turn {Turn}: {Message}", turn, exception.Message);
                 turnActivity?.SetTag("agent.duration_ms", turnWatch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
                 return FailState(state, AgentErrorCode.MODEL_ERROR);
@@ -257,7 +257,17 @@ public sealed class AgentLoopRunner
                 object? result;
                 try
                 {
-                    var arguments = call.Arguments is null ? new AIFunctionArguments() : new AIFunctionArguments(call.Arguments);
+                    var arguments = call.Arguments is null
+                        ? new AIFunctionArguments()
+                        : new AIFunctionArguments(new Dictionary<string, object?>(call.Arguments, StringComparer.OrdinalIgnoreCase));
+
+                    // Normalize default pagination arguments if omitted by the model
+                    if (string.Equals(call.Name, "find_titles_missing_metadata", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!arguments.ContainsKey("page")) arguments["page"] = 1;
+                        if (!arguments.ContainsKey("pageSize")) arguments["pageSize"] = 20;
+                    }
+
                     var invokeTask = tool.InvokeAsync(arguments, toolCts.Token).AsTask();
                     var perCallDelay = Task.Delay(_options.PerCallTimeout, CancellationToken.None);
                     var overallCancellation = Task.Delay(Timeout.InfiniteTimeSpan, runToken);
@@ -296,7 +306,7 @@ public sealed class AgentLoopRunner
                 }
                 catch (Exception exception)
                 {
-                    _logger.LogError(exception, "MCP tool invocation failed for {ToolName}.", call.Name);
+                    _logger.LogError(exception, "MCP tool invocation failed for {ToolName}: {Message}", call.Name, exception.Message);
                     toolActivity?.SetTag("agent.duration_ms", toolWatch.ElapsedMilliseconds);
                     toolActivity?.SetTag("agent.is_error", true);
                     toolActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.TOOL_ERROR));
@@ -399,7 +409,7 @@ public sealed class AgentLoopRunner
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Stage 2 structured model call failed on turn {Turn}, attempt {Attempt}.", state.ModelTurns, attempt);
+                _logger.LogError(exception, "Stage 2 structured model call failed on turn {Turn}, attempt {Attempt}: {Message}", state.ModelTurns, attempt, exception.Message);
                 turnActivity?.SetTag("agent.duration_ms", stage2Watch.ElapsedMilliseconds);
                 turnActivity?.SetTag("agent.error_code", nameof(AgentErrorCode.MODEL_ERROR));
                 return FinishVerifiedFailure(state, AgentErrorCode.MODEL_ERROR);
