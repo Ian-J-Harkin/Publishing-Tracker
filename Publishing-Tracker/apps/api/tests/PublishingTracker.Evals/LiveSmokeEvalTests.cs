@@ -128,6 +128,33 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
     private static (AIProviderOptions options, AgentLoopOptions loopOptions, HttpClient? httpClient) ResolveLiveOptions()
     {
         var retryClient = new HttpClient(new RateLimitedRetryHandler(new SocketsHttpHandler()));
+
+        // 1. Ollama (local) if explicitly requested via environment variable or provider type
+        var ollamaEndpoint = Environment.GetEnvironmentVariable("OLLAMA_ENDPOINT");
+        var ollamaModel = Environment.GetEnvironmentVariable("OLLAMA_MODEL_NAME");
+        var liveProvider = Environment.GetEnvironmentVariable("LIVE_EVAL_PROVIDER")?.Trim().ToLowerInvariant();
+
+        if (liveProvider == "ollama" || (!string.IsNullOrWhiteSpace(ollamaEndpoint) && liveProvider != "gemini" && liveProvider != "openrouter"))
+        {
+            var config = new AIProviderOptions
+            {
+                Type = "ollama",
+                ModelId = ollamaModel ?? AIProviderSetup.OllamaDefaultModelId,
+                Endpoint = ollamaEndpoint ?? AIProviderSetup.OllamaDefaultEndpoint
+            };
+            var resolved = AIProviderSetup.Resolve(config, Environment.GetEnvironmentVariable);
+            return (
+                resolved,
+                new AgentLoopOptions
+                {
+                    PerCallTimeout = TimeSpan.FromSeconds(15),
+                    OverallTimeout = TimeSpan.FromSeconds(30)
+                },
+                null
+            );
+        }
+
+        // 2. Gemini direct OpenAI-compatible endpoint
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         if (!string.IsNullOrWhiteSpace(geminiKey))
         {
@@ -148,6 +175,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
             );
         }
 
+        // 3. OpenRouter hosted fallback
         var openRouterKey = Environment.GetEnvironmentVariable("LIVE_EVAL_OPENROUTER_API_KEY")
                             ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
 
