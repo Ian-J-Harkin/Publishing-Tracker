@@ -15,8 +15,10 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\PublishingTracker.Agent\PublishingTracker.Agent.csproj" />
+    <ProjectReference Include="..\..\src\PublishingTracker.Api\PublishingTracker.Api.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Rag\PublishingTracker.Rag.csproj" />
     <ProjectReference Include="..\PublishingTracker.Agent.Tests\PublishingTracker.Agent.Tests.csproj" />
+    <ProjectReference Include="..\PublishingTracker.Api.Tests\PublishingTracker.Api.Tests.csproj" />
   </ItemGroup>
 </Project>
