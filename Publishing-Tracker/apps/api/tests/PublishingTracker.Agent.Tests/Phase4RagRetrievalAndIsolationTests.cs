@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PublishingTracker.Agent.Configuration;
 using PublishingTracker.Agent.Tests.Doubles;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Rag.Services;
@@ -227,5 +228,43 @@ public sealed class Phase4RagRetrievalAndIsolationTests
             .Select(c => new { c.ChunkId, c.Version, c.ContentHash })
             .ToList();
         Assert.Equal(before, after);
+    }
+
+    [Fact]
+    public async Task AIProviderSetup_CreateEmbeddingGenerator_ConfiguresEndpointAndOpenRouterPrivacyHeaders()
+    {
+        const string openAiEmbeddingJson = """
+        {"object":"list","data":[{"object":"embedding","index":0,"embedding":[0.1,0.2]}],"model":"text-embedding-3-small","usage":{"prompt_tokens":1,"total_tokens":1}}
+        """;
+
+        foreach (var provider in new[] { "openrouter", "openai", "ollama" })
+        {
+            var resolved = AIProviderSetup.Resolve(
+                new AIProviderOptions { Type = provider, ApiKey = "test-key", OpenRouterApiKey = "test-key" },
+                _ => null);
+
+            var expectedEmbeddingModel = provider switch
+            {
+                "openrouter" => AIProviderSetup.OpenRouterDefaultEmbeddingModelId,
+                "openai" => AIProviderSetup.OpenAiDefaultEmbeddingModelId,
+                _ => AIProviderSetup.OllamaDefaultEmbeddingModelId
+            };
+            Assert.Equal(expectedEmbeddingModel, resolved.EmbeddingModelId);
+            Assert.Equal(1536, resolved.EmbeddingDimensions);
+
+            var recorder = new RecordingHttpMessageHandler(openAiEmbeddingJson);
+            using var http = new HttpClient(recorder);
+            using var generator = AIProviderSetup.CreateEmbeddingGenerator(resolved, http);
+            _ = await generator.GenerateAsync(["audiobook narrator"]);
+
+            Assert.Single(recorder.Requests);
+            Assert.Contains("embeddings", recorder.Requests[0].RequestUri!.AbsolutePath, StringComparison.OrdinalIgnoreCase);
+            if (provider == "openrouter")
+            {
+                Assert.Contains("PublishingTracker", recorder.Requests[0].Headers.GetValues("X-Title"));
+                Assert.Contains("https://publishingtracker.local", recorder.Requests[0].Headers.GetValues("HTTP-Referer"));
+                Assert.Contains("deny", recorder.Requests[0].Headers.GetValues("data_collection"));
+            }
+        }
     }
 }

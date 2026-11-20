@@ -128,6 +128,9 @@ static void Copy(AIProviderOptions from, AIProviderOptions to)
     to.OllamaModelId = from.OllamaModelId;
     to.OllamaEndpoint = from.OllamaEndpoint;
     to.McpEndpoint = from.McpEndpoint;
+    to.EmbeddingModelId = from.EmbeddingModelId;
+    to.OllamaEmbeddingModelId = from.OllamaEmbeddingModelId;
+    to.EmbeddingDimensions = from.EmbeddingDimensions;
 }
 
 public partial class Program { }

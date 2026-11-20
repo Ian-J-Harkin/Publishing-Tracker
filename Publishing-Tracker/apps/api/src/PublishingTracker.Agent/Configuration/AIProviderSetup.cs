@@ -15,6 +15,10 @@ public static class AIProviderSetup
     public const string OllamaDefaultEndpoint = "http://localhost:11434/v1";
     public const string OllamaDefaultModelId = "qwen2.5-coder:7b";
 
+    public const string OpenRouterDefaultEmbeddingModelId = "openai/text-embedding-3-small";
+    public const string OpenAiDefaultEmbeddingModelId = "text-embedding-3-small";
+    public const string OllamaDefaultEmbeddingModelId = "nomic-embed-text";
+
     public static AIProviderOptions Resolve(AIProviderOptions configured, Func<string, string?> getEnv)
     {
         ArgumentNullException.ThrowIfNull(configured);
@@ -45,6 +49,12 @@ public static class AIProviderSetup
             "openai" => First(getEnv("OPENAI_API_KEY"), configured.ApiKey),
             _ => First(configured.ApiKey, "ollama")
         };
+        var embeddingModel = type switch
+        {
+            "openrouter" => First(getEnv("OPENROUTER_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), configured.EmbeddingModelId, OpenRouterDefaultEmbeddingModelId),
+            "openai" => First(getEnv("OPENAI_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), ConfiguredOpenAiEmbeddingModel(configured), OpenAiDefaultEmbeddingModelId),
+            _ => First(getEnv("OLLAMA_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), configured.OllamaEmbeddingModelId, OllamaDefaultEmbeddingModelId)
+        };
 
         return new AIProviderOptions
         {
@@ -57,7 +67,10 @@ public static class AIProviderSetup
             OpenRouterEndpoint = type == "openrouter" ? endpoint : configured.OpenRouterEndpoint,
             OllamaModelId = type == "ollama" ? model! : configured.OllamaModelId,
             OllamaEndpoint = type == "ollama" ? endpoint : configured.OllamaEndpoint,
-            McpEndpoint = configured.McpEndpoint
+            McpEndpoint = configured.McpEndpoint,
+            EmbeddingModelId = embeddingModel!,
+            OllamaEmbeddingModelId = type == "ollama" ? embeddingModel! : configured.OllamaEmbeddingModelId,
+            EmbeddingDimensions = configured.EmbeddingDimensions
         };
     }
 
@@ -93,10 +106,49 @@ public static class AIProviderSetup
             .Build();
     }
 
+    public static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(
+        AIProviderOptions options,
+        HttpClient? customHttpClient = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        var validationError = options.Validate();
+        if (validationError is not null) throw new InvalidOperationException(validationError);
+
+        var clientOptions = new OpenAIClientOptions
+        {
+            Endpoint = new Uri(options.Endpoint!)
+        };
+
+        if (customHttpClient is not null)
+        {
+            clientOptions.Transport = new HttpClientPipelineTransport(customHttpClient);
+        }
+
+        if (string.Equals(options.Type?.Trim(), "openrouter", StringComparison.OrdinalIgnoreCase))
+        {
+            clientOptions.AddPolicy(new OpenRouterHeadersPolicy(), PipelinePosition.PerCall);
+        }
+
+        var client = new OpenAIClient(new ApiKeyCredential(options.ApiKey), clientOptions);
+        return client
+            .GetEmbeddingClient(options.EmbeddingModelId)
+            .AsIEmbeddingGenerator()
+            .AsBuilder()
+            .UseOpenTelemetry(
+                sourceName: AgentTelemetry.ActivitySourceName,
+                configure: telemetry => telemetry.EnableSensitiveData = false)
+            .Build();
+    }
+
     private static string? ConfiguredOpenAiEndpoint(AIProviderOptions options) =>
         string.Equals(options.Endpoint, OpenRouterDefaultEndpoint, StringComparison.OrdinalIgnoreCase)
             ? null
             : options.Endpoint;
+
+    private static string? ConfiguredOpenAiEmbeddingModel(AIProviderOptions options) =>
+        string.Equals(options.EmbeddingModelId, OpenRouterDefaultEmbeddingModelId, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : options.EmbeddingModelId;
 
     private static string? First(params string?[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();

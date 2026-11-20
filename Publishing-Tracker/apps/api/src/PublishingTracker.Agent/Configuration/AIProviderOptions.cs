@@ -20,6 +20,10 @@ public sealed class AIProviderOptions
     public string? OllamaEndpoint { get; set; } = AIProviderSetup.OllamaDefaultEndpoint;
     public string McpEndpoint { get; set; } = "https://localhost:7285/mcp";
 
+    public string EmbeddingModelId { get; set; } = AIProviderSetup.OpenRouterDefaultEmbeddingModelId;
+    public string OllamaEmbeddingModelId { get; set; } = AIProviderSetup.OllamaDefaultEmbeddingModelId;
+    public int EmbeddingDimensions { get; set; } = 1536;
+
     public string? Validate()
     {
         var normalizedType = Type?.Trim() ?? string.Empty;
@@ -30,6 +34,12 @@ public sealed class AIProviderOptions
             providerUri.Scheme is not ("http" or "https") || providerUri.UserInfo.Length != 0 ||
             providerUri.Query.Length != 0 || providerUri.Fragment.Length != 0)
             return "AI provider model and absolute HTTP(S) endpoint without embedded credentials or query values are required.";
+
+        if (string.IsNullOrWhiteSpace(EmbeddingModelId))
+            return "AIProvider:EmbeddingModelId is required.";
+
+        if (EmbeddingDimensions != 1536)
+            return "AIProvider:EmbeddingDimensions must be 1536 to match the locked vector(1536) schema.";
 
         var providerUsesInsecureHttp = providerUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
         var isOllamaLoopback = providerUri.IsLoopback || providerUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
@@ -48,7 +58,7 @@ public sealed class AIProviderOptions
     }
 
     public override string ToString() =>
-        $"AIProviderOptions {{ Type = {Type}, ModelId = {ModelId}, Endpoint = {Endpoint}, ApiKey = {Redact(ApiKey)}, OpenRouterApiKey = {Redact(OpenRouterApiKey)}, McpEndpoint = {McpEndpoint} }}";
+        $"AIProviderOptions {{ Type = {Type}, ModelId = {ModelId}, EmbeddingModelId = {EmbeddingModelId}, Endpoint = {Endpoint}, ApiKey = {Redact(ApiKey)}, OpenRouterApiKey = {Redact(OpenRouterApiKey)}, McpEndpoint = {McpEndpoint} }}";
 
     private static string Redact(string? value) => string.IsNullOrWhiteSpace(value) ? "<empty>" : "[REDACTED]";
 }
