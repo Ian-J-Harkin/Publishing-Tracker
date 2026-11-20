@@ -9,7 +9,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
 - [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — 📝 **Spec Ready** (4 incremental steps planned)
-- Phase 6 — Deployment, Containerization, & Operational Readiness — ⚪ *Planned*
+- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — 📝 **Spec Ready** (4 incremental steps planned)
 
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
