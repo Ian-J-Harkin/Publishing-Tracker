@@ -1,6 +1,6 @@
 # PublishingTracker MCP & Agent — Testing & Verification Guide
 
-This guide details how to verify, test, and troubleshoot both the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`), **PublishingTracker.Agent** (`POST /api/agent/query`), and the **PublishingTracker.Rag** module across **Phases 0–4 (Steps 4.1–4.5 implemented)**.
+This guide details how to verify, test, and troubleshoot the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`), **PublishingTracker.Agent** (`POST /api/agent/query`), and **PublishingTracker.Rag** module across **Phases 0–4 (Complete)**, along with the planned **Phase 5** evaluation suite (`PublishingTracker.Evals`).
 
 ---
 
@@ -14,6 +14,7 @@ This guide details how to verify, test, and troubleshoot both the **PublishingTr
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
 | **Total Implemented CI Suite** | **Phases 0–4** | **`112`** | **100% deterministic offline execution** |
+| `PublishingTracker.Evals` | 📝 *Phase 5 (Spec Ready)*: Multi-tiered evaluation harness | *Planned* | Offline deterministic evaluator + real pgvector integration + opt-in live smoke evals |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 

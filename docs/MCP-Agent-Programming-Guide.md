@@ -21,9 +21,12 @@ Publishing-Tracker/apps/api/
   tests/
     PublishingTracker.Api.Tests/        # Phase 0 baseline + Phase 1 API & Streamable HTTP MCP integration tests (54 tests)
     PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (58 tests)
+    PublishingTracker.Evals/            # Phase 5 (Spec Ready): Multi-tiered continuous evaluation harness
+  tools/
+    PublishingTracker.HealthProbe/      # Phase 6 (Spec Ready): Standalone healthcheck probe for chiseled containers
 ```
 
-| Project | Role | Key Entry Points |
+| Project | Role | Key Entry Points / Status |
 |---|---|---|
 | `PublishingTracker.Domain` | Book, Edition, and Platform metadata entities | [Book.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Book.cs), [Edition.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Domain/Entities/Edition.cs) |
 | `PublishingTracker.Application` | Format completeness rules and owner-scoped CQRS queries | [FormatCompletenessRules.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Services/FormatCompletenessRules.cs), [FindTitlesMissingMetadataQuery.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Queries/FindTitlesMissingMetadataQuery.cs), [GetTitleDetailsQuery.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Application/Books/Queries/GetTitleDetailsQuery.cs) |
@@ -32,6 +35,8 @@ Publishing-Tracker/apps/api/
 | `PublishingTracker.Rag` | Vector math, markdown chunking, ingestion, and host-bound search tool | [VectorMath.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/VectorMath.cs), [MarkdownChunker.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/MarkdownChunker.cs), [RagIngestionService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagIngestionService.cs), [RagRetrievalService.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Services/RagRetrievalService.cs), [RagSearchToolFactory.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Rag/Tools/RagSearchToolFactory.cs) |
 | `PublishingTracker.Api` | Maps `/api/books/*` REST routes and `/mcp` MCP transport | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs), [BookEndpoints.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/BookEndpoints.cs) |
 | `PublishingTracker.Agent` | Authenticated two-stage agent orchestrator, composite tool provider & output verification | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs), [AgentLoopRunner.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/AgentLoopRunner.cs), [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs), [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs), [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) |
+| `PublishingTracker.Evals` | 📝 *Phase 5 (Spec Ready)*: Continuous offline & live evaluation harness | [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md) |
+| `PublishingTracker.HealthProbe` | 📝 *Phase 6 (Spec Ready)*: Minimal native HTTP health check probe for chiseled containers | [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) |
 
 ---
 

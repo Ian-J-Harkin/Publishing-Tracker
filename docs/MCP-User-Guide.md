@@ -1,6 +1,6 @@
 # PublishingTracker MCP & Agent — User & Integration Guide
 
-This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and the **PublishingTracker.Rag** retrieval capabilities (Steps 4.1–4.5 implemented).
+This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and the **PublishingTracker.Rag** retrieval capabilities across **Phases 0–4 (Complete)**, with references to planned evaluation and containerization architecture (Phases 5 & 6).
 
 ---
 
