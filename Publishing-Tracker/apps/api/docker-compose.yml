@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,5 +17,66 @@ services:
       timeout: 5s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: src/PublishingTracker.Api/Dockerfile
+    container_name: publishingtracker-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=publishingtracker_dev;Username=postgres;Password=postgres"
+      Jwt__Key: "${JWT_SIGNING_KEY:-DevelopmentJwtKeyMustBeAtLeast32BytesLongForHmacSha256Security12345}"
+      Jwt__Issuer: "PublishingTracker.Api"
+      Jwt__Audience: "PublishingTracker.Api"
+      Database__MigrateOnStartup: "true"
+    ports:
+      - "7285:8080"
+    volumes:
+      - temp_uploads:/app/temp_uploads
+    healthcheck:
+      test: ["CMD", "/app/healthcheck", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  agent:
+    build:
+      context: .
+      dockerfile: src/PublishingTracker.Agent/Dockerfile
+    container_name: publishingtracker-agent
+    restart: unless-stopped
+    stop_grace_period: 80s
+    depends_on:
+      api:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/healthcheck", "http://localhost:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=publishingtracker_dev;Username=postgres;Password=postgres"
+      Jwt__Key: "${JWT_SIGNING_KEY:-DevelopmentJwtKeyMustBeAtLeast32BytesLongForHmacSha256Security12345}"
+      Jwt__Issuer: "PublishingTracker.Api"
+      Jwt__Audience: "PublishingTracker.Api"
+      AIProvider__McpEndpoint: "http://api:8080/mcp"
+      AIProvider__AllowInsecureInternalHttp: "true"
+      AIProvider__Type: "${AI_PROVIDER_TYPE:-openrouter}"
+      AIProvider__ApiKey: "${OPENROUTER_API_KEY}"
+      AIProvider__OpenRouterApiKey: "${OPENROUTER_API_KEY}"
+      Rag__AutoSeedOnStartup: "true"
+    ports:
+      - "7290:8080"
+
 volumes:
   postgres_data:
+  temp_uploads:

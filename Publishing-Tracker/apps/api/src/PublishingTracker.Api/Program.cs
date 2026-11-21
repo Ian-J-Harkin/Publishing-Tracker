@@ -91,14 +91,14 @@ builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
 // ── Health Checks ─────────────────────────────────────────────────
 // NOTE: Planned migration to Application Insights for production telemetry.
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<PublishingTrackerDbContext>("database")
+    .AddDbContextCheck<PublishingTrackerDbContext>("database", tags: ["ready"])
     .AddCheck("temp-storage", () =>
     {
         var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
         return Directory.Exists(tempDir)
             ? HealthCheckResult.Healthy("temp_uploads directory exists.")
             : HealthCheckResult.Degraded("temp_uploads directory is missing.");
-    });
+    }, tags: ["ready"]);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -147,8 +147,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
 
-    Console.WriteLine($"Creating database scope");
+var migrateOnStartup = builder.Configuration.GetValue<bool>("Database:MigrateOnStartup", builder.Environment.IsDevelopment());
+if (migrateOnStartup)
+{
+    Console.WriteLine($"Applying database migrations on startup...");
     try
     {
         using (var scope = app.Services.CreateScope())
@@ -194,8 +198,16 @@ app.MapImportEndpoints();
 app.MapUserEndpoints();
 app.MapMcp("/mcp").RequireAuthorization();
 
-// ── Health Check Endpoint ─────────────────────────────────────────
+// ── Health Check Endpoints ─────────────────────────────────────────
 app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 // fix for azure port
 //app.Urls.Add("http://*:8080");

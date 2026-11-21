@@ -23,16 +23,23 @@ using PublishingTracker.Rag.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
+
 builder.Services.AddOptions<AIProviderOptions>()
     .Bind(builder.Configuration.GetSection(AIProviderOptions.SectionName))
     .Configure(options => Copy(AIProviderSetup.Resolve(options, Environment.GetEnvironmentVariable), options))
-    .Validate(options => options.Validate() is null && IsMcpEndpointSecure(options, builder.Environment), "AI provider configuration is invalid or the MCP endpoint is not trusted.")
+    .Validate(options => options.Validate(isDevOrTest) is null && IsMcpEndpointSecure(options, builder.Environment), "AI provider configuration is invalid or the MCP endpoint is not trusted.")
     .ValidateOnStart();
 
 builder.Services.AddOptions<AgentLoopOptions>()
     .Bind(builder.Configuration.GetSection(AgentLoopOptions.SectionName))
     .Validate(options => IsValid(options), "Agent loop configuration is invalid.")
     .ValidateOnStart();
+
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromSeconds(75);
+});
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -111,6 +118,12 @@ builder.Services.AddSingleton<AgentOutputValidator>();
 builder.Services.AddTransient<AgentLoopRunner>();
 builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(AgentTelemetry.ActivitySourceName));
 
+var health = builder.Services.AddHealthChecks();
+if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(connectionString))
+{
+    health.AddDbContextCheck<PublishingTrackerDbContext>("database", tags: ["ready"]);
+}
+
 var app = builder.Build();
 
 if (builder.Configuration.GetValue<bool>("Rag:AutoSeedOnStartup") &&
@@ -144,6 +157,16 @@ app.MapPost("/api/agent/query", async (AgentQueryRequest request, AgentLoopRunne
     return Results.Ok(response);
 }).RequireAuthorization();
 
+app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
 app.Run();
 
 static bool IsValid(AgentLoopOptions options)
@@ -162,10 +185,8 @@ static bool IsValid(AgentLoopOptions options)
 static bool IsMcpEndpointSecure(AIProviderOptions options, IHostEnvironment environment)
 {
     if (!Uri.TryCreate(options.McpEndpoint, UriKind.Absolute, out var endpoint)) return false;
-    if (endpoint.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)) return true;
-    var loopbackHttp = endpoint.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-                       (endpoint.IsLoopback || endpoint.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase));
-    return loopbackHttp && (environment.IsDevelopment() || environment.IsEnvironment("Testing"));
+    var isDevOrTest = environment.IsDevelopment() || environment.IsEnvironment("Testing");
+    return AIProviderOptions.IsEndpointTrusted(endpoint, isDevOrTest, options.AllowInsecureInternalHttp);
 }
 
 static void Copy(AIProviderOptions from, AIProviderOptions to)
@@ -180,6 +201,7 @@ static void Copy(AIProviderOptions from, AIProviderOptions to)
     to.OllamaModelId = from.OllamaModelId;
     to.OllamaEndpoint = from.OllamaEndpoint;
     to.McpEndpoint = from.McpEndpoint;
+    to.AllowInsecureInternalHttp = from.AllowInsecureInternalHttp;
     to.EmbeddingModelId = from.EmbeddingModelId;
     to.OllamaEmbeddingModelId = from.OllamaEmbeddingModelId;
     to.EmbeddingDimensions = from.EmbeddingDimensions;

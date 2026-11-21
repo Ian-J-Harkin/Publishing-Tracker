@@ -20,10 +20,10 @@ Publishing-Tracker/apps/api/
     PublishingTracker.Agent/            # ASP.NET Core Agent Host, IChatClient loop, CompositeToolProvider, EvidenceLedger
   tests/
     PublishingTracker.Api.Tests/        # Phase 0 baseline + Phase 1 API & Streamable HTTP MCP integration tests (54 tests)
-    PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation & RAG tests (58 tests)
+    PublishingTracker.Agent.Tests/      # Phases 2–4 loop, auth, provider, evidence, validation, RAG & Phase 6 deployment (75 tests)
     PublishingTracker.Evals/            # Phase 5 (Complete): Multi-tiered continuous evaluation harness (39 tests)
   tools/
-    PublishingTracker.HealthProbe/      # Phase 6 (Spec Ready): Standalone healthcheck probe for chiseled containers
+    PublishingTracker.HealthProbe/      # Phase 6 (Complete): Standalone healthcheck probe for chiseled containers
 ```
 
 | Project | Role | Key Entry Points / Status |
@@ -36,7 +36,7 @@ Publishing-Tracker/apps/api/
 | `PublishingTracker.Api` | Maps `/api/books/*` REST routes and `/mcp` MCP transport | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs), [BookEndpoints.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Endpoints/BookEndpoints.cs) |
 | `PublishingTracker.Agent` | Authenticated two-stage agent orchestrator, composite tool provider & output verification | [Program.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs), [AgentLoopRunner.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/AgentLoopRunner.cs), [CompositeToolProvider.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Mcp/CompositeToolProvider.cs), [EvidenceLedger.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Orchestration/EvidenceLedger.cs), [AgentOutputValidator.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Validation/AgentOutputValidator.cs) |
 | `PublishingTracker.Evals` | ✅ *Phase 5 (Complete)*: Continuous offline & live evaluation harness (39 tests) | [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md) |
-| `PublishingTracker.HealthProbe` | 📝 *Phase 6 (Spec Ready)*: Minimal native HTTP health check probe for chiseled containers | [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) |
+| `PublishingTracker.HealthProbe` | ✅ *Phase 6 (Complete)*: Minimal native HTTP health check probe for chiseled containers | [Program.cs](../Publishing-Tracker/apps/api/tools/PublishingTracker.HealthProbe/Program.cs) |
 
 ---
 
@@ -217,6 +217,7 @@ PublishingTracker.Agent (Program.cs)
 | **Phase 5 Layer 1 Deterministic Evals** | [Layer1DeterministicEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer1DeterministicEvalTests.cs) | 24 unit tests covering evaluation metrics (`RetrievalEvaluator`), link provenance verification (`ProvenanceEvaluator`), negative constraints and injection checks (`GroundingEvaluator`), and 5 golden author scenario scorecards. |
 | **Phase 5 Layer 2 pgvector Integration** | [Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) | 12 integration tests verifying PostgreSQL `vector` `<=>` distance parity with C# `VectorMath.CosineDistance`, multi-tenant chunk isolation, and dimension constraints using local Docker on port 5435. |
 | **Phase 5 Layer 3 Live Smoke Evals** | [LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) | 3 opt-in live tests covering multi-provider resolution (Ollama, Gemini 2.5 Flash, OpenRouter), fail-fast timeouts (15s/30s), bounded 429 retries (`RateLimitedRetryHandler`), tool parameter normalization, and full Stage 2 validation. |
+| **Phase 6 Deployment & Security Tests** | [Phase6DeploymentAndSecurityTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase6DeploymentAndSecurityTests.cs) | 17 unit & integration tests covering `AIProviderOptions.AllowInsecureInternalHttp` production fail-fast guard, `IsEndpointTrusted` allowlist across environments, `PerRequestBearerHandler` internal host support, and `PublishingTracker.HealthProbe` execution. |
 
 ---
 
@@ -252,3 +253,17 @@ Phase 5 delivers a continuous verification suite across three testing layers:
 | `Layer2PgVectorIntegrationTests` | [Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) | ✅ Implemented (Step 5.2). Tests real PostgreSQL `pgvector` `<=>` distance parity against `VectorMath.CosineDistance` and verifies multi-tenant chunk isolation (Docker port 5435). |
 | `RateLimitedRetryHandler` | [RateLimitedRetryHandler.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Live/RateLimitedRetryHandler.cs) | ✅ Implemented (Step 5.4). Delegating HTTP handler that intercepts HTTP 429 status codes and performs bounded exponential backoff with jitter (up to 3 retries). |
 | Multi-Provider Resolution (`LiveSmokeEvalTests`) | [LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) | ✅ Implemented (Step 5.4). Dynamically resolves `ollama` (local), `gemini` (`gemini-2.5-flash`), or `openrouter` with fail-fast timeouts and parameter normalization. |
+
+---
+
+## 9. Phase 6 Deployment, HealthCheck & Container Symbols (`tools/PublishingTracker.HealthProbe`)
+
+Phase 6 implements production-ready containerization and operational hardening:
+
+| Symbol / Component | File Location | Status / Responsibility |
+|---|---|---|
+| `PublishingTracker.HealthProbe` | [Program.cs](../Publishing-Tracker/apps/api/tools/PublishingTracker.HealthProbe/Program.cs) | ✅ Implemented (Step 6.1). Standalone lightweight console probe (`net10.0`) compiled to `/app/healthcheck`, issuing HTTP GET to `/health/ready` and exiting 0 (healthy) or 1 (unhealthy/timeout). |
+| `AIProviderOptions.AllowInsecureInternalHttp` & `IsEndpointTrusted` | [AIProviderOptions.cs](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Configuration/AIProviderOptions.cs) | ✅ Implemented (Step 6.2). Authoritative TLS allowlist verifying HTTPS across all environments, restricting HTTP loopback/container hosts (`api`, `publishingtracker-api`) strictly to Development/Testing, and failing fast on startup in Production. |
+| Tagged Health Probes (`/health`, `/health/live`, `/health/ready`) | [Program.cs (Api)](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs) & [Program.cs (Agent)](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Program.cs) | ✅ Implemented (Step 6.3). Tagged health endpoints enabling separate liveness (process responsiveness) and readiness (database connectivity, storage, and dependency checks) probing. |
+| Startup Migration Synchronization | [Program.cs (Api)](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Program.cs) & [docker-compose.yml](../Publishing-Tracker/apps/api/docker-compose.yml) | ✅ Implemented (Step 6.2). `Database:MigrateOnStartup` governs EF Core migrations on the Api container; Agent waits for Api healthy condition before bootstrapping or seeding the RAG corpus. |
+| Multi-Stage Chiseled Dockerfiles | [Dockerfile (Api)](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/Dockerfile) & [Dockerfile (Agent)](../Publishing-Tracker/apps/api/src/PublishingTracker.Agent/Dockerfile) | ✅ Implemented (Step 6.1). Minimal non-root UID 1654:1654 containers built on `mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`. |

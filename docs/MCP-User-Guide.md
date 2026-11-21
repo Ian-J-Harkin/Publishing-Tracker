@@ -323,7 +323,7 @@ Configure `PublishingTracker.Agent` using user secrets, environment variables, o
   - **Google Gemini Flash (Recommended for Cloud Live Evals):** Set `AIProvider:Type="openai"` with `Endpoint="https://generativelanguage.googleapis.com/v1beta/openai"`, `ModelId="gemini-2.5-flash"`, and provide `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
   - **OpenRouter:** Set `AIProvider:Type="openrouter"`, `Endpoint="https://openrouter.ai/api/v1"`, and provide `OPENROUTER_API_KEY`. Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
 - **Resilience & Timeouts:** Configure `PerCallTimeout` (e.g., 15s–20s) and `OverallTimeout` (e.g., 30s–60s). `PublishingTracker.Evals` attaches `RateLimitedRetryHandler` to intercept HTTP 429 rate-limiting responses and back off exponentially.
-- **Trusted MCP Endpoint:** `McpEndpoint` must point to an absolute `/mcp` URL over HTTPS (loopback HTTP is permitted only in `Development` or `Testing`).
+- **Trusted MCP Endpoint & Internal Container Networking:** `McpEndpoint` must point to an absolute `/mcp` URL. Over HTTPS, endpoints are trusted in all environments. In `Development` and `Testing`, loopback HTTP (`localhost`, `127.0.0.1`) is trusted, and internal container HTTP (e.g. `http://api:8080/mcp`) is permitted when `AIProvider:AllowInsecureInternalHttp=true`. In `Production`, `AllowInsecureInternalHttp` is strictly prohibited and causes immediate startup failure.
 
 ### 6.2 Authentication Requirements at `/api/agent/query`
 
@@ -441,3 +441,26 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "
 - **Layer 1 (Offline):** Exact Recall@k, MRR, and NDCG@k metrics; link provenance against `EvidenceLedger`; refusal of uncited answers when searches return empty; rejection of adversarial prompt injection directives across 5 synthetic personas.
 - **Layer 2 (PostgreSQL):** Cosine distance parity between PostgreSQL `pgvector` `<=>` SQL operations and C# in-memory `VectorMath.CosineDistance`; non-model-controlled tenant isolation ensuring User A never sees User B's private notes.
 - **Layer 3 (Live Smoke):** Real end-to-end tool calling against live LLMs, validating JSON Schema conformance, parameter normalization (`page=1`, `pageSize=20`), pure catalogue citation hygiene, and HTTP 429 backoff handling.
+
+---
+
+## 9. Container Deployment & Production Operations (Phase 6)
+
+Comprehensive production deployment patterns, containerization specifications, and operational runbooks are documented in [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md).
+
+### Quickstart: Local Docker Compose Stack
+Launch the complete multi-container stack (`PostgreSQL + pgvector`, `PublishingTracker.Api`, and `PublishingTracker.Agent`):
+
+```powershell
+# Set local secrets
+$env:JWT_SIGNING_KEY="YourSecureDevelopmentSecretKeyAtLeast32BytesLong!"
+$env:OPENROUTER_API_KEY="<your-openrouter-key>"
+
+# Launch all services
+docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
+```
+
+- **PublishingTracker.Api**: Available at `http://localhost:7285` (`/health/ready`, `/mcp`, `/api/*`).
+- **PublishingTracker.Agent**: Available at `http://localhost:7290` (`/health/ready`, `/api/agent/query`).
+- **PostgreSQL**: Bound to host port `5432` (or `POSTGRES_PORT`).
+- **Health Probing**: Executed automatically in chiseled containers using the native `/app/healthcheck` binary without curl/shell dependencies.

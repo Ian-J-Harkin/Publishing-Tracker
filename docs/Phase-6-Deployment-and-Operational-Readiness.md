@@ -1,8 +1,8 @@
-# Phase 6 — Expanded Design: Deployment, Containerization, & Operational Readiness
+# Phase 6 — Deployment, Containerization, & Operational Readiness
 
 > [!NOTE]
-> **Status: Specification & Design Only — Unimplemented.**
-> Code implementation has not begun. The codebase is currently at Phase 4 (112/112 tests passing across Phases 0–4).
+> **Status: Implemented & Verified.**
+> All 4 steps implemented and verified across 168 passing solution tests (including 17 dedicated Phase 6 deployment and security tests in `PublishingTracker.Agent.Tests`). Production runbook documented at [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md).
 
 Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md), [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md), [Phase-0-Baseline-and-Contracts.md](Phase-0-Baseline-and-Contracts.md), [Phase-1-Read-Only-Catalogue-and-MCP.md](Phase-1-Read-Only-Catalogue-and-MCP.md), [Phase-2-Agent-Loop-and-Tracing.md](Phase-2-Agent-Loop-and-Tracing.md), [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md), [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md), and [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md).
 

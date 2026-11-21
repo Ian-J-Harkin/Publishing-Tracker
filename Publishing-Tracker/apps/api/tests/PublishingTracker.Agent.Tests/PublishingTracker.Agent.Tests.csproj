@@ -17,5 +17,6 @@
     <ProjectReference Include="..\..\src\PublishingTracker.Agent\PublishingTracker.Agent.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Infrastructure\PublishingTracker.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\PublishingTracker.Rag\PublishingTracker.Rag.csproj" />
+    <ProjectReference Include="..\..\tools\PublishingTracker.HealthProbe\PublishingTracker.HealthProbe.csproj" />
   </ItemGroup>
 </Project>

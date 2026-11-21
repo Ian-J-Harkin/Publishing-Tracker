@@ -9,7 +9,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
 - [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 151/151 total passing)
-- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — 📝 **Spec Ready** (4 incremental steps planned)
+- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (168/168 solution tests passing, complete container runbook)
 
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
@@ -115,6 +115,25 @@ This log records Architecture Decision Records (ADRs), design Q&As, and concrete
   4. **Document Citation Discipline:** In `AgentPrompts`, explicitly instruct the model that when answering questions using only catalogue metadata without retrieving guideline documents, `evidence.documentSources` must remain empty.
   5. **PostgreSQL Port Isolation:** Run local Docker PostgreSQL on host port **5435** (`5435:5432`), configurable via `TEST_POSTGRES_CONNECTION`.
 - **Consequences:** Eliminates live test hangs, guarantees test resilience against intermittent provider rate limits, prevents tool reflection errors, and completely isolates test PostgreSQL state from host services.
+
+### ADR-011: Hardened Chiseled Containers, Native HealthProbe, AllowInsecureInternalHttp Guard, and Migration Sync
+- **Status:** Accepted (Phase 6 Implementation)
+- **Context:**
+  - Standard container base images include shells, package managers, and root access by default, increasing attack surface in production.
+  - Minimal chiseled container images (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`) lack `curl`, `wget`, or shells, preventing conventional shell-based Docker healthchecks (`CMD curl -f ...`).
+  - Container-to-container calls between `PublishingTracker.Agent` and `PublishingTracker.Api` over internal Docker bridge networks need a clear security policy that allows unencrypted HTTP during development without risking cleartext token transmission in production.
+  - Multi-container startup requires deterministic database migration gating so that the Agent does not query or seed missing tables before the Api finishes migrations.
+- **Decision:**
+  1. **Chiseled Non-Root Base:** Standardize on `.NET 10 Chiseled` (`mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled`) running strictly under non-root UID `1654:1654` (`app`).
+  2. **Native Standalone Health Probe:** Build a single-file, zero-dependency C# console executable (`tools/PublishingTracker.HealthProbe`) compiled during the Docker build stage to `/app/healthcheck`, probing `/health/ready` via `HttpClient` and exiting `0` (success) or `1` (failure).
+  3. **Authoritative Internal Transport Guard (`AllowInsecureInternalHttp`):** Add `AIProviderOptions.AllowInsecureInternalHttp` with consolidated `AIProviderOptions.IsEndpointTrusted` logic:
+     - HTTPS is always trusted across all environments.
+     - HTTP loopback (`localhost`, `127.0.0.1`) is trusted in Development/Testing.
+     - HTTP internal container hosts (`api`, `publishingtracker-api`) are trusted only when `AllowInsecureInternalHttp=true` AND environment is Development/Testing.
+     - Startup validation **fails fast** and aborts process execution if `AllowInsecureInternalHttp=true` in any environment outside Development or Testing (e.g., Production/Staging).
+  4. **Migration & Dependency Synchronization:** Gate database migrations on `Database:MigrateOnStartup` in `PublishingTracker.Api`; configure `PublishingTracker.Agent` with `depends_on: { api: { condition: service_healthy }, postgres: { condition: service_healthy } }` to ensure schema readiness before bootstrapping or RAG seeding.
+  5. **Shutdown Budget Alignment:** Configure `HostOptions.ShutdownTimeout = 75s` and Docker Compose `stop_grace_period = 80s` so in-flight queries (bounded by `AgentLoopOptions.OverallTimeout = 60s`) terminate cleanly without SIGKILL corruption.
+- **Consequences:** Provides a hardened, shell-free container footprint, guarantees zero insecure cleartext HTTP in production, eliminates startup race conditions, and ensures clean operational lifecycle management.
 
 ---
 

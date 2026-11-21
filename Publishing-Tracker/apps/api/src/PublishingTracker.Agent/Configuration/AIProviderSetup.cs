@@ -68,6 +68,7 @@ public static class AIProviderSetup
             OllamaModelId = type == "ollama" ? model! : configured.OllamaModelId,
             OllamaEndpoint = type == "ollama" ? endpoint : configured.OllamaEndpoint,
             McpEndpoint = configured.McpEndpoint,
+            AllowInsecureInternalHttp = configured.AllowInsecureInternalHttp,
             EmbeddingModelId = embeddingModel!,
             OllamaEmbeddingModelId = type == "ollama" ? embeddingModel! : configured.OllamaEmbeddingModelId,
             EmbeddingDimensions = configured.EmbeddingDimensions

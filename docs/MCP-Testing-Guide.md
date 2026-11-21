@@ -4,7 +4,7 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 
 ---
 
-## 1. Test Architecture & Coverage (`151/151` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`168/168` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
@@ -13,8 +13,9 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
+| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, and `HealthProbe` | `17` *(executions across 5 methods)* | Unit and integration tests covering environment guards, endpoint allowlists, bearer forwarding, and console healthcheck probing |
 | `PublishingTracker.Evals` | Phase 5 Layer 1 (Deterministic golden scorecards), Layer 2 (Real pgvector operator parity & multi-tenant isolation), Layer 3 (Opt-in live smoke evals) | `39` | Layer 1 deterministic evaluators + Layer 2 PostgreSQL test fixture (port 5435/env) + Layer 3 opt-in live smoke tests |
-| **Total Implemented CI Suite** | **Phases 0–5** | **`151`** | **100% deterministic offline & integration execution (Live tests opt-in)** |
+| **Total Implemented CI Suite** | **Phases 0–6** | **`168`** | **100% deterministic offline & integration execution (Live tests opt-in)** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -49,7 +50,7 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–5 — `151/151` Passing)
+### Running All Implemented Tests (Phases 0–6 — `168/168` Passing)
 Run the full solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -60,7 +61,7 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 
 **Expected Output:**
 - `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
-- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 58, Skipped: 0, Total: 58` (including all `16/16` Phase 4 RAG tests)
+- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 75, Skipped: 0, Total: 75` (including all `16/16` Phase 4 RAG tests and `17/17` Phase 6 deployment/security tests)
 - `PublishingTracker.Evals.dll`: `Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39` (Layer 1 deterministic scorecards + Layer 2 real pgvector integration; Layer 3 live smoke tests run conditionally/skip when no keys set)
 
 ### Running Filtered Suites by Phase
@@ -85,6 +86,9 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --no-resto
 $env:RUN_LIVE_EVALS="true"
 $env:GEMINI_API_KEY="<your-gemini-api-key>"
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
+
+# Phase 6: Container security, AllowInsecureInternalHttp production guard, and HealthProbe (17 tests)
+dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase6"
 ```
 
 # Phase 4: RAG VectorMath, MarkdownChunker, Ingestion, Embeddings, Retrieval, Composite Tool Provider & Injection Defense (16 tests)
@@ -425,3 +429,32 @@ $env:RUN_LIVE_EVALS="true"
 $env:LIVE_EVAL_PROVIDER="ollama"
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
 ```
+
+---
+
+## 10. Phase 6 Deployment, Security & HealthCheck Verification (`17` Tests)
+
+Specified in [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) and [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) (`Phase6DeploymentAndSecurityTests.cs` in `PublishingTracker.Agent.Tests`):
+
+```powershell
+# Run the 17 Phase 6 deployment and security tests
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
+  --filter "FullyQualifiedName~Phase6DeploymentAndSecurityTests"
+```
+
+### Verified Scenarios
+1. `AIProviderOptions_AllowInsecureInternalHttp_FailsFastOutsideDevelopmentOrTesting`:
+   - Verifies that setting `AllowInsecureInternalHttp = true` with `isDevelopmentOrTesting = false` returns a validation error prohibiting insecure internal HTTP in Production/Staging.
+2. `AIProviderOptions_AllowInsecureInternalHttp_PermittedInDevelopmentAndTesting`:
+   - Verifies that `AllowInsecureInternalHttp = true` is valid in Development and Testing environments when pointing to `http://api:8080/mcp`.
+3. `AIProviderOptions_IsEndpointTrusted_EnforcesStrictAllowlist` *(12 theory permutations)*:
+   - Proves HTTPS endpoints are always trusted across Development, Testing, and Production.
+   - Proves HTTP loopback (`localhost`, `127.0.0.1`) is trusted in Development/Testing, but untrusted in Production.
+   - Proves HTTP container hosts (`api`, `publishingtracker-api`) are trusted only when `AllowInsecureInternalHttp = true` AND `isDevelopmentOrTesting = true`.
+   - Proves untrusted external HTTP hosts (`evil.attacker.com`), URLs with query strings (`?query=leak`), and URLs with credentials (`user:pass@`) are strictly rejected.
+4. `PerRequestBearerHandler_AllowInsecureInternalHttp_PermitsInternalContainerHostInDevelopment`:
+   - Verifies outbound requests to `http://api:8080/mcp` succeed and attach the caller's Bearer token in Development when `AllowInsecureInternalHttp = true`.
+5. `PerRequestBearerHandler_AllowInsecureInternalHttp_RejectsWhenDisabledOrInProduction`:
+   - Verifies that disabling `AllowInsecureInternalHttp` or running in Production throws `InvalidOperationException`.
+6. `HealthProbe_Main_ReturnsZeroOnSuccess_AndOneOnFailure`:
+   - Verifies that `PublishingTracker.HealthProbe` exits with `1` on invalid target URLs or unreachable endpoints, providing reliable container readiness probing for chiseled Ubuntu images.

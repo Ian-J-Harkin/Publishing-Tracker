@@ -52,11 +52,9 @@ public sealed class PerRequestBearerHandler(
         if (!sameDestination || !string.Equals(NormalizePath(actual.AbsolutePath), "/mcp", StringComparison.Ordinal))
             throw new InvalidOperationException("Target URI does not match the configured trusted MCP endpoint.");
 
-        var isLoopbackHttp = actual.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) &&
-                             (actual.IsLoopback || actual.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase));
-        if (!actual.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
-            !(isLoopbackHttp && (environment.IsDevelopment() || environment.IsEnvironment("Testing"))))
-            throw new InvalidOperationException("Insecure MCP endpoints are not permitted outside local Development or Testing.");
+        var isDevOrTest = environment.IsDevelopment() || environment.IsEnvironment("Testing");
+        if (!AIProviderOptions.IsEndpointTrusted(actual, isDevOrTest, options.Value.AllowInsecureInternalHttp))
+            throw new InvalidOperationException("Insecure or untrusted MCP endpoints are not permitted in the current environment.");
     }
 
     private static string NormalizePath(string path) => path.TrimEnd('/').ToLowerInvariant();
