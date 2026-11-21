@@ -23,7 +23,7 @@ COPY tools/ tools/
 COPY docs/rag-corpus/ docs/rag-corpus/
 
 # Build standalone HealthProbe
-RUN dotnet publish tools/PublishingTracker.HealthProbe/PublishingTracker.HealthProbe.csproj -c Release -o /app/healthcheck-bin --no-restore
+RUN dotnet publish tools/PublishingTracker.HealthProbe/PublishingTracker.HealthProbe.csproj -c Release --use-current-runtime -p:PublishSingleFile=true --self-contained false -o /app/healthcheck-bin
 
 # Build and publish Agent
 RUN dotnet publish src/PublishingTracker.Agent/PublishingTracker.Agent.csproj -c Release -o /app/publish --no-restore

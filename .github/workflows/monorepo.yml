@@ -40,7 +40,7 @@ jobs:
       - name: Test
         env:
           TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=publishingtracker_tests;Username=postgres;Password=postgres
-        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --configuration Release --filter "Category!=LiveEval" --verbosity normal
 
   react:
     name: React

@@ -423,8 +423,8 @@ Phase 5 (detailed in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Ev
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category!=LiveEval"
 
 # 2. Local PostgreSQL + pgvector Integration (Docker on port 5435)
-$env:TEST_POSTGRES_CONNECTION="Host=localhost;Port=5435;Database=publishingtracker_evals;Username=postgres;Password=postgres"
-dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "FullyQualifiedName~Layer2"
+$env:TEST_POSTGRES_CONNECTION="Host=localhost;Port=5435;Database=publishingtracker_dev;Username=postgres;Password=postgres"
+dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "FullyQualifiedName~AgentMcpIntegrationEvalTests"
 
 # 3. Live Smoke Evals with Gemini 2.5 Flash (Opt-in)
 $env:RUN_LIVE_EVALS="true"
@@ -438,9 +438,9 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "
 ```
 
 ### 8.2 What the Layers Verify
-- **Layer 1 (Offline):** Exact Recall@k, MRR, and NDCG@k metrics; link provenance against `EvidenceLedger`; refusal of uncited answers when searches return empty; rejection of adversarial prompt injection directives across 5 synthetic personas.
-- **Layer 2 (PostgreSQL):** Cosine distance parity between PostgreSQL `pgvector` `<=>` SQL operations and C# in-memory `VectorMath.CosineDistance`; non-model-controlled tenant isolation ensuring User A never sees User B's private notes.
-- **Layer 3 (Live Smoke):** Real end-to-end tool calling against live LLMs, validating JSON Schema conformance, parameter normalization (`page=1`, `pageSize=20`), pure catalogue citation hygiene, and HTTP 429 backoff handling.
+- **Layer 1 (Offline — 30 Tests):** Canonical 12-scenario `GoldenDataset` integrity, `TrajectoryEvaluator` sequence/turn/tool checks, `ProvenanceScorer` structural citation checks, indirect prompt-injection rejection (`UNKNOWN_TOOL:`), and scripted end-to-end runs.
+- **Layer 2 (PostgreSQL — 4 Tests):** Cosine distance parity between PostgreSQL `pgvector` `<=>` SQL operations and C# `VectorMath.CosineDistance`, SQL `OwnerUserId` tenant filtering, `N=20` concurrent interleaved user isolation, and mid-run token expiry handling.
+- **Layer 3 (Live Smoke — 5 Tests):** 2 offline privacy/baseline regression gates (`eval_baseline.json`, `BaselineEnforcer`) plus 3 opt-in end-to-end live LLM evaluations validating tool calling, parameter normalization (`page=1`, `pageSize=20`), pure catalogue citation hygiene, and HTTP 429 backoff handling.
 
 ---
 
@@ -462,5 +462,5 @@ docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
 
 - **PublishingTracker.Api**: Available at `http://localhost:7285` (`/health/ready`, `/mcp`, `/api/*`).
 - **PublishingTracker.Agent**: Available at `http://localhost:7290` (`/health/ready`, `/api/agent/query`).
-- **PostgreSQL**: Bound to host port `5432` (or `POSTGRES_PORT`).
-- **Health Probing**: Executed automatically in chiseled containers using the native `/app/healthcheck` binary without curl/shell dependencies.
+- **PostgreSQL**: Bound to host port `5435` by default (configurable via `POSTGRES_PORT`).
+- **Health Probing**: Executed automatically in hardened `read_only` chiseled containers using the single-file `/app/healthcheck` binary without curl/shell dependencies.

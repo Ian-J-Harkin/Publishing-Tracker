@@ -232,9 +232,9 @@ Layer the 15–25 xUnit cases across three explicit test tiers:
 | **Phase 1** | Read-Only Catalogue & Hosted `/mcp` | ✅ **Completed** | [Phase-1-Read-Only-Catalogue-and-MCP.md](docs/Phase-1-Read-Only-Catalogue-and-MCP.md)<br>`PublishingTracker.Mcp`, `find_titles_missing_metadata`, `get_title_details`, `/mcp` streamable HTTP, 2-user isolation | 54/54 |
 | **Phase 2** | Agent Loop, Dual Budgets & Tracing | ✅ **Completed** | [Phase-2-Agent-Loop-and-Tracing.md](docs/Phase-2-Agent-Loop-and-Tracing.md)<br>`PublishingTracker.Agent`, OpenRouter + Claude, dual loop budgets (6 turns, 8 tool calls), `ActivitySource` tracing | 20/20<br>(74/74 total) |
 | **Phase 3** | Evidence Ledger & Reliable Outputs | ✅ **Completed** | [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](docs/Phase-3-Evidence-Ledger-and-Reliable-Outputs.md)<br>Per-run `EvidenceLedger` tracking linked source fields, Stage 2 structured repair turns | 22/22<br>(96/96 total) |
-| **Phase 4** | RAG Module with `pgvector` | 📝 Spec Ready | [Phase-4-RAG-Module-with-pgvector.md](docs/Phase-4-RAG-Module-with-pgvector.md)<br>`PublishingTracker.Rag`, `search_publishing_guidelines`, host-bound user scoping | 16 planned |
-| **Phase 5** | Layered CI Evaluation Suites | ⚪ Planned | Fast unit evals (`ScriptedChatClient`) + DB/HTTP integration tests + opt-in live smoke | 15–20 total |
-| **Phase 6** | Deployment & Operational Hardening | ⚪ Planned | Multi-stage Dockerfiles, Azure deployment Bicep, CI workflow updates | CI green |
+| **Phase 4** | RAG Module with `pgvector` | ✅ **Completed** | [Phase-4-RAG-Module-with-pgvector.md](docs/Phase-4-RAG-Module-with-pgvector.md)<br>`PublishingTracker.Rag`, `search_publishing_guidelines`, host-bound user scoping | 16/16<br>(112/112 total) |
+| **Phase 5** | Layered CI Evaluation Suites | ✅ **Completed** | [Phase-5-Layered-Evaluation-Strategy.md](docs/Phase-5-Layered-Evaluation-Strategy.md)<br>30 Layer 1 deterministic + 4 real `pgvector` Layer 2 + 5 Layer 3 live smoke/baseline | 39/39<br>(151/151 total) |
+| **Phase 6** | Deployment & Operational Hardening | ✅ **Completed** | [Phase-6-Deployment-and-Operational-Readiness.md](docs/Phase-6-Deployment-and-Operational-Readiness.md)<br>Chiseled Dockerfiles, single-file `HealthProbe`, `AllowInsecureInternalHttp` guard, OTLP export, Compose & CI updates | 19/19<br>(170/170 total) |
 
 ---
 

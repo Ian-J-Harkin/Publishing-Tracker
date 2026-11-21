@@ -64,6 +64,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         if (string.IsNullOrEmpty(jwtKey) || string.IsNullOrEmpty(jwtIssuer) || string.IsNullOrEmpty(jwtAudience)) {
             throw new InvalidOperationException("JWT configuration is incomplete. Please check appsettings.json or environment variables.");
         }
+        if (Encoding.UTF8.GetByteCount(jwtKey) < 32) {
+            throw new InvalidOperationException("JWT signing key (Jwt:Key) must be at least 32 UTF-8 bytes (256 bits) for HMAC-SHA256.");
+        }
 
         options.TokenValidationParameters = new TokenValidationParameters
         {

@@ -50,4 +50,24 @@ jobs:
       - name: Test
         env:
           TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=publishingtracker_tests;Username=postgres;Password=postgres
-        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-build --configuration Release --filter "Category!=LiveEval" --verbosity normal
+
+  live-eval:
+    name: Live Smoke Evals (Opt-In)
+    runs-on: ubuntu-latest
+    needs: build-test-api
+    if: github.event_name == 'workflow_dispatch' && vars.RUN_LIVE_EVALS == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run Layer 3 Live Smoke Evals
+        env:
+          RUN_LIVE_EVALS: "true"
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/PublishingTracker.Evals.csproj --configuration Release --filter "Category=LiveEval" --verbosity normal

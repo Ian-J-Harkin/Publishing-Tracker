@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > **Status: Implemented & Verified.**
-> All 4 steps (Steps 5.1 through 5.4) are complete. `PublishingTracker.Evals` contains 39 passing tests (151 tests passing across the solution). Layer 1 deterministic tests, Layer 2 real PostgreSQL + `pgvector` multi-tenant integration tests, and Layer 3 opt-in live smoke tests (`Category=LiveEval`) are fully implemented and verified.
+> All 4 steps (Steps 5.1 through 5.4) are complete. `PublishingTracker.Evals` contains 39 passing tests (30 Layer 1 deterministic tests, 4 Layer 2 real PostgreSQL + `pgvector` integration tests, and 5 Layer 3 `Category=LiveEval` baseline/smoke tests), out of 170 passing tests across the solution.
 
 Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md), [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md), [Phase-0-Baseline-and-Contracts.md](Phase-0-Baseline-and-Contracts.md), [Phase-1-Read-Only-Catalogue-and-MCP.md](Phase-1-Read-Only-Catalogue-and-MCP.md), [Phase-2-Agent-Loop-and-Tracing.md](Phase-2-Agent-Loop-and-Tracing.md), [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md), and [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md).
 

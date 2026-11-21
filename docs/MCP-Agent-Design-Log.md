@@ -9,7 +9,7 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
 - [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 151/151 total passing)
-- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (168/168 solution tests passing, complete container runbook)
+- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (170/170 solution tests passing, complete container runbook)
 
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
@@ -540,14 +540,14 @@ public ValidationResult Validate(string? rawJson, EvidenceLedger ledger)
 
 ### 6. Layered Evaluation Strategy (`PublishingTracker.Evals` — 39 Tests)
 
-Phase 5 implements a 3-layer verification harness fully documented in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md):
+Phase 5 implements a 3-layer verification harness documented in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md):
 
-1. **Layer 1: Deterministic Golden Scorecards ([Layer1DeterministicEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer1DeterministicEvalTests.cs) — 24 tests):**
-   Runs 100% offline with zero token spend using `ScriptedChatClient`, `RetrievalEvaluator` (Recall@k, MRR, NDCG@k), `ProvenanceEvaluator` (linked `bookId`, `editionId`, `fields`, `documentId`, `chunkId` checks), and `GroundingEvaluator` (negative constraint verification, prompt injection defense) across 5 golden author personas.
-2. **Layer 2: PostgreSQL + pgvector Integration ([Layer2PgVectorIntegrationTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/Layer2PgVectorIntegrationTests.cs) — 12 tests):**
-   Runs against a live PostgreSQL database equipped with the `vector` extension. Connects to local Docker PostgreSQL on port **5435** (`TEST_POSTGRES_CONNECTION`) to isolate tests from any native Windows PostgreSQL service on 5432. Proves SQL-level `<=>` cosine distance parity against C# `VectorMath.CosineDistance`, non-model-controlled tenant chunk isolation, and 1536-dimension schema validation.
-3. **Layer 3: Live Smoke Evals ([LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) — 3 tests, `Category=LiveEval`):**
-   Opt-in live end-to-end evaluation supporting local Ollama (`qwen2.5-coder:7b`), Google Gemini Flash (`gemini-2.5-flash`), and OpenRouter (`OPENROUTER_API_KEY`). Hardened with fail-fast timeouts (`15s` per-call, `30s` overall), `RateLimitedRetryHandler` for HTTP 429 backoff, automatic argument normalization (`page=1`, `pageSize=20`), and pure catalogue citation hygiene.
+1. **Layer 1: Deterministic Golden Benchmarks & Evaluators (30 tests across 5 files):**
+   Runs 100% offline with zero token spend across [GoldenDatasetTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/GoldenDatasetTests.cs), [TrajectoryEvaluatorTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/TrajectoryEvaluatorTests.cs), [ProvenanceScorerTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/ProvenanceScorerTests.cs), [IndirectPromptInjectionTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/IndirectPromptInjectionTests.cs), and [GoldenScenarioEndToEndTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/GoldenScenarioEndToEndTests.cs), validating the 12 scenarios in [GoldenDataset.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/GoldenDataset.cs), `TrajectoryEvaluator`, `ProvenanceScorer`, and indirect prompt-injection resistance.
+2. **Layer 2: PostgreSQL + `pgvector` Integration ([AgentMcpIntegrationEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/AgentMcpIntegrationEvalTests.cs) & [PostgresTestDatabaseFixture.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/PostgresTestDatabaseFixture.cs) — 4 tests):**
+   Hard-fails if PostgreSQL + `vector` is unavailable. Connects to port **5435** by default (overridable via `TEST_POSTGRES_CONNECTION`) to avoid colliding with native Windows PostgreSQL on 5432, proving SQL `<=>` distance parity against C# `VectorMath.CosineDistance`, SQL `OwnerUserId` filtering, `N=20` concurrent interleaved user isolation, and mid-run token expiry fail-closed behavior.
+3. **Layer 3: Live Smoke Evals & Baseline Gates ([LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) — 5 tests, `Category=LiveEval`):**
+   Includes 2 deterministic offline regression/privacy checks against [eval_baseline.json](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/eval_baseline.json) and `BaselineEnforcer`, plus 3 opt-in end-to-end live LLM evaluations supporting local Ollama (`qwen2.5-coder:7b`), Google Gemini Flash (`gemini-2.5-flash`), and OpenRouter (`google/gemini-2.5-flash`) with fail-fast timeouts (`15s` per-call, `30s` overall) and `RateLimitedRetryHandler` for HTTP 429 backoff.
 
 ---
 

@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Trace;
@@ -44,8 +45,10 @@ builder.Services.Configure<HostOptions>(options =>
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
 var jwtAudience = builder.Configuration["Jwt:Audience"];
-if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+if (string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
     throw new InvalidOperationException("JWT configuration is incomplete. Configure Jwt:Key, Jwt:Issuer, and Jwt:Audience using deployment secrets.");
+if (AIProviderOptions.ValidateJwtKey(jwtKey) is { } jwtKeyError)
+    throw new InvalidOperationException(jwtKeyError);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -58,7 +61,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
         };
         options.Events = new JwtBearerEvents
         {
@@ -116,32 +119,58 @@ builder.Services.AddSingleton<IChatClient>(services =>
     AIProviderSetup.CreateChatClient(services.GetRequiredService<IOptions<AIProviderOptions>>().Value));
 builder.Services.AddSingleton<AgentOutputValidator>();
 builder.Services.AddTransient<AgentLoopRunner>();
-builder.Services.AddOpenTelemetry().WithTracing(tracing => tracing.AddSource(AgentTelemetry.ActivitySourceName));
+builder.Services.AddOpenTelemetry().WithTracing(tracing =>
+{
+    tracing.AddSource(AgentTelemetry.ActivitySourceName);
+    if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+    {
+        tracing.AddOtlpExporter();
+    }
+});
 
 var health = builder.Services.AddHealthChecks();
-if (!builder.Environment.IsEnvironment("Testing") && !string.IsNullOrWhiteSpace(connectionString))
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    health.AddDbContextCheck<PublishingTrackerDbContext>("database", tags: ["ready"]);
+    if (!string.IsNullOrWhiteSpace(connectionString))
+    {
+        health.AddDbContextCheck<PublishingTrackerDbContext>("database", tags: ["ready"]);
+    }
+
+    health.AddCheck<McpApiHealthCheck>("mcp-api", tags: ["ready"]);
 }
 
 var app = builder.Build();
 
-if (builder.Configuration.GetValue<bool>("Rag:AutoSeedOnStartup") &&
-    !builder.Environment.IsEnvironment("Testing"))
+if (!builder.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var store = scope.ServiceProvider.GetRequiredService<IRagChunkStore>();
     if (store.IsPostgreSql)
     {
-        var corpusDir = Path.Combine(app.Environment.ContentRootPath, "..", "PublishingTracker.Api", "docs", "rag-corpus");
-        if (!Directory.Exists(corpusDir))
+        var db = scope.ServiceProvider.GetRequiredService<PublishingTrackerDbContext>();
+        try
         {
-            corpusDir = Path.Combine(app.Environment.ContentRootPath, "docs", "rag-corpus");
+            await db.RagDocumentChunks.AsNoTracking().Take(1).ToListAsync();
         }
-        if (Directory.Exists(corpusDir))
+        catch (Exception ex)
         {
-            var ingestion = scope.ServiceProvider.GetRequiredService<RagIngestionService>();
-            await ingestion.SeedLockedCorpusAsync(corpusDir);
+            throw new InvalidOperationException(
+                "Database schema is not ready (rag_document_chunks table is missing or unreachable). Ensure PublishingTracker.Api has applied migrations before starting PublishingTracker.Agent.",
+                ex);
+        }
+
+        if (builder.Configuration.GetValue<bool>("Rag:AutoSeedOnStartup"))
+        {
+            var corpusDir = Path.Combine(app.Environment.ContentRootPath, "..", "PublishingTracker.Api", "docs", "rag-corpus");
+            if (!Directory.Exists(corpusDir))
+            {
+                corpusDir = Path.Combine(app.Environment.ContentRootPath, "docs", "rag-corpus");
+            }
+            if (Directory.Exists(corpusDir))
+            {
+                var ingestion = scope.ServiceProvider.GetRequiredService<RagIngestionService>();
+                await ingestion.SeedLockedCorpusAsync(corpusDir);
+            }
         }
     }
 }
@@ -208,3 +237,27 @@ static void Copy(AIProviderOptions from, AIProviderOptions to)
 }
 
 public partial class Program { }
+
+sealed class McpApiHealthCheck(IHttpClientFactory httpClientFactory, IOptions<AIProviderOptions> options) : IHealthCheck
+{
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        if (!Uri.TryCreate(options.Value.McpEndpoint, UriKind.Absolute, out var mcpUri))
+            return HealthCheckResult.Unhealthy("Invalid McpEndpoint URI.");
+
+        var probeUri = new Uri(mcpUri, "/health/live");
+        try
+        {
+            using var client = httpClientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(3);
+            using var response = await client.GetAsync(probeUri, cancellationToken);
+            return response.IsSuccessStatusCode
+                ? HealthCheckResult.Healthy("MCP API host is reachable.")
+                : HealthCheckResult.Unhealthy($"MCP API host returned {(int)response.StatusCode}.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return HealthCheckResult.Unhealthy("MCP API host is unreachable.", ex);
+        }
+    }
+}

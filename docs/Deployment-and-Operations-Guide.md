@@ -66,7 +66,7 @@ Because chiseled containers lack `curl` and `wget`, healthchecks are performed u
 - **`/health/live`**: Process liveness probe (returns HTTP 200 immediately if process is responsive).
 - **`/health/ready`**: Readiness probe checking:
   - `PublishingTracker.Api`: Database connection status + `temp_uploads` storage availability.
-  - `PublishingTracker.Agent`: Database connection status (for RAG chunk store).
+  - `PublishingTracker.Agent`: Database connection status (`database`) + MCP API host `/health/live` reachability (`mcp-api`).
 
 ### HealthProbe Usage
 ```bash
@@ -95,6 +95,10 @@ Because chiseled containers lack `curl` and `wget`, healthchecks are performed u
 - **HTTP Internal Container Hosts (`api`, `publishingtracker-api`):** Trusted only when `AllowInsecureInternalHttp=true` AND environment is `Development` or `Testing`.
 - **All other HTTP destinations:** Strictly rejected with `InvalidOperationException`.
 
+### `Jwt:Key` Minimum Entropy & OpenTelemetry OTLP Export
+- Both `PublishingTracker.Api` and `PublishingTracker.Agent` fail fast on startup if `Jwt:Key` is shorter than **32 UTF-8 bytes (256 bits)** for HMAC-SHA256.
+- Setting `OTEL_EXPORTER_OTLP_ENDPOINT` enables out-of-process OTLP span export in `PublishingTracker.Agent` (`EnableSensitiveData = false`).
+
 ---
 
 ## 5. Startup Synchronization & Database Migrations
@@ -108,6 +112,7 @@ Because chiseled containers lack `curl` and `wget`, healthchecks are performed u
 3. **`PublishingTracker.Agent`** boots:
    - Configured with `depends_on: { api: { condition: service_healthy }, postgres: { condition: service_healthy } }`.
    - Never runs migrations directly (single authoritative migration owner).
+   - Immediately verifies PostgreSQL schema readiness (`rag_document_chunks` query) outside `Testing` and fails fast with a clear diagnostic error if migrations are missing.
    - If `Rag:AutoSeedOnStartup=true`, reads markdown guides from `/app/docs/rag-corpus` and idempotently seeds vector embeddings into PostgreSQL.
 
 ### Shutdown Alignment
@@ -133,7 +138,7 @@ docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
 ### Services & Port Mappings
 | Service | Container Name | Host Port | Internal Port | Description |
 |---|---|---|---|---|
-| PostgreSQL | `publishingtracker-postgres` | `5432` (or `POSTGRES_PORT`) | `5432` | PostgreSQL 17 with `pgvector` extension |
+| PostgreSQL | `publishingtracker-postgres` | `5435` (default, or `POSTGRES_PORT`) | `5432` | PostgreSQL 17 with `pgvector` extension |
 | API | `publishingtracker-api` | `7285` | `8080` | REST API + `/mcp` Streamable HTTP endpoint |
 | Agent | `publishingtracker-agent` | `7290` | `8080` | Natural language agent endpoint (`/api/agent/query`) |
 

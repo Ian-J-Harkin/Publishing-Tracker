@@ -90,6 +90,15 @@ public sealed class AIProviderOptions
         return false;
     }
 
+    public static string? ValidateJwtKey(string? jwtKey)
+    {
+        if (string.IsNullOrWhiteSpace(jwtKey))
+            return "JWT configuration is incomplete. Configure Jwt:Key, Jwt:Issuer, and Jwt:Audience using deployment secrets.";
+        if (System.Text.Encoding.UTF8.GetByteCount(jwtKey) < 32)
+            return "JWT signing key (Jwt:Key) must be at least 32 UTF-8 bytes (256 bits) for HMAC-SHA256.";
+        return null;
+    }
+
     public override string ToString() =>
         $"AIProviderOptions {{ Type = {Type}, ModelId = {ModelId}, EmbeddingModelId = {EmbeddingModelId}, Endpoint = {Endpoint}, ApiKey = {Redact(ApiKey)}, OpenRouterApiKey = {Redact(OpenRouterApiKey)}, McpEndpoint = {McpEndpoint}, AllowInsecureInternalHttp = {AllowInsecureInternalHttp} }}";
 

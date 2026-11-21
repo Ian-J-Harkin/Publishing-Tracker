@@ -22,7 +22,7 @@ COPY src/ src/
 COPY tools/ tools/
 
 # Build standalone HealthProbe
-RUN dotnet publish tools/PublishingTracker.HealthProbe/PublishingTracker.HealthProbe.csproj -c Release -o /app/healthcheck-bin --no-restore
+RUN dotnet publish tools/PublishingTracker.HealthProbe/PublishingTracker.HealthProbe.csproj -c Release --use-current-runtime -p:PublishSingleFile=true --self-contained false -o /app/healthcheck-bin
 
 # Build and publish API
 RUN dotnet publish src/PublishingTracker.Api/PublishingTracker.Api.csproj -c Release -o /app/publish --no-restore
