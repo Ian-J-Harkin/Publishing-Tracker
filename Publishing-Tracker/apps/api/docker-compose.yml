@@ -76,10 +76,8 @@ services:
       Jwt__Audience: "PublishingTracker.Api"
       AIProvider__McpEndpoint: "http://api:8080/mcp"
       AIProvider__AllowInsecureInternalHttp: "true"
-      AIProvider__Type: "${AI_PROVIDER_TYPE:-openrouter}"
-      AIProvider__ApiKey: "${OPENROUTER_API_KEY}"
-      AIProvider__OpenRouterApiKey: "${OPENROUTER_API_KEY}"
-      Rag__AutoSeedOnStartup: "true"
+      AIProvider__Type: "${AI_PROVIDER_TYPE:-ollama}"
+      Rag__AutoSeedOnStartup: "${RAG_AUTO_SEED_ON_STARTUP:-false}"
     ports:
       - "7290:8080"
 

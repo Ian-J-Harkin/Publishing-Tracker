@@ -22,37 +22,18 @@ param appServicePlanName string
 @description('API Web App name.')
 param apiWebAppName string
 
+@description('Agent Web App name.')
+param agentWebAppName string = 'app-publishing-tracker-agent-${environment}'
+
 @description('Log Analytics workspace name.')
 param logAnalyticsWorkspaceName string
 
 @description('Application Insights resource name.')
 param applicationInsightsName string
 
-@description('Azure SQL logical server name.')
-param sqlServerName string
-
-@description('Azure SQL database name.')
-param sqlDatabaseName string
-
-@description('SQL administrator login name.')
-param sqlAdminLogin string
-
 @secure()
-@description('SQL administrator password. Pass via secure CI secret.')
-param sqlAdminPassword string
-
-@allowed([
-  'Enabled'
-  'Disabled'
-])
-@description('SQL public network access setting. Use Disabled only with private connectivity in place.')
-param sqlPublicNetworkAccess string = 'Enabled'
-
-@description('If true, adds SQL firewall rule to allow Azure services (0.0.0.0).')
-param sqlAllowAzureServices bool = true
-
-@description('Optional single client IP allowed through SQL firewall.')
-param sqlAllowedClientIp string = ''
+@description('Neon Serverless PostgreSQL connection string stored in Azure Key Vault. Pass via secure CI secret.')
+param neonConnectionString string = ''
 
 @description('Azure Key Vault name.')
 param keyVaultName string
@@ -80,22 +61,6 @@ module monitoring './modules/monitoring.bicep' = {
   }
 }
 
-module sql './modules/sql.bicep' = {
-  name: 'sql-${environment}'
-  scope: infraResourceGroup
-  params: {
-    location: location
-    tags: tags
-    sqlServerName: sqlServerName
-    sqlDatabaseName: sqlDatabaseName
-    sqlAdminLogin: sqlAdminLogin
-    sqlAdminPassword: sqlAdminPassword
-    sqlPublicNetworkAccess: sqlPublicNetworkAccess
-    allowAzureServices: sqlAllowAzureServices
-    allowedClientIp: sqlAllowedClientIp
-  }
-}
-
 module keyVault './modules/keyvault.bicep' = {
   name: 'keyvault-${environment}'
   scope: infraResourceGroup
@@ -104,6 +69,7 @@ module keyVault './modules/keyvault.bicep' = {
     tags: tags
     keyVaultName: keyVaultName
     tenantId: tenant().tenantId
+    neonConnectionString: neonConnectionString
   }
 }
 
@@ -115,6 +81,7 @@ module appService './modules/appservice.bicep' = {
     tags: tags
     appServicePlanName: appServicePlanName
     apiWebAppName: apiWebAppName
+    agentWebAppName: agentWebAppName
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     keyVaultUri: keyVault.outputs.keyVaultUri
   }
@@ -126,6 +93,15 @@ module keyVaultAccess './modules/keyvault-rbac.bicep' = {
   params: {
     keyVaultName: keyVaultName
     principalId: appService.outputs.principalId
+  }
+}
+
+module agentKeyVaultAccess './modules/keyvault-rbac.bicep' = {
+  name: 'keyvault-rbac-agent-${environment}'
+  scope: infraResourceGroup
+  params: {
+    keyVaultName: keyVaultName
+    principalId: appService.outputs.agentPrincipalId
   }
 }
 
@@ -142,7 +118,8 @@ module alerts './modules/alerts.bicep' = {
 
 output resourceGroup string = infraResourceGroup.name
 output apiHostName string = appService.outputs.defaultHostName
+output agentHostName string = appService.outputs.agentDefaultHostName
 output keyVaultUri string = keyVault.outputs.keyVaultUri
-output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output keyVaultRoleAssignmentId string = keyVaultAccess.outputs.roleAssignmentId
+output agentKeyVaultRoleAssignmentId string = agentKeyVaultAccess.outputs.roleAssignmentId
 output appServiceHttp5xxAlertId string = alerts.outputs.metricAlertId

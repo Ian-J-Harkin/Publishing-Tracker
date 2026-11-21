@@ -14,10 +14,9 @@ This folder contains Azure infrastructure templates for Publishing Tracker.
 - Resource group
 - Log Analytics workspace
 - Application Insights
-- Azure SQL Server + database
-- Azure Key Vault
-- App Service plan + API Web App
-- Key Vault RBAC assignment (API managed identity: Key Vault Secrets User)
+- Azure Key Vault (storing `NeonConnection` secret for external Neon Serverless PostgreSQL + `pgvector`, plus references for `JwtKey` and `AIProviderApiKey`)
+- App Service plan + API Web App (`apiWebApp`) + Agent Web App (`agentWebApp`)
+- Key Vault RBAC assignments (`apiWebApp` and `agentWebApp` managed identities: Key Vault Secrets User)
 - Baseline monitoring alert for API HTTP 5xx
 
 ## GitHub workflow
@@ -35,8 +34,8 @@ It runs:
 ## Required GitHub secrets
 
 - `AZURE_CREDENTIALS`: Service principal JSON for `azure/login`
-- `SQL_ADMIN_PASSWORD_DEV`: SQL admin password for dev deployments
-- `SQL_ADMIN_PASSWORD_PROD`: SQL admin password for prod deployments
+- `NEON_CONNECTION_STRING_DEV`: Neon Serverless PostgreSQL (`pgvector`) connection string for dev deployments
+- `NEON_CONNECTION_STRING_PROD`: Neon Serverless PostgreSQL (`pgvector`) connection string for prod deployments
 
 Optional (set in parameter files):
 
@@ -53,8 +52,8 @@ Optional (set in parameter files):
 3. Add required secrets:
    - Repository-level: `AZURE_CREDENTIALS`
    - Environment-level (recommended):
-     - `dev`: `SQL_ADMIN_PASSWORD_DEV`
-     - `prod`: `SQL_ADMIN_PASSWORD_PROD`
+     - `dev`: `NEON_CONNECTION_STRING_DEV`
+     - `prod`: `NEON_CONNECTION_STRING_PROD`
 4. Validate workflow behavior:
    - Open a PR touching `infra/**` to confirm `what-if` runs.
    - Run `Infra IaC` manually with `environment=dev`, `apply=false` to validate guards.
@@ -98,8 +97,8 @@ Repository secret:
 Environment secrets:
 
 1. **Settings** -> **Environments** -> **dev** -> **Secrets and variables** -> **Actions**.
-2. Add `SQL_ADMIN_PASSWORD_DEV`.
-3. Repeat in `prod` and add `SQL_ADMIN_PASSWORD_PROD`.
+2. Add `NEON_CONNECTION_STRING_DEV`.
+3. Repeat in `prod` and add `NEON_CONNECTION_STRING_PROD`.
 
 ### 4) Validate approval flow
 
@@ -114,17 +113,16 @@ Environment secrets:
 
 ## Day-2 operations runbook
 
-### Rotate SQL admin password
+### Rotate Neon database credentials
 
-1. Generate a new strong password.
-2. Update the SQL admin password in Azure SQL Server.
-3. Update the matching GitHub environment secret:
-   - `dev` -> `SQL_ADMIN_PASSWORD_DEV`
-   - `prod` -> `SQL_ADMIN_PASSWORD_PROD`
-4. Run `Infra IaC` manually with:
+1. Rotate the PostgreSQL role password in the Neon Console.
+2. Update the Neon connection string in the matching GitHub environment secret:
+   - `dev` -> `NEON_CONNECTION_STRING_DEV`
+   - `prod` -> `NEON_CONNECTION_STRING_PROD`
+3. Run `Infra IaC` manually with:
    - `environment=<target>`
-   - `apply=true`
-5. Validate app connectivity and API health checks.
+   - `apply=true` (updates the `NeonConnection` secret in Azure Key Vault).
+4. Ensure `JwtKey` and `AIProviderApiKey` secrets exist in Key Vault, then validate app connectivity and `/health/ready` checks on both `apiWebApp` and `agentWebApp`.
 
 ### Rollback approach
 
@@ -151,17 +149,13 @@ Unfreeze:
 
 ## Security defaults in this scaffold
 
-- SQL enforces TLS 1.2 minimum.
-- SQL firewall supports:
-  - `sqlAllowAzureServices=true` (adds `0.0.0.0` rule),
-  - optional `sqlAllowedClientIp`.
+- Neon PostgreSQL connections require TLS (`Ssl Mode=Require`).
+- Both API and Agent enforce HTTPS (`httpsOnly: true`, `minTlsVersion: '1.2'`) and connect to `AIProvider__McpEndpoint` over HTTPS (`https://<apiHostName>/mcp`).
 - Key Vault uses RBAC mode with purge protection enabled.
-- API app uses managed identity and receives Key Vault secret-reader role at vault scope.
+- Both `apiWebApp` and `agentWebApp` use SystemAssigned managed identities and receive Key Vault Secrets User role at vault scope.
 - HTTP 5xx metric alert is created for the API app.
-
-If you later add private endpoints/VNet integration, set `sqlPublicNetworkAccess=Disabled` in the relevant environment parameter file.
 
 ## Notes
 
-- This is a safe first scaffold. It does not yet include private networking, advanced RBAC, or alert rules.
-- The API app setting `DefaultConnection` is set to a Key Vault reference. You must create the referenced secret in Key Vault (or extend templates to manage it).
+- Neon Serverless PostgreSQL projects/branches (with `pgvector` enabled) are provisioned externally in Neon and injected into Azure Key Vault via `neonConnectionString` (`NeonConnection` secret).
+- App settings for `Jwt__Key` and `AIProvider__ApiKey` use Key Vault references (`secrets/JwtKey/` and `secrets/AIProviderApiKey/`). Provision those two secrets in Key Vault alongside `NeonConnection` before starting production traffic.

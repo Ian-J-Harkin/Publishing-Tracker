@@ -127,13 +127,12 @@ Because chiseled containers lack `curl` and `wget`, healthchecks are performed u
 Start the complete local stack from the repository root:
 
 ```powershell
-# Set optional secrets
-$env:JWT_SIGNING_KEY="YourSecureDevelopmentSecretKeyAtLeast32BytesLong!"
-$env:OPENROUTER_API_KEY="<your-openrouter-key>"
-
-# Launch the stack
+# Launch the stack (defaults AIProvider__Type to ollama so no cloud API key env vars are injected)
 docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
 ```
+
+> [!WARNING]
+> **Never store or inject cloud LLM API keys via `docker-compose.yml` `environment:` blocks.** Environment variables persist in container config metadata (`docker inspect`) and process listings. For local non-Ollama containers, supply secrets via file-mounted Docker/orchestrator secrets (`/run/secrets/ai_provider_api_key` on `tmpfs` with `AddKeyPerFile`) or Azure Key Vault + Managed Identity in cloud deployments.
 
 ### Services & Port Mappings
 | Service | Container Name | Host Port | Internal Port | Description |

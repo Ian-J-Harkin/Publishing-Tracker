@@ -5,6 +5,10 @@ param tags object
 param keyVaultName string
 param tenantId string
 
+@secure()
+@description('Optional Neon PostgreSQL connection string stored as secret NeonConnection.')
+param neonConnectionString string = ''
+
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
   location: location
@@ -22,6 +26,13 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     softDeleteRetentionInDays: 90
     enablePurgeProtection: true
     publicNetworkAccess: 'Enabled'
+  }
+
+  resource neonConnectionSecret 'secrets@2023-07-01' = if (!empty(neonConnectionString)) {
+    name: 'NeonConnection'
+    properties: {
+      value: neonConnectionString
+    }
   }
 }
 

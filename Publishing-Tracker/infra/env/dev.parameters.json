@@ -17,29 +17,14 @@
     "apiWebAppName": {
       "value": "app-publishing-tracker-api-dev"
     },
+    "agentWebAppName": {
+      "value": "app-publishing-tracker-agent-dev"
+    },
     "logAnalyticsWorkspaceName": {
       "value": "log-publishing-tracker-dev"
     },
     "applicationInsightsName": {
       "value": "appi-publishing-tracker-dev"
-    },
-    "sqlServerName": {
-      "value": "sql-publishingtracker-dev"
-    },
-    "sqlDatabaseName": {
-      "value": "sqldb-publishingtracker-dev"
-    },
-    "sqlAdminLogin": {
-      "value": "ptsqladmin"
-    },
-    "sqlPublicNetworkAccess": {
-      "value": "Enabled"
-    },
-    "sqlAllowAzureServices": {
-      "value": true
-    },
-    "sqlAllowedClientIp": {
-      "value": ""
     },
     "keyVaultName": {
       "value": "kv-publishing-tracker-dev"

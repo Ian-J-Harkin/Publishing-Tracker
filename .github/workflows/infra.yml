@@ -56,7 +56,7 @@ jobs:
         shell: bash
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-          SQL_ADMIN_PASSWORD_DEV: ${{ secrets.SQL_ADMIN_PASSWORD_DEV }}
+          NEON_CONNECTION_STRING_DEV: ${{ secrets.NEON_CONNECTION_STRING_DEV }}
         run: |
           set -euo pipefail
           missing=0
@@ -66,8 +66,8 @@ jobs:
             missing=1
           fi
 
-          if [[ -z "${SQL_ADMIN_PASSWORD_DEV}" ]]; then
-            echo "::error::Missing required secret: SQL_ADMIN_PASSWORD_DEV"
+          if [[ -z "${NEON_CONNECTION_STRING_DEV}" ]]; then
+            echo "::error::Missing required secret: NEON_CONNECTION_STRING_DEV"
             missing=1
           fi
 
@@ -88,7 +88,7 @@ jobs:
             --location westeurope \
             --template-file Publishing-Tracker/infra/bicep/main.bicep \
             --parameters @Publishing-Tracker/infra/env/dev.parameters.json \
-            --parameters sqlAdminPassword="${{ secrets.SQL_ADMIN_PASSWORD_DEV }}"
+            --parameters neonConnectionString="${{ secrets.NEON_CONNECTION_STRING_DEV }}"
 
   deploy:
     name: Deploy infrastructure
@@ -104,8 +104,8 @@ jobs:
         env:
           TARGET_ENV: ${{ inputs.environment }}
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-          SQL_ADMIN_PASSWORD_DEV: ${{ secrets.SQL_ADMIN_PASSWORD_DEV }}
-          SQL_ADMIN_PASSWORD_PROD: ${{ secrets.SQL_ADMIN_PASSWORD_PROD }}
+          NEON_CONNECTION_STRING_DEV: ${{ secrets.NEON_CONNECTION_STRING_DEV }}
+          NEON_CONNECTION_STRING_PROD: ${{ secrets.NEON_CONNECTION_STRING_PROD }}
         run: |
           set -euo pipefail
           missing=0
@@ -116,13 +116,13 @@ jobs:
           fi
 
           if [[ "${TARGET_ENV}" == "prod" ]]; then
-            if [[ -z "${SQL_ADMIN_PASSWORD_PROD}" ]]; then
-              echo "::error::Missing required secret for prod deploy: SQL_ADMIN_PASSWORD_PROD"
+            if [[ -z "${NEON_CONNECTION_STRING_PROD}" ]]; then
+              echo "::error::Missing required secret for prod deploy: NEON_CONNECTION_STRING_PROD"
               missing=1
             fi
           else
-            if [[ -z "${SQL_ADMIN_PASSWORD_DEV}" ]]; then
-              echo "::error::Missing required secret for dev deploy: SQL_ADMIN_PASSWORD_DEV"
+            if [[ -z "${NEON_CONNECTION_STRING_DEV}" ]]; then
+              echo "::error::Missing required secret for dev deploy: NEON_CONNECTION_STRING_DEV"
               missing=1
             fi
           fi
@@ -144,11 +144,11 @@ jobs:
 
           if [[ "${{ inputs.environment }}" == "prod" ]]; then
             PARAM_FILE="Publishing-Tracker/infra/env/prod.parameters.json"
-            SQL_PASSWORD="${{ secrets.SQL_ADMIN_PASSWORD_PROD }}"
+            NEON_CONNECTION_STRING="${{ secrets.NEON_CONNECTION_STRING_PROD }}"
             DEPLOYMENT_NAME="publishing-tracker-prod-manual-${{ github.run_id }}"
           else
             PARAM_FILE="Publishing-Tracker/infra/env/dev.parameters.json"
-            SQL_PASSWORD="${{ secrets.SQL_ADMIN_PASSWORD_DEV }}"
+            NEON_CONNECTION_STRING="${{ secrets.NEON_CONNECTION_STRING_DEV }}"
             DEPLOYMENT_NAME="publishing-tracker-dev-manual-${{ github.run_id }}"
           fi
 
@@ -157,4 +157,4 @@ jobs:
             --location westeurope \
             --template-file Publishing-Tracker/infra/bicep/main.bicep \
             --parameters @"$PARAM_FILE" \
-            --parameters sqlAdminPassword="$SQL_PASSWORD"
+            --parameters neonConnectionString="$NEON_CONNECTION_STRING"
