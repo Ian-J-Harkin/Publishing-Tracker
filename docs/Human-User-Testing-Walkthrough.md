@@ -21,7 +21,7 @@ Before walking through manual testing, this matrix evaluates whether every requi
 | **9. Truthfulness over speculation (Deferred milestone)** | ✅ **Intentional Deferral** | `get_price_on_date`, `get_edition_history`, and `list_titles_by_status` remain deliberately excluded until effective-dated pricing/history domain tables exist; unsupported historical questions return `"could_not_answer"`. |
 
 > [!NOTE]
-> **Residual Azure Infrastructure Note:** Local multi-container Docker Compose, chiseled container builds, single-file health probes, and GitHub Actions CI (`api.yml` / `monorepo.yml`) are implemented and verified. Existing Azure Bicep files in [Publishing-Tracker/infra/bicep/main.bicep](../Publishing-Tracker/infra/bicep/main.bicep) still represent the baseline single App Service + SQL Server deployment and were not converted to Azure Container Apps + Neon PostgreSQL as part of local containerization.
+> **Cloud Infrastructure & Secret Alignment:** Both local Docker Compose ([docker-compose.yml](../Publishing-Tracker/apps/api/docker-compose.yml) + [docker-compose.secrets.yml](../Publishing-Tracker/apps/api/docker-compose.secrets.yml)) and Azure Bicep templates ([main.bicep](../Publishing-Tracker/infra/bicep/main.bicep), [appservice.bicep](../Publishing-Tracker/infra/bicep/modules/appservice.bicep), [keyvault.bicep](../Publishing-Tracker/infra/bicep/modules/keyvault.bicep)) are aligned to PostgreSQL (`pgvector` / Neon Serverless PostgreSQL) with 3-tier secret management (`.NET User Secrets` locally, `/run/secrets/` file mounts in containers, and Key Vault Managed Identity RBAC in Azure).
 
 ---
 
@@ -52,9 +52,14 @@ Plus 6 baseline `RagDocumentChunks`: the 4 shared publishing guides (`doc-metada
 #### Prerequisites
 - PostgreSQL 17 + `pgvector` running locally on port `5435` (for example container `publishingtracker-postgres` mapped `5435:5432`).
 - At least one configured AI provider credential for `PublishingTracker.Agent`:
-  - **Recommended Cloud Quickstart (Gemini Flash):** `$env:AIProvider__Type = "gemini"; $env:GEMINI_API_KEY = "<your-gemini-key>"`.
-  - **Alternative Cloud Provider (OpenRouter):** `$env:AIProvider__Type = "openrouter"; $env:OPENROUTER_API_KEY = "<your-openrouter-key>"`.
-  - **Alternative Local Provider (Ollama):** `$env:AIProvider__Type = "ollama"` (requires Ollama running locally on `http://localhost:11434`). *(Note: `VectorMath.ExpectedDimensions` locks `1536`-dimension embeddings for `search_publishing_guidelines`; Gemini `gemini-embedding-001` and OpenRouter `openai/text-embedding-3-small` return 1536 dimensions natively, whereas local `nomic-embed-text` defaults to 768 dimensions unless paired with a 1536-dim embedding endpoint.)*
+  - **Recommended Local Dev Secret Storage (`.NET User Secrets`):** Store hosted provider keys outside the repository and shell environment before running `dotnet run`:
+    ```powershell
+    dotnet user-secrets --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent set "AIProvider:Type" "gemini"
+    dotnet user-secrets --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent set "AIProvider:GeminiApiKey" "<your-gemini-key>"
+    ```
+  - **Recommended Container Secret Storage (`/run/secrets/` via Compose):** Use [docker-compose.secrets.yml](../Publishing-Tracker/apps/api/docker-compose.secrets.yml) to mount `./.secrets/ai_provider_api_key.secret` at `/run/secrets/ai_provider_api_key` rather than environment variables.
+  - **Alternative Cloud Provider (OpenRouter):** Set `AIProvider:Type` to `"openrouter"` and store `"AIProvider:OpenRouterApiKey"` via User Secrets (or `/run/secrets/openrouter_api_key` in containers).
+  - **Alternative Local Provider (Ollama):** Set `AIProvider__Type = "ollama"` (requires Ollama running locally on `http://localhost:11434`). *(Note: `VectorMath.ExpectedDimensions` locks `1536`-dimension embeddings for `search_publishing_guidelines`; Gemini `gemini-embedding-001` and OpenRouter `openai/text-embedding-3-small` return 1536 dimensions natively, whereas local `nomic-embed-text` defaults to 768 dimensions unless paired with a 1536-dim embedding endpoint.)*
 
 *(Because `appsettings.Development.json` is gitignored per `.gitignore`, the commands below pass matching local connection and JWT settings explicitly via environment variables so they work on any clean checkout.)*
 
@@ -76,14 +81,13 @@ Invoke-RestMethod -SkipCertificateCheck https://localhost:7285/health/ready
 
 #### Terminal 2 — Start `PublishingTracker.Agent`
 ```powershell
+# Assumes AIProvider:Type ("gemini") and AIProvider:GeminiApiKey are stored in dotnet user-secrets above
 $env:ASPNETCORE_ENVIRONMENT="Development"
 $env:ConnectionStrings__DefaultConnection="Host=localhost;Port=5435;Database=publishingtracker_dev;Username=postgres;Password=postgres"
 $env:Jwt__Issuer="PublishingTracker.Api"
 $env:Jwt__Audience="PublishingTracker.Api"
 $env:Jwt__Key="super-secret-key-that-is-long-enough-to-be-secure"
-$env:AIProvider__Type="gemini"
 $env:AIProvider__McpEndpoint="https://localhost:7285/mcp"
-$env:GEMINI_API_KEY="<your-gemini-key>"
 dotnet run --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent --urls https://localhost:7290
 ```
 Wait for startup to complete, then check liveness and readiness (which probes both PostgreSQL and `PublishingTracker.Api` `/health/live`):
@@ -93,7 +97,7 @@ Invoke-RestMethod -SkipCertificateCheck https://localhost:7290/health/ready
 ```
 **Expected Result:** Both return `Healthy` (`200 OK`).
 
-*(Optional Docker Compose path: run `docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build` if port `5435` is free on your machine; API listens at `http://localhost:7285` and Agent listens at `http://localhost:7290` using `AIProvider__AllowInsecureInternalHttp=true` inside the dev Compose network.)*
+*(Optional Docker Compose path: run `docker compose -f Publishing-Tracker/apps/api/docker-compose.yml -f Publishing-Tracker/apps/api/docker-compose.secrets.yml up --build` for hosted Gemini/OpenRouter using `/run/secrets/`, or omit `docker-compose.secrets.yml` for zero-key `ollama` mode; API listens at `http://localhost:7285` and Agent listens at `http://localhost:7290` using `AIProvider__AllowInsecureInternalHttp=true` inside the dev Compose network.)*
 
 ---
 
@@ -292,9 +296,9 @@ $respE | ConvertTo-Json -Depth 8
 1. **Redacted Telemetry Confirmation:**
    - Review Terminal 2 (`PublishingTracker.Agent`) logs or configure an OTLP collector (`$env:OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4317"`) before starting the Agent.
    - Verify OpenTelemetry spans (`agent.run`, `agent.model_turn`, `agent.tool_call`) record `agent.prompt_version = "v1"`, turn numbers, tool names, and durations — while never logging raw user prompts, RAG excerpts, JWTs, or AI API keys.
-2. **Automated Regression Matrix Confirmation (`172/172` Solution Tests):**
+2. **Automated Regression Matrix Confirmation (`175/175` Solution Tests):**
    ```powershell
-   # Offline + PostgreSQL Layer 2 regression suite (167 tests passing; port 5435 Postgres active)
+   # Offline + PostgreSQL Layer 2 regression suite (170 tests passing; port 5435 Postgres active)
    dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --configuration Release -m:1 /nodeReuse:false /p:UseSharedCompilation=false --filter "Category!=LiveEval"
 
    # Opt-in Layer 3 live smoke & regression suite (5 tests)

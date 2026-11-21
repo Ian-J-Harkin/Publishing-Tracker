@@ -127,12 +127,22 @@ Because chiseled containers lack `curl` and `wget`, healthchecks are performed u
 Start the complete local stack from the repository root:
 
 ```powershell
-# Launch the stack (defaults AIProvider__Type to ollama so no cloud API key env vars are injected)
+# 1. Default zero-key local stack (AIProvider__Type defaults to ollama; zero API keys in Compose env)
 docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
+
+# 2. Non-Ollama hosted provider stack (file-mounted Docker secrets at /run/secrets/, never env vars)
+New-Item -ItemType Directory -Force Publishing-Tracker/apps/api/.secrets | Out-Null
+Set-Content -NoNewline Publishing-Tracker/apps/api/.secrets/ai_provider_api_key.secret "<your-gemini-or-openrouter-key>"
+Set-Content -NoNewline Publishing-Tracker/apps/api/.secrets/jwt_key.secret "YourSecureDevelopmentSecretKeyAtLeast32BytesLong!"
+$env:AI_PROVIDER_TYPE="gemini" # optional; docker-compose.secrets.yml defaults to gemini
+docker compose -f Publishing-Tracker/apps/api/docker-compose.yml -f Publishing-Tracker/apps/api/docker-compose.secrets.yml up --build
 ```
 
 > [!WARNING]
-> **Never store or inject cloud LLM API keys via `docker-compose.yml` `environment:` blocks.** Environment variables persist in container config metadata (`docker inspect`) and process listings. For local non-Ollama containers, supply secrets via file-mounted Docker/orchestrator secrets (`/run/secrets/ai_provider_api_key` on `tmpfs` with `AddKeyPerFile`) or Azure Key Vault + Managed Identity in cloud deployments.
+> **Never store or inject cloud LLM API keys via `docker-compose.yml` `environment:` blocks.** Environment variables persist in container config metadata (`docker inspect`) and process listings. Use the 3-tier secret pattern wired across the solution:
+> 1. **Local Native Dev (`dotnet run`):** Store keys outside the repository with `.NET User Secrets` (`dotnet user-secrets --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent set "AIProvider:ApiKey" "<key>"` and `UserSecretsId = publishingtracker-agent-dev-secrets`).
+> 2. **Docker Compose / Containers:** Mount gitignored secret files via [docker-compose.secrets.yml](../Publishing-Tracker/apps/api/docker-compose.secrets.yml) into `/run/secrets/` (loaded cleanly by `ContainerSecretsConfiguration.AddContainerSecrets()` and `*_FILE` resolution in `AIProviderSetup.Resolve`).
+> 3. **Cloud / Production (Azure App Service + Neon PostgreSQL):** Use `SystemAssigned` Managed Identity + Azure Key Vault (`Key Vault Secrets User` RBAC) with `@Microsoft.KeyVault(SecretUri=...)` references configured in [main.bicep](../Publishing-Tracker/infra/bicep/main.bicep) and [appservice.bicep](../Publishing-Tracker/infra/bicep/modules/appservice.bicep).
 
 ### Services & Port Mappings
 | Service | Container Name | Host Port | Internal Port | Description |

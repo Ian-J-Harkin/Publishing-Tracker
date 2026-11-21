@@ -10,10 +10,12 @@ using PublishingTracker.Application;
 using PublishingTracker.Infrastructure;
 using PublishingTracker.Api.Middleware;
 using System.Text;
+using PublishingTracker.Infrastructure.Configuration;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Domain.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddContainerSecrets();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
 

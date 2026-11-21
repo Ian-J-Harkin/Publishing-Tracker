@@ -5,6 +5,7 @@ param tags object
 param appServicePlanName string
 param apiWebAppName string
 param agentWebAppName string
+param aiProviderType string = 'gemini'
 param applicationInsightsConnectionString string
 param keyVaultUri string
 
@@ -113,6 +114,10 @@ resource agentWebApp 'Microsoft.Web/sites@2023-12-01' = {
         {
           name: 'Jwt__Audience'
           value: 'PublishingTracker.Api'
+        }
+        {
+          name: 'AIProvider__Type'
+          value: aiProviderType
         }
         {
           name: 'AIProvider__McpEndpoint'

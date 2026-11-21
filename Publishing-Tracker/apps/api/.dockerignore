@@ -8,5 +8,8 @@
 **/*.suo
 **/TestResults
 **/.env*
+**/.secrets
+**/secrets
+**/*.secret
 **/*.log
 **/*.tmp

@@ -318,7 +318,7 @@ Configure `PublishingTracker.Agent` using user secrets, environment variables, o
 }
 ```
 
-- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"`, `"gemini"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via environment variables or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
+- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"`, `"gemini"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Store keys via `.NET User Secrets` for local native development (`publishingtracker-agent-dev-secrets` / `publishingtracker-api-dev-secrets`), file-mounted `/run/secrets/` (`ContainerSecretsConfiguration.AddContainerSecrets()` + `*_FILE` env vars via `docker-compose.secrets.yml`) for containers, or Azure Key Vault + Managed Identity in production—never committed config files or Compose `environment:` blocks; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
   - **Local Ollama:** Set `AIProvider:Type="ollama"`, or configure `OLLAMA_ENDPOINT` (defaults to `http://localhost:11434/v1`) and `OLLAMA_MODEL_NAME` (defaults to `qwen2.5-coder:7b`). Zero cloud spend and fully local.
   - **Google Gemini Flash (Recommended for Local & Live Evals):** Set `AIProvider:Type="gemini"` (defaults to `Endpoint="https://generativelanguage.googleapis.com/v1beta/openai"`, `ModelId="gemini-2.5-flash"`, `EmbeddingModelId="gemini-embedding-001"`), and provide `GEMINI_API_KEY` or `GOOGLE_API_KEY` (override model with `GEMINI_MODEL_NAME`).
   - **OpenRouter:** Set `AIProvider:Type="openrouter"`, `Endpoint="https://openrouter.ai/api/v1"`, and provide `OPENROUTER_API_KEY`. Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
@@ -452,12 +452,11 @@ Comprehensive production deployment patterns, containerization specifications, a
 Launch the complete multi-container stack (`PostgreSQL + pgvector`, `PublishingTracker.Api`, and `PublishingTracker.Agent`):
 
 ```powershell
-# Set local secrets
-$env:JWT_SIGNING_KEY="YourSecureDevelopmentSecretKeyAtLeast32BytesLong!"
-$env:OPENROUTER_API_KEY="<your-openrouter-key>"
-
-# Launch all services
+# Default zero-key local stack (defaults Agent AIProvider__Type to ollama)
 docker compose -f Publishing-Tracker/apps/api/docker-compose.yml up --build
+
+# Or launch with hosted Gemini/OpenRouter via gitignored /run/secrets/ file mounts (no env var keys)
+docker compose -f Publishing-Tracker/apps/api/docker-compose.yml -f Publishing-Tracker/apps/api/docker-compose.secrets.yml up --build
 ```
 
 - **PublishingTracker.Api**: Available at `http://localhost:7285` (`/health/ready`, `/mcp`, `/api/*`).

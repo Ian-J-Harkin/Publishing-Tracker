@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > **Status: Implemented & Verified.**
-> All 4 steps implemented and verified across 172 total solution tests (including 21 Phase 6 deployment and security test executions across 10 methods in `PublishingTracker.Agent.Tests`). Docker chiseled container builds (`api` and `agent`) and single-file `/app/healthcheck` execution verified. Production runbook documented at [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) and human verification walkthrough at [Human-User-Testing-Walkthrough.md](Human-User-Testing-Walkthrough.md).
+> All 4 steps implemented and verified across `175` total solution tests (including `24` Phase 6 deployment and security test executions across `13` methods in `PublishingTracker.Agent.Tests`). Docker chiseled container builds (`api` and `agent`), single-file `/app/healthcheck` execution, live container stack verification (`api`, `agent`, `postgres`), 3-tier non-Ollama secret management (`.NET User Secrets`, `/run/secrets/` file mounts via `ContainerSecretsConfiguration`, and Azure Key Vault), and Neon Serverless PostgreSQL Bicep templates verified. Production runbook documented at [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) and human verification walkthrough at [Human-User-Testing-Walkthrough.md](Human-User-Testing-Walkthrough.md).
 
 Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md), [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md), [Phase-0-Baseline-and-Contracts.md](Phase-0-Baseline-and-Contracts.md), [Phase-1-Read-Only-Catalogue-and-MCP.md](Phase-1-Read-Only-Catalogue-and-MCP.md), [Phase-2-Agent-Loop-and-Tracing.md](Phase-2-Agent-Loop-and-Tracing.md), [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md), [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md), and [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation-Strategy.md).
 
@@ -236,11 +236,12 @@ Step 6.4: Environment Configuration, Secret Management & Operations Runbook
   - Shutdown budget configured to 75s ensuring in-flight queries terminate cleanly.
 
 ### Step 6.4 — Environment Configuration & Production Readiness Runbook
-- **Goal:** Document production deployment patterns (Neon PostgreSQL + Azure Container Apps / AWS ECS) and secrets handling.
+- **Goal:** Implement and document 3-tier non-Ollama secret management, production deployment patterns (Neon Serverless PostgreSQL + Azure App Service + Key Vault Managed Identity), and operational runbooks.
 - **Deliverables:**
-  - Production deployment runbook in `docs/Deployment-and-Operations-Guide.md`.
-  - Environment variable mapping table and mandatory JWT key length checks.
-  - End-to-end containerized smoke test.
+  - `.NET User Secrets` configured in `PublishingTracker.Api.csproj` (`publishingtracker-api-dev-secrets`) and `PublishingTracker.Agent.csproj` (`publishingtracker-agent-dev-secrets`) for local native development.
+  - `ContainerSecretsConfiguration.AddContainerSecrets()` + `AIProviderSetup.Resolve` `/run/secrets/` & `*_FILE` support paired with [docker-compose.secrets.yml](../Publishing-Tracker/apps/api/docker-compose.secrets.yml) for zero-env container secret mounts.
+  - Azure Bicep templates ([main.bicep](../Publishing-Tracker/infra/bicep/main.bicep), [appservice.bicep](../Publishing-Tracker/infra/bicep/modules/appservice.bicep), [keyvault.bicep](../Publishing-Tracker/infra/bicep/modules/keyvault.bicep)) updated to provision dual API/Agent Web Apps wired to Neon PostgreSQL (`NeonConnection`) and Azure Key Vault RBAC.
+  - Production deployment runbook in `docs/Deployment-and-Operations-Guide.md` and end-to-end containerized smoke verification.
 
 ---
 

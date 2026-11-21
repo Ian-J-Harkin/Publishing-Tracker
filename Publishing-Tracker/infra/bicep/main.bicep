@@ -25,6 +25,14 @@ param apiWebAppName string
 @description('Agent Web App name.')
 param agentWebAppName string = 'app-publishing-tracker-agent-${environment}'
 
+@allowed([
+  'gemini'
+  'openrouter'
+  'openai'
+])
+@description('Hosted AI provider type for the Agent service.')
+param aiProviderType string = 'gemini'
+
 @description('Log Analytics workspace name.')
 param logAnalyticsWorkspaceName string
 
@@ -82,6 +90,7 @@ module appService './modules/appservice.bicep' = {
     appServicePlanName: appServicePlanName
     apiWebAppName: apiWebAppName
     agentWebAppName: agentWebAppName
+    aiProviderType: aiProviderType
     applicationInsightsConnectionString: monitoring.outputs.applicationInsightsConnectionString
     keyVaultUri: keyVault.outputs.keyVaultUri
   }

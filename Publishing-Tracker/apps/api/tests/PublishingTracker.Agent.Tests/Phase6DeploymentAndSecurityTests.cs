@@ -1,13 +1,17 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using PublishingTracker.Agent.Auth;
 using PublishingTracker.Agent.Configuration;
+using PublishingTracker.Infrastructure.Configuration;
 using PublishingTracker.Infrastructure.Persistence;
 using Xunit;
 
@@ -233,6 +237,78 @@ public sealed class Phase6DeploymentAndSecurityTests
 
         var chunks = await db.RagDocumentChunks.ToListAsync();
         Assert.Equal(6, chunks.Count);
+    }
+
+    [Fact]
+    public void ContainerSecretsConfiguration_LoadsCanonicalAndKeyPerFileSecrets_AndTrimsNewlines()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("pt-secrets-");
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir.FullName, "ai_provider_api_key"), "mounted-provider-key\r\n");
+            File.WriteAllText(Path.Combine(tempDir.FullName, "gemini_api_key.secret"), "  mounted-gemini-key\n");
+            File.WriteAllText(Path.Combine(tempDir.FullName, "jwt_key.txt"), "secret-jwt-key-at-least-32-bytes-long\n");
+            File.WriteAllText(Path.Combine(tempDir.FullName, "AIProvider__OpenRouterApiKey"), "mounted-openrouter-key\n");
+            File.WriteAllText(Path.Combine(tempDir.FullName, ".hidden_file"), "should-be-ignored");
+            File.WriteAllText(Path.Combine(tempDir.FullName, "empty_secret"), "   \r\n ");
+
+            var loaded = ContainerSecretsConfiguration.LoadSecretsFromDirectory(tempDir.FullName);
+
+            Assert.Equal(4, loaded.Count);
+            Assert.Equal("mounted-provider-key", loaded["AIProvider:ApiKey"]);
+            Assert.Equal("mounted-gemini-key", loaded["AIProvider:GeminiApiKey"]);
+            Assert.Equal("secret-jwt-key-at-least-32-bytes-long", loaded["Jwt:Key"]);
+            Assert.Equal("mounted-openrouter-key", loaded["AIProvider:OpenRouterApiKey"]);
+            Assert.False(loaded.ContainsKey(".hidden_file"));
+            Assert.False(loaded.ContainsKey("empty_secret"));
+
+            var config = new ConfigurationBuilder()
+                .AddContainerSecrets(tempDir.FullName)
+                .Build();
+
+            Assert.Equal("mounted-provider-key", config["AIProvider:ApiKey"]);
+            Assert.Equal("secret-jwt-key-at-least-32-bytes-long", config["Jwt:Key"]);
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AIProviderSetup_Resolve_SupportsFileMountedSecretsAndFileEnvVars_WithoutPlaintextEnvVars()
+    {
+        var geminiFromFileEnv = AIProviderSetup.Resolve(
+            new AIProviderOptions { Type = "gemini" },
+            name => name == "GEMINI_API_KEY_FILE" ? "/custom/gemini.secret" : null,
+            path => path == "/custom/gemini.secret" ? "gemini-file-key\n" : null);
+
+        Assert.Equal("gemini-file-key", geminiFromFileEnv.ApiKey);
+        Assert.Null(geminiFromFileEnv.Validate());
+
+        var openRouterFromFileEnv = AIProviderSetup.Resolve(
+            new AIProviderOptions { Type = "openrouter" },
+            name => name == "OPENROUTER_API_KEY_FILE" ? "/custom/or.secret" : null,
+            path => path == "/custom/or.secret" ? "openrouter-file-key\r\n" : null);
+
+        Assert.Equal("openrouter-file-key", openRouterFromFileEnv.ApiKey);
+        Assert.Null(openRouterFromFileEnv.Validate());
+
+        var defaultMountFallback = AIProviderSetup.Resolve(
+            new AIProviderOptions { Type = "gemini" },
+            _ => null,
+            path => path == "/run/secrets/ai_provider_api_key" ? "mounted-ai-key\n" : null);
+
+        Assert.Equal("mounted-ai-key", defaultMountFallback.ApiKey);
+        Assert.Null(defaultMountFallback.Validate());
+    }
+
+    [Fact]
+    public void Assemblies_ConfigureUserSecretsId_ForLocalDevelopment()
+    {
+        var agentAttr = typeof(Program).Assembly.GetCustomAttribute<UserSecretsIdAttribute>();
+        Assert.NotNull(agentAttr);
+        Assert.Equal("publishingtracker-agent-dev-secrets", agentAttr!.UserSecretsId);
     }
 
     private static SingleResponseServer StartSingleResponseServer(string statusLine, string body)

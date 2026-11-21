@@ -4,7 +4,7 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 
 ---
 
-## 1. Test Architecture & Coverage (`172/172` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`175/175` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
@@ -13,9 +13,9 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
-| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key` check, `gemini` resolution, `DevelopmentCatalogSeeder`, and `HealthProbe` | `21` *(executions across 10 methods)* | Unit and loopback TCP integration tests covering environment guards, endpoint allowlists, bearer forwarding, demo seeding, and console healthcheck probing |
+| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key`, `gemini` / `/run/secrets` & `*_FILE` resolution, `UserSecretsId`, `DevelopmentCatalogSeeder`, and `HealthProbe` | `24` *(executions across 13 methods)* | Unit and loopback TCP integration tests covering environment guards, secret mounts, user secrets, endpoint allowlists, bearer forwarding, demo seeding, and console healthcheck probing |
 | `PublishingTracker.Evals` | Phase 5 Layer 1 (30 deterministic golden/evaluator tests), Layer 2 (4 real `pgvector` & multi-tenant tests), Layer 3 (5 opt-in live smoke & baseline tests) | `39` | Deterministic evaluators + PostgreSQL `pgvector` fixture (port 5435 / `TEST_POSTGRES_CONNECTION`) + opt-in live smoke tests |
-| **Total Implemented CI Suite** | **Phases 0–6** | **`172`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 167 tests; `Category=LiveEval` = 5 opt-in tests)** |
+| **Total Implemented CI Suite** | **Phases 0–6** | **`175`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 170 tests; `Category=LiveEval` = 5 opt-in tests)** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -50,7 +50,7 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–6 — `172/172` Total, `167/167` CI Non-Live Filter)
+### Running All Implemented Tests (Phases 0–6 — `175/175` Total, `170/170` CI Non-Live Filter)
 Run the CI solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -61,7 +61,7 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 
 **Expected Output:**
 - `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
-- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 79, Skipped: 0, Total: 79` (including `16/16` Phase 4 RAG tests and `21/21` Phase 6 deployment/security tests)
+- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 82, Skipped: 0, Total: 82` (including `16/16` Phase 4 RAG tests and `24/24` Phase 6 deployment/security tests)
 - `PublishingTracker.Evals.dll`: `Passed! - Failed: 0, Passed: 34, Skipped: 0, Total: 34` (30 Layer 1 deterministic + 4 Layer 2 real pgvector integration; 5 `Category=LiveEval` tests run separately when opted in, for `39` total in `PublishingTracker.Evals`)
 
 ### Running Filtered Suites by Phase
@@ -87,7 +87,7 @@ $env:RUN_LIVE_EVALS="true"
 $env:GEMINI_API_KEY="<your-gemini-api-key>"
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
 
-# Phase 6: Container security, AllowInsecureInternalHttp guard, 32-byte JWT check, Gemini & demo seeding, HealthProbe (21 tests)
+# Phase 6: Container security, AllowInsecureInternalHttp guard, 32-byte JWT, UserSecretsId, /run/secrets, HealthProbe (24 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase6"
 ```
 
@@ -291,13 +291,14 @@ All 42 Agent tests run offline with zero API keys or outbound network traffic vi
 ## 7. Manual Verification of `PublishingTracker.Agent` (`POST /api/agent/query`)
 
 1. Start `PublishingTracker.Api` in terminal 1 (`https://localhost:7285`, per Section 4 Step 1).
-2. Configure secrets and start `PublishingTracker.Agent` in terminal 2 with an explicit listen URL (since `PublishingTracker.Agent` has no default `launchSettings.json`):
+2. Store secrets with `.NET User Secrets` (recommended for local dev) and start `PublishingTracker.Agent` in terminal 2 with an explicit listen URL (since `PublishingTracker.Agent` has no default `launchSettings.json`):
    ```powershell
+   dotnet user-secrets --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent set "AIProvider:Type" "gemini"
+   dotnet user-secrets --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent set "AIProvider:GeminiApiKey" "<your-gemini-key>"
    $env:ASPNETCORE_ENVIRONMENT="Development"
    $env:Jwt__Key="<same-signing-key-as-PublishingTracker.Api>"
    $env:Jwt__Issuer="PublishingTracker.Api"
    $env:Jwt__Audience="PublishingTracker.Api"
-   $env:OPENROUTER_API_KEY="<your-openrouter-key>"
    dotnet run --project Publishing-Tracker/apps/api/src/PublishingTracker.Agent --urls https://localhost:7290
    ```
 3. Reuse the JWT `$token` obtained from `https://localhost:7285/api/auth/login` (must include an `iat` claim) and query `POST /api/agent/query`:
@@ -423,12 +424,12 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "
 
 ---
 
-## 10. Phase 6 Deployment, Security & HealthCheck Verification (`21` Tests)
+## 10. Phase 6 Deployment, Security & HealthCheck Verification (`24` Tests)
 
 Specified in [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) and [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) ([Phase6DeploymentAndSecurityTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase6DeploymentAndSecurityTests.cs) in `PublishingTracker.Agent.Tests`):
 
 ```powershell
-# Run the 21 Phase 6 deployment and security tests
+# Run the 24 Phase 6 deployment and security tests
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
   --filter "FullyQualifiedName~Phase6DeploymentAndSecurityTests"
 ```
@@ -457,3 +458,9 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
    - Verifies first-class `AIProvider:Type="gemini"` resolution via `GEMINI_API_KEY`, `GOOGLE_API_KEY`, and `GEMINI_MODEL_NAME`.
 10. `DevelopmentCatalogSeeder_IsIdempotent_AndSeedsAuthenticatableDemoUsersAndBooks`:
     - Verifies `DevelopmentCatalogSeeder.SeedAsync` is idempotent, hashes `Password123!` using BCrypt SHA-256 compatible with `/api/auth/login`, and seeds the 6 canonical books + 6 RAG chunks across User A and User B.
+11. `ContainerSecretsConfiguration_LoadsCanonicalAndKeyPerFileSecrets_AndTrimsNewlines`:
+    - Verifies `/run/secrets/` file loading trims trailing `\r\n`, ignores `.hidden` and whitespace-only files, and maps both canonical Compose secret names (`ai_provider_api_key`, `gemini_api_key.secret`, `jwt_key.txt`) and `AIProvider__OpenRouterApiKey` ASP.NET Core keys.
+12. `AIProviderSetup_Resolve_SupportsFileMountedSecretsAndFileEnvVars_WithoutPlaintextEnvVars`:
+    - Verifies hosted provider resolution reads `GEMINI_API_KEY_FILE`, `OPENROUTER_API_KEY_FILE`, and `/run/secrets/ai_provider_api_key` without any plaintext API key environment variables.
+13. `Assemblies_ConfigureUserSecretsId_ForLocalDevelopment`:
+    - Verifies `<UserSecretsId>` assembly attribute metadata is present on `PublishingTracker.Agent` for `dotnet user-secrets` workflows.

@@ -32,6 +32,9 @@ CodeCoverage/
 **/*.env
 appsettings.Development.json
 secrets.json
+**/secrets/
+.secrets/
+*.secret
 *.key
 *.pem
 

@@ -22,10 +22,14 @@ public static class AIProviderSetup
     public const string GeminiDefaultEmbeddingModelId = "gemini-embedding-001";
     public const string OllamaDefaultEmbeddingModelId = "nomic-embed-text";
 
-    public static AIProviderOptions Resolve(AIProviderOptions configured, Func<string, string?> getEnv)
+    public static AIProviderOptions Resolve(
+        AIProviderOptions configured,
+        Func<string, string?> getEnv,
+        Func<string, string?>? readSecretFile = null)
     {
         ArgumentNullException.ThrowIfNull(configured);
         ArgumentNullException.ThrowIfNull(getEnv);
+        var reader = readSecretFile ?? TryReadSecretFile;
 
         var type = configured.Type?.Trim().ToLowerInvariant() ?? string.Empty;
         if (!AIProviderOptions.SupportedTypes.Contains(type, StringComparer.Ordinal))
@@ -50,9 +54,25 @@ public static class AIProviderSetup
         };
         var key = type switch
         {
-            "openrouter" => First(getEnv("OPENROUTER_API_KEY"), configured.OpenRouterApiKey, configured.ApiKey),
-            "openai" => First(getEnv("OPENAI_API_KEY"), configured.ApiKey),
-            "gemini" => First(getEnv("GEMINI_API_KEY"), getEnv("GOOGLE_API_KEY"), configured.GeminiApiKey, configured.ApiKey),
+            "openrouter" => First(
+                FromFileEnv(getEnv, reader, "OPENROUTER_API_KEY_FILE", "/run/secrets/openrouter_api_key"),
+                FromFileEnv(getEnv, reader, "AI_PROVIDER_API_KEY_FILE", "/run/secrets/ai_provider_api_key"),
+                getEnv("OPENROUTER_API_KEY"),
+                configured.OpenRouterApiKey,
+                configured.ApiKey),
+            "openai" => First(
+                FromFileEnv(getEnv, reader, "OPENAI_API_KEY_FILE", "/run/secrets/openai_api_key"),
+                FromFileEnv(getEnv, reader, "AI_PROVIDER_API_KEY_FILE", "/run/secrets/ai_provider_api_key"),
+                getEnv("OPENAI_API_KEY"),
+                configured.ApiKey),
+            "gemini" => First(
+                FromFileEnv(getEnv, reader, "GEMINI_API_KEY_FILE", "/run/secrets/gemini_api_key"),
+                FromFileEnv(getEnv, reader, "GOOGLE_API_KEY_FILE", "/run/secrets/google_api_key"),
+                FromFileEnv(getEnv, reader, "AI_PROVIDER_API_KEY_FILE", "/run/secrets/ai_provider_api_key"),
+                getEnv("GEMINI_API_KEY"),
+                getEnv("GOOGLE_API_KEY"),
+                configured.GeminiApiKey,
+                configured.ApiKey),
             _ => First(configured.ApiKey, "ollama")
         };
         var embeddingModel = type switch
@@ -178,6 +198,45 @@ public static class AIProviderSetup
 
     private static string? First(params string?[] values) =>
         values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim();
+
+    private static string? FromFileEnv(
+        Func<string, string?> getEnv,
+        Func<string, string?> reader,
+        string envVarName,
+        string? defaultSecretPath = null)
+    {
+        var configuredPath = getEnv(envVarName);
+        if (!string.IsNullOrWhiteSpace(configuredPath))
+        {
+            var fromConfigured = reader(configuredPath.Trim());
+            if (!string.IsNullOrWhiteSpace(fromConfigured))
+            {
+                return fromConfigured.Trim();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(defaultSecretPath))
+        {
+            var fromDefault = reader(defaultSecretPath);
+            if (!string.IsNullOrWhiteSpace(fromDefault))
+            {
+                return fromDefault.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static string? TryReadSecretFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return null;
+        }
+
+        var content = File.ReadAllText(path).Trim();
+        return string.IsNullOrWhiteSpace(content) ? null : content;
+    }
 
     private sealed class OpenRouterHeadersPolicy : PipelinePolicy
     {

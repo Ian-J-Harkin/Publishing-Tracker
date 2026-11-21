@@ -17,12 +17,14 @@ using PublishingTracker.Agent.Telemetry;
 using PublishingTracker.Agent.Validation;
 using PublishingTracker.Application.Common.Interfaces;
 using PublishingTracker.Infrastructure.Authentication;
+using PublishingTracker.Infrastructure.Configuration;
 using PublishingTracker.Infrastructure.Persistence;
 using PublishingTracker.Rag.Persistence;
 using PublishingTracker.Rag.Services;
 using PublishingTracker.Rag.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddContainerSecrets();
 
 var isDevOrTest = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing");
 
