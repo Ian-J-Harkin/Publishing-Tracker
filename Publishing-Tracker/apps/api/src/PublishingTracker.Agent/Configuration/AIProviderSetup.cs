@@ -12,11 +12,14 @@ public static class AIProviderSetup
     public const string OpenRouterDefaultModelId = "anthropic/claude-sonnet-4";
     public const string OpenAiDefaultEndpoint = "https://api.openai.com/v1";
     public const string OpenAiDefaultModelId = "gpt-4o-mini";
+    public const string GeminiDefaultEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai";
+    public const string GeminiDefaultModelId = "gemini-2.5-flash";
     public const string OllamaDefaultEndpoint = "http://localhost:11434/v1";
     public const string OllamaDefaultModelId = "qwen2.5-coder:7b";
 
     public const string OpenRouterDefaultEmbeddingModelId = "openai/text-embedding-3-small";
     public const string OpenAiDefaultEmbeddingModelId = "text-embedding-3-small";
+    public const string GeminiDefaultEmbeddingModelId = "gemini-embedding-001";
     public const string OllamaDefaultEmbeddingModelId = "nomic-embed-text";
 
     public static AIProviderOptions Resolve(AIProviderOptions configured, Func<string, string?> getEnv)
@@ -35,24 +38,28 @@ public static class AIProviderSetup
         {
             "openrouter" => First(getEnv("OPENROUTER_ENDPOINT"), configured.OpenRouterEndpoint, configured.Endpoint, OpenRouterDefaultEndpoint),
             "openai" => First(getEnv("OPENAI_ENDPOINT"), ConfiguredOpenAiEndpoint(configured), OpenAiDefaultEndpoint),
+            "gemini" => First(getEnv("GEMINI_ENDPOINT"), configured.GeminiEndpoint, ConfiguredGeminiEndpoint(configured), GeminiDefaultEndpoint),
             _ => First(getEnv("OLLAMA_ENDPOINT"), configured.OllamaEndpoint, configured.Endpoint, OllamaDefaultEndpoint)
         };
         var model = type switch
         {
             "openrouter" => First(getEnv("OPENROUTER_MODEL_NAME"), configured.OpenRouterModelId, configured.ModelId, OpenRouterDefaultModelId),
             "openai" => First(getEnv("OPENAI_MODEL_NAME"), configured.ModelId, OpenAiDefaultModelId),
+            "gemini" => First(getEnv("GEMINI_MODEL_NAME"), configured.GeminiModelId, ConfiguredGeminiModel(configured), GeminiDefaultModelId),
             _ => First(getEnv("OLLAMA_MODEL_NAME"), configured.OllamaModelId, configured.ModelId, OllamaDefaultModelId)
         };
         var key = type switch
         {
             "openrouter" => First(getEnv("OPENROUTER_API_KEY"), configured.OpenRouterApiKey, configured.ApiKey),
             "openai" => First(getEnv("OPENAI_API_KEY"), configured.ApiKey),
+            "gemini" => First(getEnv("GEMINI_API_KEY"), getEnv("GOOGLE_API_KEY"), configured.GeminiApiKey, configured.ApiKey),
             _ => First(configured.ApiKey, "ollama")
         };
         var embeddingModel = type switch
         {
             "openrouter" => First(getEnv("OPENROUTER_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), configured.EmbeddingModelId, OpenRouterDefaultEmbeddingModelId),
             "openai" => First(getEnv("OPENAI_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), ConfiguredOpenAiEmbeddingModel(configured), OpenAiDefaultEmbeddingModelId),
+            "gemini" => First(getEnv("GEMINI_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), ConfiguredGeminiEmbeddingModel(configured), GeminiDefaultEmbeddingModelId),
             _ => First(getEnv("OLLAMA_EMBEDDING_MODEL_NAME"), getEnv("EMBEDDING_MODEL_NAME"), configured.OllamaEmbeddingModelId, OllamaDefaultEmbeddingModelId)
         };
 
@@ -65,6 +72,9 @@ public static class AIProviderSetup
             OpenRouterApiKey = string.Empty,
             OpenRouterModelId = type == "openrouter" ? model! : configured.OpenRouterModelId,
             OpenRouterEndpoint = type == "openrouter" ? endpoint : configured.OpenRouterEndpoint,
+            GeminiApiKey = string.Empty,
+            GeminiModelId = type == "gemini" ? model! : configured.GeminiModelId,
+            GeminiEndpoint = type == "gemini" ? endpoint : configured.GeminiEndpoint,
             OllamaModelId = type == "ollama" ? model! : configured.OllamaModelId,
             OllamaEndpoint = type == "ollama" ? endpoint : configured.OllamaEndpoint,
             McpEndpoint = configured.McpEndpoint,
@@ -147,6 +157,21 @@ public static class AIProviderSetup
             : options.Endpoint;
 
     private static string? ConfiguredOpenAiEmbeddingModel(AIProviderOptions options) =>
+        string.Equals(options.EmbeddingModelId, OpenRouterDefaultEmbeddingModelId, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : options.EmbeddingModelId;
+
+    private static string? ConfiguredGeminiEndpoint(AIProviderOptions options) =>
+        string.Equals(options.Endpoint, OpenRouterDefaultEndpoint, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : options.Endpoint;
+
+    private static string? ConfiguredGeminiModel(AIProviderOptions options) =>
+        string.Equals(options.ModelId, OpenRouterDefaultModelId, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : options.ModelId;
+
+    private static string? ConfiguredGeminiEmbeddingModel(AIProviderOptions options) =>
         string.Equals(options.EmbeddingModelId, OpenRouterDefaultEmbeddingModelId, StringComparison.OrdinalIgnoreCase)
             ? null
             : options.EmbeddingModelId;

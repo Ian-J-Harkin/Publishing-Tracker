@@ -3,10 +3,12 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using PublishingTracker.Agent.Auth;
 using PublishingTracker.Agent.Configuration;
+using PublishingTracker.Infrastructure.Persistence;
 using Xunit;
 
 namespace PublishingTracker.Agent.Tests;
@@ -167,6 +169,70 @@ public sealed class Phase6DeploymentAndSecurityTests
         var unhealthyExit = await HealthProbe.Program.Main([unhealthyServer.Url, "3"]);
         await unhealthyServer.Completed;
         Assert.Equal(1, unhealthyExit);
+    }
+
+    [Fact]
+    public void AIProviderSetup_Resolve_SupportsGeminiProviderWithEnvironmentVariables()
+    {
+        var configured = new AIProviderOptions { Type = "gemini" };
+
+        var resolvedFromGeminiKey = AIProviderSetup.Resolve(configured, name => name switch
+        {
+            "GEMINI_API_KEY" => "gemini-test-key",
+            _ => null
+        });
+
+        Assert.Equal("gemini", resolvedFromGeminiKey.Type);
+        Assert.Equal(AIProviderSetup.GeminiDefaultModelId, resolvedFromGeminiKey.ModelId);
+        Assert.Equal(AIProviderSetup.GeminiDefaultEndpoint, resolvedFromGeminiKey.Endpoint);
+        Assert.Equal("gemini-test-key", resolvedFromGeminiKey.ApiKey);
+        Assert.Null(resolvedFromGeminiKey.Validate());
+
+        var resolvedWithGoogleFallbackAndOverride = AIProviderSetup.Resolve(configured, name => name switch
+        {
+            "GOOGLE_API_KEY" => "google-fallback-key",
+            "GEMINI_MODEL_NAME" => "gemini-2.5-pro",
+            _ => null
+        });
+
+        Assert.Equal("gemini-2.5-pro", resolvedWithGoogleFallbackAndOverride.ModelId);
+        Assert.Equal("google-fallback-key", resolvedWithGoogleFallbackAndOverride.ApiKey);
+        Assert.Null(resolvedWithGoogleFallbackAndOverride.Validate());
+    }
+
+    [Fact]
+    public async Task DevelopmentCatalogSeeder_IsIdempotent_AndSeedsAuthenticatableDemoUsersAndBooks()
+    {
+        var dbOptions = new DbContextOptionsBuilder<PublishingTrackerDbContext>()
+            .UseInMemoryDatabase($"DemoSeederTest_{Guid.NewGuid():N}")
+            .Options;
+
+        await using var db = new PublishingTrackerDbContext(dbOptions);
+
+        await DevelopmentCatalogSeeder.SeedAsync(db);
+        await DevelopmentCatalogSeeder.SeedAsync(db); // Idempotent second call
+
+        var userA = await db.Users.SingleAsync(u => u.Email == "author-a@example.test");
+        var userB = await db.Users.SingleAsync(u => u.Email == "author-b@example.test");
+
+        Assert.True(BCrypt.Net.BCrypt.Verify(
+            DevelopmentCatalogSeeder.DemoPassword,
+            userA.PasswordHash,
+            hashType: BCrypt.Net.HashType.SHA256));
+        Assert.True(BCrypt.Net.BCrypt.Verify(
+            DevelopmentCatalogSeeder.DemoPassword,
+            userB.PasswordHash,
+            hashType: BCrypt.Net.HashType.SHA256));
+
+        var books = await db.Books.Include(b => b.Editions).ToListAsync();
+        Assert.Equal(6, books.Count);
+        Assert.Equal(5, books.Count(b => b.UserId == userA.Id));
+        Assert.Equal(1, books.Count(b => b.UserId == userB.Id));
+        Assert.Contains(books, b => b.UserId == userA.Id && b.Title == "Audio Missing Narrator" && b.Editions.Any(e => e.Format == Domain.Entities.EditionFormat.Audiobook));
+        Assert.Contains(books, b => b.UserId == userB.Id && b.Title == "Beta Private Incomplete Hardcover");
+
+        var chunks = await db.RagDocumentChunks.ToListAsync();
+        Assert.Equal(6, chunks.Count);
     }
 
     private static SingleResponseServer StartSingleResponseServer(string statusLine, string body)

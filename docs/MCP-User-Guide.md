@@ -1,6 +1,6 @@
 # PublishingTracker MCP & Agent — User & Integration Guide
 
-This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, as well as the **PublishingTracker.Agent** query API (`POST /api/agent/query`) and the **PublishingTracker.Rag** retrieval capabilities across **Phases 0–4 (Complete)**, with references to planned evaluation and containerization architecture (Phases 5 & 6).
+This guide describes how to connect to, authenticate with, and use the **PublishingTracker Model Context Protocol (MCP)** server hosted at `/mcp` inside `PublishingTracker.Api`, **PublishingTracker.Agent** (`POST /api/agent/query`), **PublishingTracker.Rag**, the **PublishingTracker.Evals** harness, and container deployment across **Phases 0–6 (Complete)**. For an end-to-end human acceptance test scenario, see [Human-User-Testing-Walkthrough.md](Human-User-Testing-Walkthrough.md).
 
 ---
 
@@ -318,9 +318,9 @@ Configure `PublishingTracker.Agent` using user secrets, environment variables, o
 }
 ```
 
-- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"` / `"gemini"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via environment variables or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
+- **Supported `AIProvider:Type` values:** `"openrouter"` (default), `"openai"`, `"gemini"`, and `"ollama"` (case-insensitive; unrecognized values fail fast at startup). Supply secrets via environment variables or user secrets rather than committed config files; `AIProviderOptions` marks secrets `[JsonIgnore]` and outputs `[REDACTED]` in `ToString()`.
   - **Local Ollama:** Set `AIProvider:Type="ollama"`, or configure `OLLAMA_ENDPOINT` (defaults to `http://localhost:11434/v1`) and `OLLAMA_MODEL_NAME` (defaults to `qwen2.5-coder:7b`). Zero cloud spend and fully local.
-  - **Google Gemini Flash (Recommended for Cloud Live Evals):** Set `AIProvider:Type="openai"` with `Endpoint="https://generativelanguage.googleapis.com/v1beta/openai"`, `ModelId="gemini-2.5-flash"`, and provide `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
+  - **Google Gemini Flash (Recommended for Local & Live Evals):** Set `AIProvider:Type="gemini"` (defaults to `Endpoint="https://generativelanguage.googleapis.com/v1beta/openai"`, `ModelId="gemini-2.5-flash"`, `EmbeddingModelId="gemini-embedding-001"`), and provide `GEMINI_API_KEY` or `GOOGLE_API_KEY` (override model with `GEMINI_MODEL_NAME`).
   - **OpenRouter:** Set `AIProvider:Type="openrouter"`, `Endpoint="https://openrouter.ai/api/v1"`, and provide `OPENROUTER_API_KEY`. Outbound requests for `"openrouter"` automatically attach `HTTP-Referer: https://publishingtracker.local`, `X-Title: PublishingTracker`, and `data_collection: deny`, and wrap `IChatClient` with OpenTelemetry tracing (`EnableSensitiveData = false`).
 - **Resilience & Timeouts:** Configure `PerCallTimeout` (e.g., 15s–20s) and `OverallTimeout` (e.g., 30s–60s). `PublishingTracker.Evals` attaches `RateLimitedRetryHandler` to intercept HTTP 429 rate-limiting responses and back off exponentially.
 - **Trusted MCP Endpoint & Internal Container Networking:** `McpEndpoint` must point to an absolute `/mcp` URL. Over HTTPS, endpoints are trusted in all environments. In `Development` and `Testing`, loopback HTTP (`localhost`, `127.0.0.1`) is trusted, and internal container HTTP (e.g. `http://api:8080/mcp`) is permitted when `AIProvider:AllowInsecureInternalHttp=true`. In `Production`, `AllowInsecureInternalHttp` is strictly prohibited and causes immediate startup failure.

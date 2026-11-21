@@ -227,6 +227,9 @@ static void Copy(AIProviderOptions from, AIProviderOptions to)
     to.OpenRouterModelId = from.OpenRouterModelId;
     to.OpenRouterEndpoint = from.OpenRouterEndpoint;
     to.OpenRouterApiKey = from.OpenRouterApiKey;
+    to.GeminiModelId = from.GeminiModelId;
+    to.GeminiEndpoint = from.GeminiEndpoint;
+    to.GeminiApiKey = from.GeminiApiKey;
     to.OllamaModelId = from.OllamaModelId;
     to.OllamaEndpoint = from.OllamaEndpoint;
     to.McpEndpoint = from.McpEndpoint;

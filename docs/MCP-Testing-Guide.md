@@ -1,10 +1,10 @@
 # PublishingTracker MCP & Agent — Testing & Verification Guide
 
-This guide details how to verify, test, and troubleshoot the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`), **PublishingTracker.Agent** (`POST /api/agent/query`), **PublishingTracker.Rag**, the **Phase 5** evaluation suite (`PublishingTracker.Evals`), and **Phase 6** deployment/security checks across **Phases 0–6 (Complete)**.
+This guide details how to verify, test, and troubleshoot the **PublishingTracker MCP Server** (`/mcp` inside `PublishingTracker.Api`), **PublishingTracker.Agent** (`POST /api/agent/query`), **PublishingTracker.Rag**, the **Phase 5** evaluation suite (`PublishingTracker.Evals`), and **Phase 6** deployment/security checks across **Phases 0–6 (Complete)**. See also the end-to-end manual test playbook in [Human-User-Testing-Walkthrough.md](Human-User-Testing-Walkthrough.md).
 
 ---
 
-## 1. Test Architecture & Coverage (`170/170` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`172/172` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
@@ -13,9 +13,9 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
-| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key` check, and `HealthProbe` | `19` *(executions across 8 methods)* | Unit and loopback TCP integration tests covering environment guards, endpoint allowlists, bearer forwarding, and console healthcheck probing |
+| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key` check, `gemini` resolution, `DevelopmentCatalogSeeder`, and `HealthProbe` | `21` *(executions across 10 methods)* | Unit and loopback TCP integration tests covering environment guards, endpoint allowlists, bearer forwarding, demo seeding, and console healthcheck probing |
 | `PublishingTracker.Evals` | Phase 5 Layer 1 (30 deterministic golden/evaluator tests), Layer 2 (4 real `pgvector` & multi-tenant tests), Layer 3 (5 opt-in live smoke & baseline tests) | `39` | Deterministic evaluators + PostgreSQL `pgvector` fixture (port 5435 / `TEST_POSTGRES_CONNECTION`) + opt-in live smoke tests |
-| **Total Implemented CI Suite** | **Phases 0–6** | **`170`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 165 tests; `Category=LiveEval` = 5 opt-in tests)** |
+| **Total Implemented CI Suite** | **Phases 0–6** | **`172`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 167 tests; `Category=LiveEval` = 5 opt-in tests)** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -44,13 +44,13 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 | **User A** | *Audio Missing Narrator* | Audiobook | **Incomplete:** Missing `Narrator`, `Duration` |
 | **User A** | *Clockwork Missing Book Metadata* | Hardcover | **Incomplete:** Has `SeriesName` but missing `SeriesNumber` |
 | **User A** | *Draft With No Editions* | None | **Incomplete:** Zero editions attached |
-| **User B** (`beta-author@example.test`) | *Beta Private Incomplete Hardcover* | Hardcover | **Incomplete:** Owned exclusively by User B |
+| **User B** (`author-b@example.test`) | *Beta Private Incomplete Hardcover* | Hardcover | **Incomplete:** Owned exclusively by User B |
 
 ---
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–6 — `170/170` Total, `165/165` CI Non-Live Filter)
+### Running All Implemented Tests (Phases 0–6 — `172/172` Total, `167/167` CI Non-Live Filter)
 Run the CI solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -61,7 +61,7 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 
 **Expected Output:**
 - `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
-- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 77, Skipped: 0, Total: 77` (including `16/16` Phase 4 RAG tests and `19/19` Phase 6 deployment/security tests)
+- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 79, Skipped: 0, Total: 79` (including `16/16` Phase 4 RAG tests and `21/21` Phase 6 deployment/security tests)
 - `PublishingTracker.Evals.dll`: `Passed! - Failed: 0, Passed: 34, Skipped: 0, Total: 34` (30 Layer 1 deterministic + 4 Layer 2 real pgvector integration; 5 `Category=LiveEval` tests run separately when opted in, for `39` total in `PublishingTracker.Evals`)
 
 ### Running Filtered Suites by Phase
@@ -87,9 +87,8 @@ $env:RUN_LIVE_EVALS="true"
 $env:GEMINI_API_KEY="<your-gemini-api-key>"
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
 
-# Phase 6: Container security, AllowInsecureInternalHttp production guard, 32-byte JWT check, and HealthProbe (19 tests)
+# Phase 6: Container security, AllowInsecureInternalHttp guard, 32-byte JWT check, Gemini & demo seeding, HealthProbe (21 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase6"
-```
 ```
 
 *(Note: `Phase1McpAndCatalogueTests` contains 8 test methods, with `McpClient_InvalidArguments_ReturnsActionableErrors` running as an xUnit theory with 6 test cases, totaling 13 executions.)*
@@ -118,9 +117,9 @@ To test a live running instance of `PublishingTracker.Api`:
 ### Step 1: Start the API
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT="Development"
-dotnet run --project Publishing-Tracker/apps/api/src/PublishingTracker.Api
+dotnet run --project Publishing-Tracker/apps/api/src/PublishingTracker.Api --launch-profile https
 ```
-*(Default launch profile listens at `https://localhost:7285` / `http://localhost:5226`)*
+*(The `https` launch profile listens at `https://localhost:7285;http://localhost:5226` and runs `DevelopmentCatalogSeeder` automatically on startup so `author-a@example.test` / `Password123!` works immediately.)*
 
 ### Step 2: Acquire a JWT Token
 If testing against an existing database seeded with test accounts:
@@ -424,12 +423,12 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "
 
 ---
 
-## 10. Phase 6 Deployment, Security & HealthCheck Verification (`19` Tests)
+## 10. Phase 6 Deployment, Security & HealthCheck Verification (`21` Tests)
 
 Specified in [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) and [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) ([Phase6DeploymentAndSecurityTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase6DeploymentAndSecurityTests.cs) in `PublishingTracker.Agent.Tests`):
 
 ```powershell
-# Run the 19 Phase 6 deployment and security tests
+# Run the 21 Phase 6 deployment and security tests
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
   --filter "FullyQualifiedName~Phase6DeploymentAndSecurityTests"
 ```
@@ -454,3 +453,7 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
    - Verifies `AIProviderOptions.ValidateJwtKey` rejects null/whitespace keys and keys under 32 UTF-8 bytes while accepting 32+ byte keys.
 8. `HealthProbe_Main_ReturnsZeroAgainstHealthyServer_AndOneAgainstUnhealthyServer`:
    - Exercises `PublishingTracker.HealthProbe` against a live loopback HTTP server returning `200 OK` (exit `0`) vs `503 Service Unavailable` (exit `1`).
+9. `AIProviderSetup_Resolve_SupportsGeminiProviderWithEnvironmentVariables`:
+   - Verifies first-class `AIProvider:Type="gemini"` resolution via `GEMINI_API_KEY`, `GOOGLE_API_KEY`, and `GEMINI_MODEL_NAME`.
+10. `DevelopmentCatalogSeeder_IsIdempotent_AndSeedsAuthenticatableDemoUsersAndBooks`:
+    - Verifies `DevelopmentCatalogSeeder.SeedAsync` is idempotent, hashes `Password123!` using BCrypt SHA-256 compatible with `/api/auth/login`, and seeds the 6 canonical books + 6 RAG chunks across User A and User B.

@@ -5,7 +5,7 @@ namespace PublishingTracker.Agent.Configuration;
 public sealed class AIProviderOptions
 {
     public const string SectionName = "AIProvider";
-    public static readonly string[] SupportedTypes = ["openrouter", "openai", "ollama"];
+    public static readonly string[] SupportedTypes = ["openrouter", "openai", "gemini", "ollama"];
 
     public string Type { get; set; } = "openrouter";
     public string ModelId { get; set; } = AIProviderSetup.OpenRouterDefaultModelId;
@@ -16,6 +16,10 @@ public sealed class AIProviderOptions
     public string? OpenRouterEndpoint { get; set; } = AIProviderSetup.OpenRouterDefaultEndpoint;
     [JsonIgnore]
     public string OpenRouterApiKey { get; set; } = string.Empty;
+    public string GeminiModelId { get; set; } = AIProviderSetup.GeminiDefaultModelId;
+    public string? GeminiEndpoint { get; set; } = AIProviderSetup.GeminiDefaultEndpoint;
+    [JsonIgnore]
+    public string GeminiApiKey { get; set; } = string.Empty;
     public string OllamaModelId { get; set; } = AIProviderSetup.OllamaDefaultModelId;
     public string? OllamaEndpoint { get; set; } = AIProviderSetup.OllamaDefaultEndpoint;
     public string McpEndpoint { get; set; } = "https://localhost:7285/mcp";

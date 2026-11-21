@@ -153,9 +153,10 @@ if (app.Environment.IsDevelopment())
 }
 
 var migrateOnStartup = builder.Configuration.GetValue<bool>("Database:MigrateOnStartup", builder.Environment.IsDevelopment());
-if (migrateOnStartup)
+var seedDemoCatalog = builder.Configuration.GetValue<bool>("Database:SeedDemoCatalogOnStartup", builder.Environment.IsDevelopment());
+if (migrateOnStartup || (seedDemoCatalog && !app.Environment.IsEnvironment("Testing")))
 {
-    Console.WriteLine($"Applying database migrations on startup...");
+    Console.WriteLine($"Initializing database on startup...");
     try
     {
         using (var scope = app.Services.CreateScope())
@@ -164,14 +165,19 @@ if (migrateOnStartup)
             // wrap in try-catch to handle potential migration issues
             try
             {
-                if (db.Database.IsRelational())
+                if (migrateOnStartup && db.Database.IsRelational())
                 {
                     db.Database.Migrate();
+                }
+
+                if (seedDemoCatalog && !app.Environment.IsEnvironment("Testing"))
+                {
+                    await DevelopmentCatalogSeeder.SeedAsync(db);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Migration failed: {ex.Message}");
+                Console.WriteLine($"Migration/seeding failed: {ex.Message}");
             }
         }
     }

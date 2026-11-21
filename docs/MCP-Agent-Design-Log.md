@@ -9,12 +9,13 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 - [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
 - [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
 - [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 151/151 total passing)
-- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (170/170 solution tests passing, complete container runbook)
+- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (172/172 solution tests passing, complete container runbook)
 
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
 - [MCP Testing & Verification Guide](MCP-Testing-Guide.md) — How to run the automated xUnit suite and perform manual JSON-RPC verification with curl/PowerShell.
-- [MCP & Agent Programming Guide](MCP-Agent-Programming-Guide.md) — Reference inventory of functions, contracts, endpoints, and file locations added across Phases 0–3.
+- [Human User Testing Walkthrough](Human-User-Testing-Walkthrough.md) — Original intent fulfillment matrix and step-by-step end-to-end acceptance walkthrough.
+- [MCP & Agent Programming Guide](MCP-Agent-Programming-Guide.md) — Reference inventory of functions, contracts, endpoints, and file locations added across Phases 0–6.
 
 This log records Architecture Decision Records (ADRs), design Q&As, and concrete technical contracts (tool I/O schemas, metadata completeness rules, identity propagation, output schemas, and evaluation specs) so the master project plan stays concise while implementation details remain explicit and traceable.
 

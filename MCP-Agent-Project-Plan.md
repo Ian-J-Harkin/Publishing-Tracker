@@ -234,7 +234,7 @@ Layer the 15–25 xUnit cases across three explicit test tiers:
 | **Phase 3** | Evidence Ledger & Reliable Outputs | ✅ **Completed** | [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](docs/Phase-3-Evidence-Ledger-and-Reliable-Outputs.md)<br>Per-run `EvidenceLedger` tracking linked source fields, Stage 2 structured repair turns | 22/22<br>(96/96 total) |
 | **Phase 4** | RAG Module with `pgvector` | ✅ **Completed** | [Phase-4-RAG-Module-with-pgvector.md](docs/Phase-4-RAG-Module-with-pgvector.md)<br>`PublishingTracker.Rag`, `search_publishing_guidelines`, host-bound user scoping | 16/16<br>(112/112 total) |
 | **Phase 5** | Layered CI Evaluation Suites | ✅ **Completed** | [Phase-5-Layered-Evaluation-Strategy.md](docs/Phase-5-Layered-Evaluation-Strategy.md)<br>30 Layer 1 deterministic + 4 real `pgvector` Layer 2 + 5 Layer 3 live smoke/baseline | 39/39<br>(151/151 total) |
-| **Phase 6** | Deployment & Operational Hardening | ✅ **Completed** | [Phase-6-Deployment-and-Operational-Readiness.md](docs/Phase-6-Deployment-and-Operational-Readiness.md)<br>Chiseled Dockerfiles, single-file `HealthProbe`, `AllowInsecureInternalHttp` guard, OTLP export, Compose & CI updates | 19/19<br>(170/170 total) |
+| **Phase 6** | Deployment & Operational Hardening | ✅ **Completed** | [Phase-6-Deployment-and-Operational-Readiness.md](docs/Phase-6-Deployment-and-Operational-Readiness.md)<br>Chiseled Dockerfiles, single-file `HealthProbe`, `AllowInsecureInternalHttp` guard, OTLP export, Gemini provider, demo seeder, [Human-User-Testing-Walkthrough.md](docs/Human-User-Testing-Walkthrough.md) | 21/21<br>(172/172 total) |
 
 ---
 
