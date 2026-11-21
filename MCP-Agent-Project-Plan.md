@@ -402,33 +402,33 @@ docs/                                   # MCP-Agent-Design-Log.md, rag-corpus/ (
 
 ## Build Order & Honest Milestones
 
-| Step | Phase | Deliverable | What You Can Honestly Say Afterwards |
-|---|---|---|---|
-| 0 | Phase 0 | `.NET 10` PostgreSQL baseline, `iat`/auth hygiene, contracts | "Upgraded to .NET 10 LTS, reconciled domain drift, and standardized on PostgreSQL." |
-| 1 | Phase 1 | Hosted `/mcp` endpoint in API with 2 owner-scoped tools + isolation tests | "I've built read-only, user-scoped MCP tools in C# over Streamable HTTP." |
-| 2 | Phase 2 | Explicit `IChatClient` loop with dual budgets, tracing, and scripted tests | "I've built a bounded multi-step tool-calling agent in .NET with OpenTelemetry tracing." |
-| 3 | Phase 3 | Linked Evidence Ledger, separate structured output turn, provenance checks, retries | "It validates structured outputs against a per-run Evidence Ledger and handles failures." |
-| 4 | Phase 4 | `pgvector` RAG module with host-bound tenant ID and prompt-injection tests | "It retrieves from `pgvector` with non-model-controlled tenant isolation and chunk citations." |
-| 5 | Phase 5 | 15–25 layered xUnit evals in CI + opt-in live OpenRouter/Claude checks | "It has layered deterministic CI evals plus live model smoke verification." |
-| 6 | Phase 6 | Containerized Azure + Neon deployment, redacted App Insights traces & docs | "I've shipped it to Azure with CI/CD and redacted OpenTelemetry observability." |
+| Step | Phase | Deliverable | Status | What You Can Honestly Say Afterwards |
+|---|---|---|---|---|
+| 0 | Phase 0 | `.NET 10` PostgreSQL baseline, `iat`/auth hygiene, contracts | ✅ Completed | "Upgraded to .NET 10 LTS, reconciled domain drift, and standardized on PostgreSQL." |
+| 1 | Phase 1 | Hosted `/mcp` endpoint in API with 2 owner-scoped tools + isolation tests | ✅ Completed | "I've built read-only, user-scoped MCP tools in C# over Streamable HTTP." |
+| 2 | Phase 2 | Explicit `IChatClient` loop with dual budgets, tracing, and scripted tests | ✅ Completed | "I've built a bounded multi-step tool-calling agent in .NET with OpenTelemetry tracing." |
+| 3 | Phase 3 | Linked Evidence Ledger, separate structured output turn, provenance checks, retries | ✅ Completed | "It validates structured outputs against a per-run Evidence Ledger and handles failures." |
+| 4 | Phase 4 | `pgvector` RAG module with host-bound tenant ID and prompt-injection tests | ✅ Completed | "It retrieves from `pgvector` with non-model-controlled tenant isolation and chunk citations." |
+| 5 | Phase 5 | 15–25 layered xUnit evals in CI + opt-in live OpenRouter/Claude checks | ✅ Completed | "It has layered deterministic CI evals plus live model smoke verification." |
+| 6 | Phase 6 | Containerized Azure + Neon deployment, redacted App Insights traces & docs | ✅ Completed | "I've shipped it to Azure with CI/CD and redacted OpenTelemetry observability." |
 
 ---
 
 ## Definition of Done
 
-- [ ] Solution and CI run on `.NET 10 LTS` (`net10.0`) with tests passing against PostgreSQL
-- [ ] JWT auth (`iat` claim, explicit validation, non-null `userId` filtering) is enforced at every service boundary and tool query (verified by two-user isolation tests)
-- [ ] MCP endpoint (`/mcp` in `PublishingTracker.Api`) serves `find_titles_missing_metadata` and `get_title_details` over Streamable HTTP to standalone MCP clients and the Agent Host
-- [ ] Pagination and incomplete results (`hasMore`) are explicitly surfaced rather than silently truncated
-- [ ] Agent completes multi-step tasks with explicit `MaxModelTurns`, `MaxTotalToolCalls`, payload limits, timeouts, and repeat-call guards
-- [ ] Final answers validate locally against a versioned schema with max 2 retries, host-populated `toolsUsed`, and clear failure states
-- [ ] Linked citations (`(bookId, editionId?, fields)` and `(documentId, chunkId)`) are verified against the run's Evidence Ledger
-- [ ] RAG retrieval binds caller identity in host code (never model arguments) and withstands prompt-injection test fixtures
-- [ ] At least 15 deterministic eval cases run in CI (unit orchestration + focused PostgreSQL integration), with live OpenRouter/Claude evals reported separately
-- [ ] OpenTelemetry traces are visible for a full agent run without exposing raw prompts, documents, tokens, or secrets
-- [ ] External LLM data handling/retention policy is documented and PII is stripped from model payloads
-- [ ] No price, status, or revision-history claim is made without supporting domain data
-- [ ] Deployed to Azure (with external Neon PostgreSQL) via GitHub Actions with documented architecture, sample trace, cost, and teardown notes
+- [x] Solution and CI run on `.NET 10 LTS` (`net10.0`) with tests passing against PostgreSQL
+- [x] JWT auth (`iat` claim, explicit validation, non-null `userId` filtering) is enforced at every service boundary and tool query (verified by two-user isolation tests)
+- [x] MCP endpoint (`/mcp` in `PublishingTracker.Api`) serves `find_titles_missing_metadata` and `get_title_details` over Streamable HTTP to standalone MCP clients and the Agent Host
+- [x] Pagination and incomplete results (`hasMore`) are explicitly surfaced rather than silently truncated
+- [x] Agent completes multi-step tasks with explicit `MaxModelTurns`, `MaxTotalToolCalls`, payload limits, timeouts, and repeat-call guards
+- [x] Final answers validate locally against a versioned schema with max 2 retries, host-populated `toolsUsed`, and clear failure states
+- [x] Linked citations (`(bookId, editionId?, fields)` and `(documentId, chunkId)`) are verified against the run's Evidence Ledger
+- [x] RAG retrieval binds caller identity in host code (never model arguments) and withstands prompt-injection test fixtures
+- [x] At least 15 deterministic eval cases run in CI (unit orchestration + focused PostgreSQL integration), with live OpenRouter/Claude evals reported separately
+- [x] OpenTelemetry traces are visible for a full agent run without exposing raw prompts, documents, tokens, or secrets
+- [x] External LLM data handling/retention policy is documented and PII is stripped from model payloads
+- [x] No price, status, or revision-history claim is made without supporting domain data
+- [x] Deployed to Azure (with external Neon PostgreSQL) via GitHub Actions with documented architecture, sample trace, cost, and teardown notes
 
 ---
 
