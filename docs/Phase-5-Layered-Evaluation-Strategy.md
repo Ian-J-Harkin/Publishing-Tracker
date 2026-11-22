@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > **Status: Implemented & Verified.**
-> All 4 steps (Steps 5.1 through 5.4) are complete. `PublishingTracker.Evals` contains 39 passing tests (30 Layer 1 deterministic tests, 4 Layer 2 real PostgreSQL + `pgvector` integration tests, and 5 Layer 3 `Category=LiveEval` baseline/smoke tests), out of 172 total tests across the solution.
+> All 4 steps (Steps 5.1 through 5.4) are complete. `PublishingTracker.Evals` contains 39 passing tests (30 Layer 1 deterministic tests, 4 Layer 2 real PostgreSQL + `pgvector` integration tests, and 5 Layer 3 `Category=LiveEval` baseline/smoke tests), out of `186` total tests across the solution (`181` in the default non-LiveEval CI filter).
 
 Companion phase specification to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md), [MCP-Agent-Design-Log.md](MCP-Agent-Design-Log.md), [Phase-0-Baseline-and-Contracts.md](Phase-0-Baseline-and-Contracts.md), [Phase-1-Read-Only-Catalogue-and-MCP.md](Phase-1-Read-Only-Catalogue-and-MCP.md), [Phase-2-Agent-Loop-and-Tracing.md](Phase-2-Agent-Loop-and-Tracing.md), [Phase-3-Evidence-Ledger-and-Reliable-Outputs.md](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md), and [Phase-4-RAG-Module-with-pgvector.md](Phase-4-RAG-Module-with-pgvector.md).
 
@@ -20,7 +20,7 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
 │  Layer 3: Live Provider Smoke & Quality Evals (Opt-In / Nightly / Non-Fork Only)             │
 │    • Pinned OpenRouter / OpenAI / Claude Live Runs (Temp = 0.0, Seed = 42)                   │
 │    • Multi-step tool grounding, RAG retrieval quality, & Stage 2 JSON schema compliance      │
-│    • Zero data collection verification (data_collection: deny header asserted)              │
+│    • Zero data collection verification (headers + JSON body provider.data_collection = "deny") │
 │    • Gated behind explicit API key check; skips cleanly if missing (never false fail/pass)   │
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
 │  Layer 2: Multi-Tenant Integration & Real pgvector DB Isolation Evals (CI Fast Path)         │
@@ -87,7 +87,7 @@ Establish a **continuous, multi-tiered evaluation harness (`PublishingTracker.Ev
     - *"Find my incomplete audiobooks and inspect what metadata is missing."*
     - *"What are the formatting guidelines for ebook file sizes and covers?"*
   - **Retrieval Quality (Recall@k / MRR):** Verifies that semantic guideline searches return the expected canonical document chunks in the top-3 hits.
-  - **Privacy Header Compliance:** Network recording verifies that live requests send `HTTP-Referer`, `X-Title`, and `data_collection: deny`.
+  - **Privacy & ZDR Payload Compliance:** Network recording executes a request through `AIProviderSetup.CreateChatClient` + `RecordingHttpMessageHandler` and verifies both HTTP headers (`HTTP-Referer`, `X-Title`, `data_collection: deny`) and JSON request body (`"provider": { "data_collection": "deny" }`).
 
 ---
 

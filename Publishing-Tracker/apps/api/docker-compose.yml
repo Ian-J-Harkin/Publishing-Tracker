@@ -32,7 +32,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=publishingtracker_dev;Username=postgres;Password=postgres"
-      Jwt__Key: "${JWT_SIGNING_KEY:-DevelopmentJwtKeyMustBeAtLeast32BytesLongForHmacSha256Security12345}"
+      Jwt__Key: "${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set (min 32 chars)}"
       Jwt__Issuer: "PublishingTracker.Api"
       Jwt__Audience: "PublishingTracker.Api"
       Database__MigrateOnStartup: "true"
@@ -71,7 +71,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=publishingtracker_dev;Username=postgres;Password=postgres"
-      Jwt__Key: "${JWT_SIGNING_KEY:-DevelopmentJwtKeyMustBeAtLeast32BytesLongForHmacSha256Security12345}"
+      Jwt__Key: "${JWT_SIGNING_KEY:?JWT_SIGNING_KEY must be set (min 32 chars)}"
       Jwt__Issuer: "PublishingTracker.Api"
       Jwt__Audience: "PublishingTracker.Api"
       AIProvider__McpEndpoint: "http://api:8080/mcp"

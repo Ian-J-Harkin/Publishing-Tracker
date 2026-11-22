@@ -353,6 +353,21 @@ public sealed class Phase3EvidenceAndValidationTests
         var unmappedResult = validator.Validate(unmappedJson, ledger);
         Assert.False(unmappedResult.IsValid);
         Assert.Contains("strict JSON", unmappedResult.Error, StringComparison.OrdinalIgnoreCase);
+
+        var arrayLimitationsJson = """
+        {
+          "status": "answered",
+          "answer": "Book 42 checked.",
+          "evidence": {
+            "catalogueSources": [{ "bookId": 42, "editionId": 105, "fields": ["Title"], "claim": "Returned." }],
+            "documentSources": []
+          },
+          "limitations": []
+        }
+        """;
+        var arrayLimitationsResult = validator.Validate(arrayLimitationsJson, ledger);
+        Assert.False(arrayLimitationsResult.IsValid);
+        Assert.Contains("$.limitations", arrayLimitationsResult.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

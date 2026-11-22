@@ -25,6 +25,9 @@ namespace PublishingTracker.Api.Tests
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
+            builder.UseSetting("Jwt:Issuer", "PublishingTracker.Api");
+            builder.UseSetting("Jwt:Audience", "PublishingTracker.Api");
+            builder.UseSetting("Jwt:Key", "test-only-jwt-signing-key-at-least-32-bytes-long");
 
             builder.ConfigureServices(services =>
             {

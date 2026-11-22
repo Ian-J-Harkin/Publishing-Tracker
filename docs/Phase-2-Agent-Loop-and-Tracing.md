@@ -91,7 +91,7 @@ Target framework: `net10.0`. References:
 - NuGet packages: `Microsoft.Extensions.AI`, `Microsoft.Extensions.AI.OpenAI`, `ModelContextProtocol`, `Microsoft.AspNetCore.Authentication.JwtBearer`, `OpenTelemetry.Extensions.Hosting`.
 
 ### 3.2 Provider Options: `AIProviderOptions.cs`
-Pattern ported and hardened from `ai-code-review-bot`:
+Ported and extended for 4 supported providers and 3-tier secret management:
 
 ```csharp
 namespace PublishingTracker.Agent.Configuration;
@@ -100,41 +100,49 @@ public sealed class AIProviderOptions
 {
     public const string SectionName = "AIProvider";
 
-    public static readonly string[] SupportedTypes = ["openrouter", "openai", "ollama"];
+    public static readonly string[] SupportedTypes = ["openrouter", "openai", "gemini", "ollama"];
 
-    /// <summary>Provider type: "openrouter" (default), "openai", or "ollama".</summary>
+    /// <summary>Provider type: "openrouter" (default), "openai", "gemini", or "ollama".</summary>
     public string Type { get; set; } = "openrouter";
 
-    /// <summary>Active model ID (e.g. "anthropic/claude-sonnet-4").</summary>
-    public string ModelId { get; set; } = "anthropic/claude-sonnet-4";
-
-    /// <summary>Base endpoint URL.</summary>
-    public string? Endpoint { get; set; } = "https://openrouter.ai/api/v1";
+    public string ModelId { get; set; } = AIProviderSetup.OpenRouterDefaultModelId;
+    public string? Endpoint { get; set; } = AIProviderSetup.OpenRouterDefaultEndpoint;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string ApiKey { get; set; } = string.Empty;
 
-    public string OpenRouterModelId { get; set; } = "anthropic/claude-sonnet-4";
-    public string? OpenRouterEndpoint { get; set; } = "https://openrouter.ai/api/v1";
+    public string OpenRouterModelId { get; set; } = AIProviderSetup.OpenRouterDefaultModelId;
+    public string? OpenRouterEndpoint { get; set; } = AIProviderSetup.OpenRouterDefaultEndpoint;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string OpenRouterApiKey { get; set; } = string.Empty;
 
-    public string OllamaModelId { get; set; } = "qwen2.5-coder:7b";
-    public string? OllamaEndpoint { get; set; } = "http://localhost:11434/v1";
+    public string GeminiModelId { get; set; } = AIProviderSetup.GeminiDefaultModelId;
+    public string? GeminiEndpoint { get; set; } = AIProviderSetup.GeminiDefaultEndpoint;
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string GeminiApiKey { get; set; } = string.Empty;
+
+    public string OllamaModelId { get; set; } = AIProviderSetup.OllamaDefaultModelId;
+    public string? OllamaEndpoint { get; set; } = AIProviderSetup.OllamaDefaultEndpoint;
 
     /// <summary>Target PublishingTracker.Api MCP endpoint.</summary>
     public string McpEndpoint { get; set; } = "https://localhost:7285/mcp";
+    public bool AllowInsecureInternalHttp { get; set; }
+
+    public string EmbeddingModelId { get; set; } = AIProviderSetup.OpenRouterDefaultEmbeddingModelId;
+    public string OllamaEmbeddingModelId { get; set; } = AIProviderSetup.OllamaDefaultEmbeddingModelId;
+    public int EmbeddingDimensions { get; set; } = 1536;
 
     public override string ToString() =>
-        $"AIProviderOptions {{ Type = {Type}, ModelId = {ModelId}, Endpoint = {Endpoint}, ApiKey = {Redact(ApiKey)}, McpEndpoint = {McpEndpoint} }}";
+        $"AIProviderOptions {{ Type = {Type}, ModelId = {ModelId}, EmbeddingModelId = {EmbeddingModelId}, Endpoint = {Endpoint}, ApiKey = {Redact(ApiKey)}, OpenRouterApiKey = {Redact(OpenRouterApiKey)}, McpEndpoint = {McpEndpoint}, AllowInsecureInternalHttp = {AllowInsecureInternalHttp} }}";
 
     private static string Redact(string? val) => string.IsNullOrWhiteSpace(val) ? "<empty>" : "[REDACTED]";
 }
 ```
 
 ### 3.3 Provider Resolution & Client Factory: `AIProviderSetup.cs`
-Resolves options with explicit provider type validation, environment variable fallbacks (`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_MODEL_NAME`, `OPENAI_MODEL_NAME`), wires `customHttpClient` to `OpenAIClientOptions.Transport`, configures outbound headers for OpenRouter privacy compliance (`data_collection: "deny"`, `X-Title: PublishingTracker`), and constructs an `IChatClient`:
+Resolves options across `"openrouter"`, `"openai"`, `"gemini"`, and `"ollama"` with 3-tier secret resolution (container `/run/secrets/` files + `*_FILE` env vars, `.NET User Secrets` in Development, Azure Key Vault references in production, or explicit env fallbacks), wires `customHttpClient` to `OpenAIClientOptions.Transport`, and attaches `OpenRouterHeadersPolicy` (setting `HTTP-Referer`, `X-Title`, `data_collection: "deny"`, **and** injecting `provider.data_collection = "deny"` directly into the JSON request body per OpenRouter's routing API spec):
 
 ```csharp
 namespace PublishingTracker.Agent.Configuration;
@@ -145,127 +153,14 @@ public static class AIProviderSetup
     public const string OpenRouterDefaultModelId = "anthropic/claude-sonnet-4";
     public const string OpenAiDefaultEndpoint = "https://api.openai.com/v1";
     public const string OpenAiDefaultModelId = "gpt-4o-mini";
+    public const string GeminiDefaultEndpoint = "https://generativelanguage.googleapis.com/v1beta/openai";
+    public const string GeminiDefaultModelId = "gemini-2.5-flash";
     public const string OllamaDefaultEndpoint = "http://localhost:11434/v1";
     public const string OllamaDefaultModelId = "qwen2.5-coder:7b";
 
-    public static AIProviderOptions Resolve(AIProviderOptions configured, Func<string, string?> getEnv)
-    {
-        ArgumentNullException.ThrowIfNull(configured);
-        ArgumentNullException.ThrowIfNull(getEnv);
-
-        var rawType = configured.Type?.Trim().ToLowerInvariant() ?? string.Empty;
-        if (!AIProviderOptions.SupportedTypes.Contains(rawType))
-        {
-            throw new InvalidOperationException(
-                $"Unsupported AIProvider:Type '{configured.Type}'. Supported values: {string.Join(", ", AIProviderOptions.SupportedTypes)}.");
-        }
-
-        if (rawType == "openrouter")
-        {
-            var key = FirstNonEmpty(getEnv("OPENROUTER_API_KEY"), configured.OpenRouterApiKey, configured.ApiKey);
-            var model = FirstNonEmpty(getEnv("OPENROUTER_MODEL_NAME"), configured.OpenRouterModelId, configured.ModelId, OpenRouterDefaultModelId);
-            var endpoint = FirstNonEmpty(configured.OpenRouterEndpoint, configured.Endpoint, OpenRouterDefaultEndpoint);
-
-            return new AIProviderOptions
-            {
-                Type = "openrouter",
-                ModelId = model!,
-                Endpoint = endpoint,
-                ApiKey = key ?? string.Empty,
-                McpEndpoint = configured.McpEndpoint
-            };
-        }
-
-        if (rawType == "ollama")
-        {
-            return new AIProviderOptions
-            {
-                Type = "ollama",
-                ModelId = FirstNonEmpty(configured.OllamaModelId, configured.ModelId, OllamaDefaultModelId)!,
-                Endpoint = FirstNonEmpty(configured.OllamaEndpoint, configured.Endpoint, OllamaDefaultEndpoint),
-                ApiKey = FirstNonEmpty(configured.ApiKey, "ollama")!,
-                McpEndpoint = configured.McpEndpoint
-            };
-        }
-
-        // openai
-        var openAiKey = FirstNonEmpty(getEnv("OPENAI_API_KEY"), configured.ApiKey) ?? string.Empty;
-        var openAiModel = FirstNonEmpty(getEnv("OPENAI_MODEL_NAME"), configured.ModelId, OpenAiDefaultModelId)!;
-        var openAiEndpoint = FirstNonEmpty(configured.Endpoint, OpenAiDefaultEndpoint);
-
-        return new AIProviderOptions
-        {
-            Type = "openai",
-            ModelId = openAiModel,
-            Endpoint = openAiEndpoint,
-            ApiKey = openAiKey,
-            McpEndpoint = configured.McpEndpoint
-        };
-    }
-
-    public static IChatClient CreateChatClient(
-        AIProviderOptions options,
-        HttpClient? customHttpClient = null)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-
-        if (options.Type != "ollama" && string.IsNullOrWhiteSpace(options.ApiKey))
-        {
-            throw new InvalidOperationException($"API key is required for provider '{options.Type}'. Set OPENROUTER_API_KEY or AIProvider:ApiKey.");
-        }
-
-        var openAiOptions = new OpenAI.OpenAIClientOptions();
-        if (!string.IsNullOrWhiteSpace(options.Endpoint))
-        {
-            openAiOptions.Endpoint = new Uri(options.Endpoint);
-        }
-
-        // Wire customHttpClient for test doubles (RecordingHttpMessageHandler)
-        if (customHttpClient is not null)
-        {
-            openAiOptions.Transport = new System.ClientModel.Primitives.HttpClientPipelineTransport(customHttpClient);
-        }
-
-        if (options.Type == "openrouter")
-        {
-            // Privacy & attribution headers required by ADR-008
-            openAiOptions.AddPolicy(new OpenRouterHeadersPolicy(), System.ClientModel.Primitives.PipelinePosition.PerCall);
-        }
-
-        var client = new OpenAI.OpenAIClient(new System.ClientModel.ApiKeyCredential(options.ApiKey), openAiOptions);
-        return client.GetChatClient(options.ModelId).AsIChatClient();
-    }
-
-    private static string? FirstNonEmpty(params string?[] values) =>
-        values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
-
-    private sealed class OpenRouterHeadersPolicy : System.ClientModel.Primitives.PipelinePolicy
-    {
-        public override void Process(
-            System.ClientModel.Primitives.PipelineMessage message,
-            IReadOnlyList<System.ClientModel.Primitives.PipelinePolicy> pipeline,
-            int currentIndex)
-        {
-            ApplyHeaders(message);
-            ProcessNext(message, pipeline, currentIndex);
-        }
-
-        public override ValueTask ProcessAsync(
-            System.ClientModel.Primitives.PipelineMessage message,
-            IReadOnlyList<System.ClientModel.Primitives.PipelinePolicy> pipeline,
-            int currentIndex)
-        {
-            ApplyHeaders(message);
-            return ProcessNextAsync(message, pipeline, currentIndex);
-        }
-
-        private static void ApplyHeaders(System.ClientModel.Primitives.PipelineMessage message)
-        {
-            message.Request.Headers.Set("HTTP-Referer", "https://publishingtracker.local");
-            message.Request.Headers.Set("X-Title", "PublishingTracker");
-            message.Request.Headers.Set("data_collection", "deny");
-        }
-    }
+    // Resolve(...) checks *_FILE + /run/secrets/* mounts before env vars / configured properties.
+    // OpenRouterHeadersPolicy attaches HTTP-Referer, X-Title, data_collection headers AND injects
+    // { "provider": { "data_collection": "deny" } } into the outbound JSON request payload.
 }
 ```
 

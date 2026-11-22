@@ -311,6 +311,46 @@ public sealed class Phase6DeploymentAndSecurityTests
         Assert.Equal("publishingtracker-agent-dev-secrets", agentAttr!.UserSecretsId);
     }
 
+    [Fact]
+    public void AppSettingsJson_ContainsNoCommittedCredentialsOrJwtSigningKeys()
+    {
+        string? appSettingsPath = null;
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var direct = Path.Combine(dir.FullName, "src", "PublishingTracker.Api", "appsettings.json");
+            if (File.Exists(direct))
+            {
+                appSettingsPath = direct;
+                break;
+            }
+
+            var monorepo = Path.Combine(dir.FullName, "Publishing-Tracker", "apps", "api", "src", "PublishingTracker.Api", "appsettings.json");
+            if (File.Exists(monorepo))
+            {
+                appSettingsPath = monorepo;
+                break;
+            }
+        }
+
+        Assert.NotNull(appSettingsPath);
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(appSettingsPath!));
+
+        if (doc.RootElement.TryGetProperty("ConnectionStrings", out var connStrings))
+        {
+            if (connStrings.TryGetProperty("DefaultConnection", out var defConn))
+                Assert.True(string.IsNullOrWhiteSpace(defConn.GetString()), "DefaultConnection in appsettings.json must be blank.");
+            if (connStrings.TryGetProperty("NeonConnection", out var neonConn))
+                Assert.True(string.IsNullOrWhiteSpace(neonConn.GetString()), "NeonConnection in appsettings.json must be blank.");
+            if (connStrings.TryGetProperty("AzureConnection", out var azConn))
+                Assert.True(string.IsNullOrWhiteSpace(azConn.GetString()), "AzureConnection in appsettings.json must not contain secrets.");
+        }
+
+        if (doc.RootElement.TryGetProperty("Jwt", out var jwt) && jwt.TryGetProperty("Key", out var jwtKey))
+        {
+            Assert.True(string.IsNullOrWhiteSpace(jwtKey.GetString()), "Jwt:Key in appsettings.json must be blank.");
+        }
+    }
+
     private static SingleResponseServer StartSingleResponseServer(string statusLine, string body)
     {
         var listener = new TcpListener(IPAddress.Loopback, 0);

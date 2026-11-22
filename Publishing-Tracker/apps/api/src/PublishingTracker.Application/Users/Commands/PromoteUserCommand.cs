@@ -1,5 +1,6 @@
 using MediatR;
 using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Domain.Exceptions;
 
 
 namespace PublishingTracker.Application.Users.Commands;
@@ -23,7 +24,14 @@ public class PromoteUserCommandHandler : IRequestHandler<PromoteUserCommand, Res
         if (user == null)
             return Result.Failure("User not found.");
 
-        user.Promote();
+        try
+        {
+            user.Promote();
+        }
+        catch (InvalidDomainStateException ex)
+        {
+            return Result.Failure(ex.Message);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();

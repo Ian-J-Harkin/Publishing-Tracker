@@ -11,16 +11,35 @@ public class UploadImportFileCommandHandler : IRequestHandler<UploadImportFileCo
 {
     public async Task<Result<PreviewDataDto>> Handle(UploadImportFileCommand request, CancellationToken cancellationToken)
     {
-        var tempDir = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads");
+        if (string.IsNullOrWhiteSpace(request.FileName))
+            return Result<PreviewDataDto>.Failure("Invalid file name.");
+
+        var trimmed = request.FileName.Trim();
+        var safeFileName = Path.GetFileName(trimmed);
+        if (!string.Equals(trimmed, safeFileName, StringComparison.Ordinal) ||
+            trimmed.Contains("..", StringComparison.Ordinal) ||
+            trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            trimmed is "." or "..")
+        {
+            return Result<PreviewDataDto>.Failure("Invalid file name.");
+        }
+
+        var tempDir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads"));
         Directory.CreateDirectory(tempDir);
 
-        var filePath = Path.Combine(tempDir, $"{request.UserId}_{request.FileName}");
+        var filePath = Path.GetFullPath(Path.Combine(tempDir, $"{request.UserId}_{safeFileName}"));
+        if (!filePath.StartsWith(tempDir + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            !string.Equals(Path.GetDirectoryName(filePath), tempDir, StringComparison.Ordinal))
+        {
+            return Result<PreviewDataDto>.Failure("Invalid file path.");
+        }
+
         await using (var target = File.Create(filePath))
         {
             await request.FileStream.CopyToAsync(target, cancellationToken);
         }
 
-        var preview = new PreviewDataDto { FileName = request.FileName };
+        var preview = new PreviewDataDto { FileName = safeFileName };
         using var reader = new StreamReader(filePath, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
 
         var headerLine = await reader.ReadLineAsync(cancellationToken);

@@ -21,8 +21,11 @@ public static class ImportEndpoints
             if (!httpContext.TryGetUserId(out var userId, out var errorResult))
                 return errorResult!;
 
+            if (!TrySanitizeImportFileName(file.FileName, out var safeFileName))
+                return ApiResults.BadRequest("Invalid file name.");
+
             await using var stream = file.OpenReadStream();
-            var result = await mediator.Send(new UploadImportFileCommand(userId, Path.GetFileName(file.FileName), stream));
+            var result = await mediator.Send(new UploadImportFileCommand(userId, safeFileName, stream));
             return result.IsSuccess ? Results.Ok(result.Value) : ApiResults.BadRequest(result.ErrorMessage ?? "Upload failed");
         });
 
@@ -34,8 +37,18 @@ public static class ImportEndpoints
             if (!httpContext.TryGetUserId(out var userId, out var errorResult))
                 return errorResult!;
 
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads", $"{userId}_{request.FileName}");
-            var result = await mediator.Send(new CreateImportJobCommand(userId, request.FileName, filePath, request.Mapping));
+            if (!TrySanitizeImportFileName(request.FileName, out var safeFileName))
+                return ApiResults.BadRequest("Invalid file name.");
+
+            var tempDir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "temp_uploads"));
+            var filePath = Path.GetFullPath(Path.Combine(tempDir, $"{userId}_{safeFileName}"));
+            if (!filePath.StartsWith(tempDir + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                !string.Equals(Path.GetDirectoryName(filePath), tempDir, StringComparison.Ordinal))
+            {
+                return ApiResults.BadRequest("Invalid file path.");
+            }
+
+            var result = await mediator.Send(new CreateImportJobCommand(userId, safeFileName, filePath, request.Mapping));
             return result.IsSuccess
                 ? Results.Accepted($"/api/import/status/{result.Value?.Id}", result.Value)
                 : ApiResults.BadRequest(result.ErrorMessage ?? "Processing failed");
@@ -66,6 +79,26 @@ public static class ImportEndpoints
             var result = await mediator.Send(new GetImportJobHistoryQuery(userId));
             return result.IsSuccess ? Results.Ok(result.Value) : ApiResults.BadRequest(result.ErrorMessage ?? "Request failed");
         });
+    }
+
+    private static bool TrySanitizeImportFileName(string? fileName, out string safeFileName)
+    {
+        safeFileName = string.Empty;
+        if (string.IsNullOrWhiteSpace(fileName))
+            return false;
+
+        var trimmed = fileName.Trim();
+        var extracted = Path.GetFileName(trimmed);
+        if (!string.Equals(trimmed, extracted, StringComparison.Ordinal) ||
+            trimmed.Contains("..", StringComparison.Ordinal) ||
+            trimmed.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            trimmed is "." or "..")
+        {
+            return false;
+        }
+
+        safeFileName = extracted;
+        return true;
     }
 
     public record ProcessImportRequest(string FileName, ColumnMappingDto Mapping);

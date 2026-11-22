@@ -4,18 +4,18 @@ This guide details how to verify, test, and troubleshoot the **PublishingTracker
 
 ---
 
-## 1. Test Architecture & Coverage (`175/175` Implemented Tests Passing)
+## 1. Test Architecture & Coverage (`186/186` Implemented Tests Passing)
 
 | Test Assembly / Filter | Phase Coverage | Count | Test Approach |
 |---|---|---:|---|
-| `PublishingTracker.Api.Tests` | Baseline API & Phase 0 (`TokenService`, `FormatCompletenessRules`) | `41` | Unit tests + `TestWebAppFactory` integration suite |
-| `Phase1McpAndCatalogueTests` | Phase 1 Hosted `/mcp` & REST parity | `13` *(executions across 8 methods)* | Real `ModelContextProtocol.Client.McpClient` over Streamable HTTP against `TestWebAppFactory` + `TwoUserSeedCatalog` |
+| `PublishingTracker.Api.Tests` | Baseline API & Phase 0 (`TokenService`, `FormatCompletenessRules`, path-traversal & `Result` safety guards) | `49` | Unit tests + `TestWebAppFactory` integration suite |
+| `Phase1McpAndCatalogueTests` | Phase 1 Hosted `/mcp`, REST parity & `UserSecretsId` | `15` *(executions across 10 methods)* | Real `ModelContextProtocol.Client.McpClient` over Streamable HTTP against `TestWebAppFactory` + `TwoUserSeedCatalog` |
 | `AgentLoopTests` (`PublishingTracker.Agent.Tests`) | Phase 2 Agent Loop, Auth Forwarding, Provider Routing & Telemetry | `20` | Deterministic `ScriptedChatClient`, `StubToolProvider`, and `RecordingHttpMessageHandler` (`0` external API spend) |
 | `Phase3EvidenceAndValidationTests` (`PublishingTracker.Agent.Tests`) | Phase 3 Linked `EvidenceLedger`, Stage 2 Repair & Strict Output Validation | `22` | Deterministic `ScriptedChatClient` + stub MCP/DTO responses (`0` external API spend) |
 | `Phase4RagRetrievalAndIsolationTests` (`PublishingTracker.Agent.Tests`) | Phase 4 RAG VectorMath, Markdown Chunker, Ingestion, Embeddings, Retrieval, Composite Provider Isolation & Prompt-Injection Defense | `16` | Deterministic `DeterministicTestEmbeddingGenerator`, EF InMemory/Npgsql double, and `CompositeToolProvider` stubs |
-| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key`, `gemini` / `/run/secrets` & `*_FILE` resolution, `UserSecretsId`, `DevelopmentCatalogSeeder`, and `HealthProbe` | `24` *(executions across 13 methods)* | Unit and loopback TCP integration tests covering environment guards, secret mounts, user secrets, endpoint allowlists, bearer forwarding, demo seeding, and console healthcheck probing |
+| `Phase6DeploymentAndSecurityTests` (`PublishingTracker.Agent.Tests`) | Phase 6 Container Security, `AllowInsecureInternalHttp` Production Guard, `IsEndpointTrusted`, 32-byte `Jwt:Key`, `gemini` / `/run/secrets` & `*_FILE` resolution, `UserSecretsId`, blank `appsettings.json` secrets gate, `DevelopmentCatalogSeeder`, and `HealthProbe` | `25` *(executions across 14 methods)* | Unit and loopback TCP integration tests covering environment guards, secret mounts, user secrets, zero committed secrets, endpoint allowlists, bearer forwarding, demo seeding, and console healthcheck probing |
 | `PublishingTracker.Evals` | Phase 5 Layer 1 (30 deterministic golden/evaluator tests), Layer 2 (4 real `pgvector` & multi-tenant tests), Layer 3 (5 opt-in live smoke & baseline tests) | `39` | Deterministic evaluators + PostgreSQL `pgvector` fixture (port 5435 / `TEST_POSTGRES_CONNECTION`) + opt-in live smoke tests |
-| **Total Implemented CI Suite** | **Phases 0–6** | **`175`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 170 tests; `Category=LiveEval` = 5 opt-in tests)** |
+| **Total Implemented CI Suite** | **Phases 0–6** | **`186`** | **100% deterministic offline & PostgreSQL integration (`Category!=LiveEval` = 181 tests; `Category=LiveEval` = 5 opt-in tests)** |
 
 The MCP integration tests run against `TestWebAppFactory` with a real `ModelContextProtocol.Client.McpClient` over Streamable HTTP:
 
@@ -50,7 +50,7 @@ To prove non-model-controlled tenant isolation, the test fixture seeds a determi
 
 ## 2. Automated Test Execution
 
-### Running All Implemented Tests (Phases 0–6 — `175/175` Total, `170/170` CI Non-Live Filter)
+### Running All Implemented Tests (Phases 0–6 — `186/186` Total, `181/181` CI Non-Live Filter)
 Run the CI solution test suite using standard `dotnet test` flags for clean Windows execution:
 
 ```powershell
@@ -60,14 +60,14 @@ dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln `
 ```
 
 **Expected Output:**
-- `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 54, Skipped: 0, Total: 54`
-- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 82, Skipped: 0, Total: 82` (including `16/16` Phase 4 RAG tests and `24/24` Phase 6 deployment/security tests)
+- `PublishingTracker.Api.Tests.dll`: `Passed! - Failed: 0, Passed: 64, Skipped: 0, Total: 64`
+- `PublishingTracker.Agent.Tests.dll`: `Passed! - Failed: 0, Passed: 83, Skipped: 0, Total: 83` (including `16/16` Phase 4 RAG tests and `25/25` Phase 6 deployment/security tests)
 - `PublishingTracker.Evals.dll`: `Passed! - Failed: 0, Passed: 34, Skipped: 0, Total: 34` (30 Layer 1 deterministic + 4 Layer 2 real pgvector integration; 5 `Category=LiveEval` tests run separately when opted in, for `39` total in `PublishingTracker.Evals`)
 
 ### Running Filtered Suites by Phase
 
 ```powershell
-# Phase 1: Hosted /mcp endpoint & REST parity (13 test executions)
+# Phase 1: Hosted /mcp endpoint, REST parity & UserSecretsId (15 test executions)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase1"
 
 # Phase 2: Agent loop budgets, auth forwarding, routing & tracing (20 tests)
@@ -84,10 +84,10 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --no-resto
 
 # Phase 5: Opt-in Live Smoke Evals (5 tests, requires live AI provider credentials for 3 end-to-end LLM tests)
 $env:RUN_LIVE_EVALS="true"
-$env:GEMINI_API_KEY="<your-gemini-api-key>"
+$env:GEMINI_API_KEY="<your-gemini-key>"
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "Category=LiveEval"
 
-# Phase 6: Container security, AllowInsecureInternalHttp guard, 32-byte JWT, UserSecretsId, /run/secrets, HealthProbe (24 tests)
+# Phase 6: Container security, AllowInsecureInternalHttp guard, 32-byte JWT, UserSecretsId, /run/secrets, appsettings check, HealthProbe (25 tests)
 dotnet test Publishing-Tracker/apps/api/PublishingTracker.Api.sln --no-restore --filter "FullyQualifiedName~Phase6"
 ```
 
@@ -364,7 +364,7 @@ Specified in [Phase-5-Layered-Evaluation-Strategy.md](Phase-5-Layered-Evaluation
 │   ├── Privacy policy & eval_baseline.json regression gate (offline)    │
 │   ├── Multi-provider support: Ollama (local), Gemini 2.5 Flash,        │
 │   │   OpenRouter                                                       │
-│   ├── Fail-fast timeouts (15s per-call, 30s overall)                   │
+│   ├── Fail-fast timeouts (30s per-call, 60s overall)                   │
 │   └── RateLimitedRetryHandler (bounded 429 exponential backoff)        │
 └────────────────────────────────────────────────────────────────────────┘
 ```
@@ -398,10 +398,10 @@ Marked with `[Trait("Category", "LiveEval")]`. Two tests (`LiveSmoke_PrivacyPoli
    - Default model: `gemini-2.5-flash` (overridable via `LIVE_EVAL_MODEL_ID`) at `https://generativelanguage.googleapis.com/v1beta/openai`.
 3. **OpenRouter:**
    - Configured via `LIVE_EVAL_OPENROUTER_API_KEY` or `OPENROUTER_API_KEY`.
-   - Default live eval model: `google/gemini-2.5-flash` (overridable via `LIVE_EVAL_MODEL_ID`), with OpenRouter privacy headers (`data_collection: deny`, `HTTP-Referer`, `X-Title`).
+   - Default live eval model: `openai/gpt-4o-mini` (overridable via `LIVE_EVAL_MODEL_ID`), with OpenRouter ZDR JSON payload `"provider": { "data_collection": "deny" }` plus privacy headers (`data_collection: deny`, `HTTP-Referer`, `X-Title`).
 
 #### Live Resilience & Guardrails
-- **Fail-Fast Timeouts:** Live evals enforce strict per-call timeouts (`15s`) and overall timeouts (`30s`).
+- **Fail-Fast Timeouts:** Live evals enforce strict per-call timeouts (`30s`) and overall timeouts (`60s`).
 - **Bounded 429 Retry Handler:** Nested `RateLimitedRetryHandler` intercepts HTTP 429 responses and applies exponential backoff (up to 3 retries).
 - **Parameter Normalization:** Tool invocation normalizes missing pagination arguments (`page=1`, `pageSize=20`) when the model omits optional defaults.
 - **Pure Catalogue Citation Discipline:** `Stage2FormattingPrompt` instructs models that `documentSources` must remain empty when no guideline documents were searched.
@@ -424,12 +424,12 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Evals --filter "
 
 ---
 
-## 10. Phase 6 Deployment, Security & HealthCheck Verification (`24` Tests)
+## 10. Phase 6 Deployment, Security & HealthCheck Verification (`25` Tests)
 
 Specified in [Phase-6-Deployment-and-Operational-Readiness.md](Phase-6-Deployment-and-Operational-Readiness.md) and [Deployment-and-Operations-Guide.md](Deployment-and-Operations-Guide.md) ([Phase6DeploymentAndSecurityTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests/Phase6DeploymentAndSecurityTests.cs) in `PublishingTracker.Agent.Tests`):
 
 ```powershell
-# Run the 24 Phase 6 deployment and security tests
+# Run the 25 Phase 6 deployment and security tests
 dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
   --filter "FullyQualifiedName~Phase6DeploymentAndSecurityTests"
 ```
@@ -464,3 +464,5 @@ dotnet test Publishing-Tracker/apps/api/tests/PublishingTracker.Agent.Tests `
     - Verifies hosted provider resolution reads `GEMINI_API_KEY_FILE`, `OPENROUTER_API_KEY_FILE`, and `/run/secrets/ai_provider_api_key` without any plaintext API key environment variables.
 13. `Assemblies_ConfigureUserSecretsId_ForLocalDevelopment`:
     - Verifies `<UserSecretsId>` assembly attribute metadata is present on `PublishingTracker.Agent` for `dotnet user-secrets` workflows.
+14. `AppSettingsJson_ContainsNoCommittedCredentialsOrJwtSigningKeys`:
+    - Verifies committed [appsettings.json](../Publishing-Tracker/apps/api/src/PublishingTracker.Api/appsettings.json) contains blank `ConnectionStrings` (`DefaultConnection`, `NeonConnection`, and no `AzureConnection` secret) and blank `Jwt:Key`.

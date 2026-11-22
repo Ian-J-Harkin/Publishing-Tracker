@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -36,7 +37,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         }
     }
     [Fact]
-    public void LiveSmoke_PrivacyPolicy_MandatesZeroRetentionAndProvenanceHeaders()
+    public async Task LiveSmoke_PrivacyPolicy_MandatesZeroRetentionAndProvenanceHeaders()
     {
         var baseline = EvalBaseline.LoadDefault();
 
@@ -45,7 +46,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         Assert.True(baseline.PrivacyPolicy.RequireXTitle, "Baseline must mandate X-Title header");
         Assert.True(baseline.MaxSpendCapUsd <= 0.50m, "Spend cap must not exceed $0.50 per Layer 3 quality gate");
 
-        // Verify that OpenRouter request pipeline attaches the required privacy headers
+        // Verify that OpenRouter request pipeline sends required privacy headers and JSON body provider.data_collection = "deny"
         var options = new AIProviderOptions
         {
             Type = "openrouter",
@@ -55,7 +56,16 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
 
         var recordingHandler = new RecordingHttpMessageHandler();
         var client = AIProviderSetup.CreateChatClient(options, new HttpClient(recordingHandler));
-        Assert.NotNull(client);
+        await client.GetResponseAsync("Verify OpenRouter privacy policy");
+
+        var request = Assert.Single(recordingHandler.Requests);
+        Assert.Equal("https://publishingtracker.local", request.Headers.GetValues("HTTP-Referer").Single());
+        Assert.Equal("PublishingTracker", request.Headers.GetValues("X-Title").Single());
+        Assert.Equal("deny", request.Headers.GetValues("data_collection").Single());
+
+        var bodyJson = Assert.Single(recordingHandler.RequestBodies);
+        using var doc = JsonDocument.Parse(bodyJson);
+        Assert.Equal("deny", doc.RootElement.GetProperty("provider").GetProperty("data_collection").GetString());
     }
 
     [Fact]
@@ -147,8 +157,8 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
                 resolved,
                 new AgentLoopOptions
                 {
-                    PerCallTimeout = TimeSpan.FromSeconds(15),
-                    OverallTimeout = TimeSpan.FromSeconds(30)
+                    PerCallTimeout = TimeSpan.FromSeconds(30),
+                    OverallTimeout = TimeSpan.FromSeconds(60)
                 },
                 null
             );
@@ -156,8 +166,12 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
 
         // 2. Gemini direct OpenAI-compatible endpoint
         var geminiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-        if (!string.IsNullOrWhiteSpace(geminiKey))
+        if (!string.IsNullOrWhiteSpace(geminiKey) && liveProvider != "openrouter")
         {
+            var hasOpenRouterFallback = !string.IsNullOrWhiteSpace(
+                Environment.GetEnvironmentVariable("LIVE_EVAL_OPENROUTER_API_KEY")
+                ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY"));
+
             return (
                 new AIProviderOptions
                 {
@@ -168,8 +182,8 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
                 },
                 new AgentLoopOptions
                 {
-                    PerCallTimeout = TimeSpan.FromSeconds(15),
-                    OverallTimeout = TimeSpan.FromSeconds(30)
+                    PerCallTimeout = TimeSpan.FromSeconds(hasOpenRouterFallback ? 45 : 30),
+                    OverallTimeout = TimeSpan.FromSeconds(60)
                 },
                 retryClient
             );
@@ -184,12 +198,12 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
             {
                 Type = "openrouter",
                 ApiKey = openRouterKey ?? string.Empty,
-                ModelId = Environment.GetEnvironmentVariable("LIVE_EVAL_MODEL_ID") ?? "google/gemini-2.5-flash"
+                ModelId = Environment.GetEnvironmentVariable("LIVE_EVAL_MODEL_ID") ?? "openai/gpt-4o-mini"
             },
             new AgentLoopOptions
             {
-                PerCallTimeout = TimeSpan.FromSeconds(15),
-                OverallTimeout = TimeSpan.FromSeconds(30)
+                PerCallTimeout = TimeSpan.FromSeconds(30),
+                OverallTimeout = TimeSpan.FromSeconds(60)
             },
             retryClient
         );
@@ -209,7 +223,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         var baseline = EvalBaseline.LoadDefault();
         var scenarioBaseline = baseline.Scenarios["catalogue-missing-audiobook-metadata"];
 
-        var chatClient = AIProviderSetup.CreateChatClient(options, httpClient);
+        var chatClient = CreateLiveChatClient(options, httpClient);
 
         var toolProvider = CreateCatalogueProvider(
             findHandler: (format, missingField, page, pageSize) =>
@@ -270,7 +284,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         var baseline = EvalBaseline.LoadDefault();
         var scenarioBaseline = baseline.Scenarios["rag-ebook-formatting-guidelines"];
 
-        var chatClient = AIProviderSetup.CreateChatClient(options, httpClient);
+        var chatClient = CreateLiveChatClient(options, httpClient);
 
         var toolProvider = CreateRagProvider((query, topK) =>
         {
@@ -316,7 +330,7 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         var baseline = EvalBaseline.LoadDefault();
         var scenarioBaseline = baseline.Scenarios["attack-cross-tenant-book-id-guess"];
 
-        var chatClient = AIProviderSetup.CreateChatClient(options, httpClient);
+        var chatClient = CreateLiveChatClient(options, httpClient);
         var toolProvider = CreateCatalogueProvider(
             detailsHandler: _ => Task.FromResult<object?>(null));
 
@@ -335,11 +349,82 @@ public sealed class LiveSmokeEvalTests(ITestOutputHelper output)
         Assert.NotEqual("answered", result.Status);
     }
 
+    private static IChatClient CreateLiveChatClient(AIProviderOptions primaryOptions, HttpClient? httpClient)
+    {
+        var primary = AIProviderSetup.CreateChatClient(primaryOptions, httpClient);
+        var openRouterKey = Environment.GetEnvironmentVariable("LIVE_EVAL_OPENROUTER_API_KEY")
+                            ?? Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
+
+        if (string.Equals(primaryOptions.Type, "openrouter", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(openRouterKey))
+        {
+            return primary;
+        }
+
+        var fallbackOptions = new AIProviderOptions
+        {
+            Type = "openrouter",
+            ApiKey = openRouterKey,
+            ModelId = Environment.GetEnvironmentVariable("LIVE_EVAL_MODEL_ID") ?? "openai/gpt-4o-mini"
+        };
+        var fallback = AIProviderSetup.CreateChatClient(fallbackOptions, httpClient);
+        return new FallbackChatClient(primary, fallback, TimeSpan.FromSeconds(8));
+    }
+
+    private sealed class FallbackChatClient(IChatClient primary, IChatClient fallback, TimeSpan primaryAttemptTimeout) : IChatClient
+    {
+        private static volatile bool _preferFallback;
+
+        public async Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            var messageList = messages.ToList();
+            if (_preferFallback)
+            {
+                return await fallback.GetResponseAsync(messageList, options, cancellationToken).ConfigureAwait(false);
+            }
+
+            using var primaryCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            primaryCts.CancelAfter(primaryAttemptTimeout);
+            try
+            {
+                return await primary.GetResponseAsync(messageList, options, primaryCts.Token).ConfigureAwait(false);
+            }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                _preferFallback = true;
+                return await fallback.GetResponseAsync(messageList, options, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> messages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            primary.GetStreamingResponseAsync(messages, options, cancellationToken);
+
+        public object? GetService(Type serviceType, object? serviceKey = null) =>
+            primary.GetService(serviceType, serviceKey);
+
+        public void Dispose()
+        {
+            primary.Dispose();
+            fallback.Dispose();
+        }
+    }
+
     private static IMcpToolProvider CreateCatalogueProvider(
         Func<string?, string?, int, int, Task<object?>>? findHandler = null,
         Func<int, Task<object?>>? detailsHandler = null)
     {
-        FindTitlesDelegate findDel = (string? format, string? missingField, int page, int pageSize, CancellationToken ct) =>
+        FindTitlesDelegate findDel = (
+            [Description("Optional edition format filter: Ebook, Paperback, Hardcover, Audiobook, or LargeText.")] string? format = null,
+            [Description("Optional missing field name filter.")] string? missingField = null,
+            [Description("1-based page number (must be >= 1, default 1).")] int page = 1,
+            [Description("Items per page from 1 to 50 (default 20).")] int pageSize = 20,
+            CancellationToken ct = default) =>
             (findHandler ?? ((_, _, p, ps) => Task.FromResult<object?>(new MissingMetadataPageDto(p, ps, 0, false, []))))(format, missingField, page, pageSize);
 
         GetDetailsDelegate detailsDel = (int bookId, CancellationToken ct) =>

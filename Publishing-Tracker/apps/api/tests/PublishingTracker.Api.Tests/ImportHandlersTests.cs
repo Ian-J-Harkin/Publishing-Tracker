@@ -136,4 +136,41 @@ public class ImportHandlersTests : IDisposable
         Assert.Equal("second.csv", result.Value[0].FileName);
         Assert.Equal("first.csv", result.Value[1].FileName);
     }
+
+    [Fact]
+    public async Task UploadImportFileCommand_WithPathTraversalFileName_ReturnsFailure()
+    {
+        var handler = new UploadImportFileCommandHandler();
+
+        foreach (var malicious in new[] { "../../appsettings.json", "sub/file.csv" })
+        {
+            await using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("col\nval\n"));
+            var result = await handler.Handle(new UploadImportFileCommand(7, malicious, input), CancellationToken.None);
+            Assert.False(result.IsSuccess);
+        }
+    }
+
+    [Fact]
+    public async Task CreateImportJobCommand_WithFilePathOutsideTempDirectories_ReturnsFailure()
+    {
+        var externalDir = Directory.CreateTempSubdirectory("pt-external-import-");
+        try
+        {
+            var externalFile = Path.Combine(externalDir.FullName, "appsettings.json");
+            await File.WriteAllTextAsync(externalFile, "{\"secret\":true}");
+
+            var handler = new CreateImportJobCommandHandler(_context, _queue.Object);
+            var mapping = new ColumnMappingDto { BookTitle = "Title" };
+            var result = await handler.Handle(
+                new CreateImportJobCommand(42, "appsettings.json", externalFile, mapping),
+                CancellationToken.None);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal("Invalid file path.", result.ErrorMessage);
+        }
+        finally
+        {
+            externalDir.Delete(recursive: true);
+        }
+    }
 }

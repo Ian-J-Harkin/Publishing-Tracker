@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+using Moq;
 using PublishingTracker.Application.Books.Queries;
 using PublishingTracker.Application.Interfaces;
 using PublishingTracker.Infrastructure.Persistence;
@@ -225,6 +226,37 @@ public sealed class Phase1McpAndCatalogueTests : IClassFixture<TestWebAppFactory
         using var anonymous = _factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/books/missing-metadata")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.GetAsync("/api/books/1/details")).StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteBook_AcrossTenants_ReturnsResultFailureAccessDenied_WithoutThrowing()
+    {
+        var betaBook = new PublishingTracker.Domain.Entities.Book(_seed!.UserB.Id, "User B Protected Book", "Author B");
+        var repo = new Mock<IBookRepository>();
+        repo.Setup(r => r.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PublishingTracker.Domain.Entities.Book?)betaBook);
+
+        var currentUser = new Mock<PublishingTracker.Application.Common.Interfaces.ICurrentUserService>();
+        currentUser.SetupGet(u => u.UserId).Returns(_seed.UserA.Id);
+
+        var handler = new PublishingTracker.Application.Books.Commands.DeleteBookCommandHandler(repo.Object, currentUser.Object);
+        var result = await handler.Handle(new PublishingTracker.Application.Books.Commands.DeleteBookCommand(99), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Access denied.", result.ErrorMessage);
+        repo.Verify(r => r.DeleteAsync(It.IsAny<PublishingTracker.Domain.Entities.Book>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        using var clientA = CreateAuthenticatedClient(_seed.UserA);
+        var httpResponse = await clientA.DeleteAsync($"/api/books/{_bookIds["Beta Private Incomplete Hardcover"]}");
+        Assert.NotEqual(HttpStatusCode.InternalServerError, httpResponse.StatusCode);
+    }
+
+    [Fact]
+    public void ApiAssembly_ConfiguresUserSecretsId_ForLocalDevelopment()
+    {
+        var apiAttr = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute>(typeof(Program).Assembly);
+        Assert.NotNull(apiAttr);
+        Assert.Equal("publishingtracker-api-dev-secrets", apiAttr!.UserSecretsId);
     }
 
     private HttpClient CreateAuthenticatedClient(PublishingTracker.Domain.Entities.User user)

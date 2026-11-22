@@ -10,9 +10,12 @@ public static class AgentPrompts
 
     public const string Stage2FormattingPrompt =
         "Format your grounded findings strictly as JSON matching the required AgentModelDraft schema. " +
-        "Do not call any tools. Cite only exact bookId, linked (bookId, editionId), returned field names, and (documentId, chunkId) pairs " +
-        "observed in the tool results above. If no guidelines/documents were retrieved, leave 'documents' empty ([]). Do not invent toolsUsed, documentIds, chunkIds, or extra JSON properties. " +
-        "If any catalogue search ended with hasMore=true, explicitly disclose in 'limitations' that results were paginated or truncated.";
+        "Set 'status' strictly to 'answered' (when supported by evidence) or 'could_not_answer'. " +
+        "Do not call any tools. Cite only exact bookId, linked (bookId, editionId) (include editionId whenever citing edition-level fields like Format, Narrator, Duration, or MissingFields), returned field names, and (documentId, chunkId) pairs " +
+        "observed in the tool results above. Always provide both 'catalogueSources' and 'documentSources' arrays inside 'evidence' (use [] when empty; if no guidelines/documents were retrieved, leave 'documentSources' empty []). " +
+        "Set 'limitations' to null (when none) or a single string (never an array []). " +
+        "Do not invent toolsUsed, documentIds, chunkIds, or extra JSON properties. " +
+        "If any catalogue search ended with hasMore=true, explicitly disclose in 'limitations' (as a string) that results were paginated or truncated.";
 
     public static string BuildStage2RepairPrompt(string validationError) =>
         $"Validation failed: {validationError}. Return valid strict JSON matching AgentModelDraft, " +

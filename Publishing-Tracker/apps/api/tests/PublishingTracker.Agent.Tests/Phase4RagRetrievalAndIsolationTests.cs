@@ -276,6 +276,10 @@ public sealed class Phase4RagRetrievalAndIsolationTests
                 Assert.Contains("PublishingTracker", recorder.Requests[0].Headers.GetValues("X-Title"));
                 Assert.Contains("https://publishingtracker.local", recorder.Requests[0].Headers.GetValues("HTTP-Referer"));
                 Assert.Contains("deny", recorder.Requests[0].Headers.GetValues("data_collection"));
+
+                var bodyJson = Assert.Single(recorder.RequestBodies);
+                using var doc = System.Text.Json.JsonDocument.Parse(bodyJson);
+                Assert.Equal("deny", doc.RootElement.GetProperty("provider").GetProperty("data_collection").GetString());
             }
         }
     }

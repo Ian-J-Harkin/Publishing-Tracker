@@ -261,9 +261,11 @@ public sealed class AgentLoopRunner
                         ? new AIFunctionArguments()
                         : new AIFunctionArguments(new Dictionary<string, object?>(call.Arguments, StringComparer.OrdinalIgnoreCase));
 
-                    // Normalize default pagination arguments if omitted by the model
+                    // Normalize optional filter and default pagination arguments if omitted by the model
                     if (string.Equals(call.Name, "find_titles_missing_metadata", StringComparison.OrdinalIgnoreCase))
                     {
+                        if (!arguments.ContainsKey("format")) arguments["format"] = null;
+                        if (!arguments.ContainsKey("missingField")) arguments["missingField"] = null;
                         if (!arguments.ContainsKey("page")) arguments["page"] = 1;
                         if (!arguments.ContainsKey("pageSize")) arguments["pageSize"] = 20;
                     }

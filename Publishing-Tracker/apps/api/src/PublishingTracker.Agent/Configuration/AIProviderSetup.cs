@@ -1,5 +1,7 @@
 using System.ClientModel;
 using System.ClientModel.Primitives;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using PublishingTracker.Agent.Telemetry;
@@ -242,14 +244,46 @@ public static class AIProviderSetup
     {
         public override void Process(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
         {
-            ApplyHeaders(message);
+            ApplyHeadersAndPrivacyBody(message);
             ProcessNext(message, pipeline, currentIndex);
         }
 
-        public override ValueTask ProcessAsync(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
+        public override async ValueTask ProcessAsync(PipelineMessage message, IReadOnlyList<PipelinePolicy> pipeline, int currentIndex)
+        {
+            await ApplyHeadersAndPrivacyBodyAsync(message).ConfigureAwait(false);
+            await ProcessNextAsync(message, pipeline, currentIndex).ConfigureAwait(false);
+        }
+
+        private static void ApplyHeadersAndPrivacyBody(PipelineMessage message)
         {
             ApplyHeaders(message);
-            return ProcessNextAsync(message, pipeline, currentIndex);
+            if (message.Request.Content is null)
+            {
+                return;
+            }
+
+            using var buffer = new MemoryStream();
+            message.Request.Content.WriteTo(buffer, message.CancellationToken);
+            if (TryInjectDataCollectionDeny(buffer.ToArray(), out var updatedBytes))
+            {
+                message.Request.Content = BinaryContent.Create(BinaryData.FromBytes(updatedBytes));
+            }
+        }
+
+        private static async ValueTask ApplyHeadersAndPrivacyBodyAsync(PipelineMessage message)
+        {
+            ApplyHeaders(message);
+            if (message.Request.Content is null)
+            {
+                return;
+            }
+
+            using var buffer = new MemoryStream();
+            await message.Request.Content.WriteToAsync(buffer, message.CancellationToken).ConfigureAwait(false);
+            if (TryInjectDataCollectionDeny(buffer.ToArray(), out var updatedBytes))
+            {
+                message.Request.Content = BinaryContent.Create(BinaryData.FromBytes(updatedBytes));
+            }
         }
 
         private static void ApplyHeaders(PipelineMessage message)
@@ -257,6 +291,37 @@ public static class AIProviderSetup
             message.Request.Headers.Set("HTTP-Referer", "https://publishingtracker.local");
             message.Request.Headers.Set("X-Title", "PublishingTracker");
             message.Request.Headers.Set("data_collection", "deny");
+        }
+
+        private static bool TryInjectDataCollectionDeny(byte[] rawBytes, out byte[] updatedBytes)
+        {
+            updatedBytes = rawBytes;
+            if (rawBytes.Length == 0)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (JsonNode.Parse(rawBytes) is not JsonObject jsonObj)
+                {
+                    return false;
+                }
+
+                if (jsonObj["provider"] is not JsonObject providerObj)
+                {
+                    providerObj = new JsonObject();
+                    jsonObj["provider"] = providerObj;
+                }
+
+                providerObj["data_collection"] = "deny";
+                updatedBytes = JsonSerializer.SerializeToUtf8Bytes(jsonObj);
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
         }
     }
 }

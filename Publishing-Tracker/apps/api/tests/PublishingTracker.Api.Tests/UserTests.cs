@@ -1,4 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Moq;
+using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Application.Users.Commands;
 using PublishingTracker.Domain.Entities;
 using PublishingTracker.Domain.Exceptions;
 using Xunit;
@@ -79,6 +86,51 @@ namespace PublishingTracker.Api.Tests
         {
             var user = User.Create("test@test.com", "oldHash", "First", "Last");
             Assert.Throws<ArgumentException>(() => user.ChangePassword(""));
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task PromoteUserCommandHandler_WhenAlreadyAdmin_ReturnsFailureInsteadOfThrowing()
+        {
+            var admin = User.Create("admin@test.com", "hash", "Admin", "User", "Admin");
+            var context = new Moq.Mock<PublishingTracker.Application.Common.Interfaces.IApplicationDbContext>();
+            context.SetupGet(c => c.Users).Returns(new[] { admin }.AsQueryable());
+
+            var queries = new Mock<IQueryExecutor>();
+            queries.Setup(q => q.FirstOrDefaultAsync(It.IsAny<IQueryable<User>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((User?)admin);
+
+            var handler = new PromoteUserCommandHandler(context.Object, queries.Object);
+            var result = await handler.Handle(new PromoteUserCommand(1), CancellationToken.None);
+
+            Assert.False(result.IsSuccess);
+            Assert.Equal("User is already an Admin.", result.ErrorMessage);
+        }
+
+        [Fact]
+        public async Task DemoteUserCommandHandler_WhenNotAdminOrLastAdmin_ReturnsFailureInsteadOfThrowing()
+        {
+            var regular = User.Create("user@test.com", "hash", "Reg", "User", "User");
+            var admin = User.Create("admin@test.com", "hash", "Admin", "User", "Admin");
+
+            var context = new Mock<IApplicationDbContext>();
+            context.SetupGet(c => c.Users).Returns(new[] { admin }.AsQueryable());
+
+            var queries = new Mock<IQueryExecutor>();
+            queries.SetupSequence(q => q.FirstOrDefaultAsync(It.IsAny<IQueryable<User>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((User?)regular)
+                .ReturnsAsync((User?)admin);
+            queries.Setup(q => q.ToListAsync(It.IsAny<IQueryable<User>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([admin]);
+
+            var handler = new DemoteUserCommandHandler(context.Object, queries.Object);
+
+            var notAdminResult = await handler.Handle(new DemoteUserCommand(1), CancellationToken.None);
+            Assert.False(notAdminResult.IsSuccess);
+            Assert.Equal("User is not an Admin.", notAdminResult.ErrorMessage);
+
+            var lastAdminResult = await handler.Handle(new DemoteUserCommand(2), CancellationToken.None);
+            Assert.False(lastAdminResult.IsSuccess);
+            Assert.Equal("Cannot demote the last remaining Admin. Promote another user first.", lastAdminResult.ErrorMessage);
         }
     }
 }

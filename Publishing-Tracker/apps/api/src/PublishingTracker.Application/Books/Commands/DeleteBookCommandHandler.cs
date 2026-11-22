@@ -28,7 +28,8 @@ public class DeleteBookCommandHandler : IRequestHandler<DeleteBookCommand, Resul
         if (book == null) return Result<bool>.Failure("Book not found");
 
         // Verify ownership
-        book.VerifyOwnership(userId.Value);
+        if (book.UserId != userId.Value)
+            return Result<bool>.Failure("Access denied.");
 
         // 2. Delete using the Port interface (Dependency Inversion)
         await _bookRepository.DeleteAsync(book, cancellationToken);

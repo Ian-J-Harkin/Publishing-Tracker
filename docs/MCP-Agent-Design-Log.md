@@ -4,12 +4,12 @@ Companion document to [MCP-Agent-Project-Plan.md](../MCP-Agent-Project-Plan.md).
 
 **Expanded Phase Specifications & Completion Waypoints:**
 - [Phase 0 — Baseline, `.NET 10` Upgrade, Auth Hygiene, and Contracts](Phase-0-Baseline-and-Contracts.md) — ✅ **Completed** (41/41 tests passing)
-- [Phase 1 — Read-Only Catalogue Capabilities & Hosted `/mcp` Endpoint](Phase-1-Read-Only-Catalogue-and-MCP.md) — ✅ **Completed** (54/54 tests passing)
-- [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 74/74 total passing)
-- [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 96/96 total passing)
-- [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 112/112 total passing)
-- [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 151/151 total passing)
-- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (172/172 solution tests passing, complete container runbook)
+- [Phase 1 — Read-Only Catalogue Capabilities & Hosted `/mcp` Endpoint](Phase-1-Read-Only-Catalogue-and-MCP.md) — ✅ **Completed** (64/64 API/Phase 1 tests passing)
+- [Phase 2 — Agent Loop, Dual Budgets, and Basic Tracing](Phase-2-Agent-Loop-and-Tracing.md) — ✅ **Completed** (20/20 Agent tests, 84/84 total passing)
+- [Phase 3 — Linked Evidence Ledger & Reliable Final Outputs](Phase-3-Evidence-Ledger-and-Reliable-Outputs.md) — ✅ **Completed** (22/22 Phase 3 tests, 42/42 Agent tests, 106/106 total passing)
+- [Phase 4 — RAG Module with Tenant-Bound pgvector Retrieval](Phase-4-RAG-Module-with-pgvector.md) — ✅ **Completed** (16/16 Phase 4 tests, 58/58 Agent tests, 122/122 total passing)
+- [Phase 5 — Layered Evaluation Strategy & Continuous Verification](Phase-5-Layered-Evaluation-Strategy.md) — ✅ **Completed** (39/39 Phase 5 tests, 161/161 total passing)
+- [Phase 6 — Deployment, Containerization, & Operational Readiness](Phase-6-Deployment-and-Operational-Readiness.md) — ✅ **Completed** (186/186 solution tests passing, complete container & Neon Bicep runbook)
 
 **Operational & Integration Guides:**
 - [MCP User & Integration Guide](MCP-User-Guide.md) — How to authenticate and connect desktop/IDE clients (Claude Desktop, Cursor) or programmatic callers.
@@ -90,7 +90,7 @@ This log records Architecture Decision Records (ADRs), design Q&As, and concrete
 - **Decision:**
   - Retain the multi-provider configuration matrix (`OpenRouter` with a pinned Claude model/provider config primary; `Ollama`, `OpenAI`, and `AzureOpenAI` fallbacks) using hardened `AIProviderOptions` (`enum`, `init`, `[JsonIgnore]`, redacting `ToString()`, `ValidateOnStart()`, HTTPS checks).
   - **Locked Embedding Model (Phase 4):** Standardize on **`openai/text-embedding-3-small`** (`1536` dimensions, `pgvector` `vector(1536)` column) via OpenRouter / OpenAI so local development and Azure/Neon production share one API key and fixed vector schema without dimension mismatch.
-  - **External Provider Data Policy:** Strip all user PII (emails, names, JWTs, credentials) from model payloads—only authorized `Book`/`Edition` metadata and non-sensitive RAG snippets are sent—and enforce OpenRouter `data_collection: "deny"` (no provider retention/training).
+  - **External Provider Data Policy:** Strip all user PII (emails, names, JWTs, credentials) from model payloads—only authorized `Book`/`Edition` metadata and non-sensitive RAG snippets are sent—and enforce OpenRouter `provider.data_collection = "deny"` in the JSON request body (plus headers) to prohibit provider retention/training.
 - **Consequences:** Reuses proven OpenRouter routing and test patterns, keeps chat and `vector(1536)` embeddings consistent across environments, and enforces clear external-LLM data boundaries.
 
 ### ADR-009: Post-Appraisal Security, Budget, and Layered Eval Hardening
@@ -548,7 +548,7 @@ Phase 5 implements a 3-layer verification harness documented in [Phase-5-Layered
 2. **Layer 2: PostgreSQL + `pgvector` Integration ([AgentMcpIntegrationEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/AgentMcpIntegrationEvalTests.cs) & [PostgresTestDatabaseFixture.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/PostgresTestDatabaseFixture.cs) — 4 tests):**
    Hard-fails if PostgreSQL + `vector` is unavailable. Connects to port **5435** by default (overridable via `TEST_POSTGRES_CONNECTION`) to avoid colliding with native Windows PostgreSQL on 5432, proving SQL `<=>` distance parity against C# `VectorMath.CosineDistance`, SQL `OwnerUserId` filtering, `N=20` concurrent interleaved user isolation, and mid-run token expiry fail-closed behavior.
 3. **Layer 3: Live Smoke Evals & Baseline Gates ([LiveSmokeEvalTests.cs](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/LiveSmokeEvalTests.cs) — 5 tests, `Category=LiveEval`):**
-   Includes 2 deterministic offline regression/privacy checks against [eval_baseline.json](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/eval_baseline.json) and `BaselineEnforcer`, plus 3 opt-in end-to-end live LLM evaluations supporting local Ollama (`qwen2.5-coder:7b`), Google Gemini Flash (`gemini-2.5-flash`), and OpenRouter (`google/gemini-2.5-flash`) with fail-fast timeouts (`15s` per-call, `30s` overall) and `RateLimitedRetryHandler` for HTTP 429 backoff.
+   Includes 2 deterministic offline regression/privacy checks against [eval_baseline.json](../Publishing-Tracker/apps/api/tests/PublishingTracker.Evals/eval_baseline.json) and `BaselineEnforcer` (inspecting real `RecordingHttpMessageHandler` request headers and JSON `provider.data_collection = "deny"` payloads), plus 3 opt-in end-to-end live LLM evaluations supporting local Ollama (`qwen2.5-coder:7b`), Google Gemini Flash (`gemini-2.5-flash`), and ZDR-compatible OpenRouter (`openai/gpt-4o-mini`) with fail-fast timeouts (`30s` per-call, `60s` overall) and `RateLimitedRetryHandler` for HTTP 429 backoff.
 
 ---
 
@@ -558,5 +558,5 @@ All open design questions have been resolved and locked into ADRs and specificat
 1. **Embedding Model:** `openai/text-embedding-3-small` (`1536` dims, `vector(1536)` in `pgvector`) via OpenRouter / OpenAI (`ADR-008`).
 2. **Completeness Rules:** Print formats require `ISBN`; `Ebook` and `Audiobook` accept either `ISBN` or `PlatformEditionMetadata.PlatformProductId`; `BasePrice >= 0` is valid (`null` is missing); `SeriesNumber` is required only when `SeriesName` is non-empty.
 3. **Pagination Policy:** Surface `hasMore`; allow at most 2 pages within budget; require `limitations` when `hasMore` remains `true`.
-4. **JWT & External Data Policy:** `DateTime.UtcNow.AddMinutes(60)` default (`Jwt:ExpiryMinutes`) + `JwtRegisteredClaimNames.Iat` (`ADR-005`); strip user PII and set OpenRouter `data_collection: "deny"` (`ADR-008`).
+4. **JWT & External Data Policy:** `DateTime.UtcNow.AddMinutes(60)` default (`Jwt:ExpiryMinutes`) + `JwtRegisteredClaimNames.Iat` (`ADR-005`); strip user PII and set OpenRouter JSON body `provider.data_collection = "deny"` + headers (`ADR-008`).
 5. **RAG Corpus & Budgets:** 4 repo-owned markdown guides in `docs/rag-corpus/`; `MaxModelTurns = 6`, `MaxTotalToolCalls = 8`, `MaxValidationRetries = 2`, `RepeatCallLimit = 2`, `MaxToolPayloadBytes = 16_384`, `PerCallTimeout = 20s`, `OverallTimeout = 60s`.

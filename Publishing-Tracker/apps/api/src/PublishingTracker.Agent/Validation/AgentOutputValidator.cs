@@ -50,9 +50,11 @@ public sealed class AgentOutputValidator
         {
             draft = JsonSerializer.Deserialize<AgentModelDraft>(utf8Bytes, StrictJsonOptions);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return AgentValidationResult.Fail("Output is not valid strict JSON matching AgentModelDraft (check required types and remove unknown properties).");
+            var pathDetail = string.IsNullOrWhiteSpace(ex.Path) ? string.Empty : $" at path '{ex.Path}'";
+            return AgentValidationResult.Fail(
+                $"Output is not valid strict JSON matching AgentModelDraft{pathDetail} (check required types, ensure 'limitations' is string or null rather than an array, and remove unknown properties).");
         }
 
         if (draft is null)

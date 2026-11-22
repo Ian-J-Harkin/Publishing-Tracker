@@ -135,5 +135,34 @@ namespace PublishingTracker.Api.Tests
                 Assert.Equal(11.00m, eurSale.Revenue); // 2 * 5.50
             }
         }
+
+        [Theory]
+        [InlineData("../../appsettings.json")]
+        [InlineData("../secret.csv")]
+        [InlineData("sub/file.csv")]
+        [InlineData(@"..\appsettings.json")]
+        public async Task Process_WithPathTraversalFileName_Returns400BadRequest(string maliciousFileName)
+        {
+            var client = await _factory.GetAuthenticatedClientAsync();
+
+            var mapping = new ColumnMappingDto
+            {
+                BookTitle = "Book Title",
+                Platform = "Platform",
+                SaleDate = "Sale Date",
+                Quantity = "Quantity",
+                UnitPrice = "Unit Price",
+                Currency = "Currency",
+                OrderId = "Order ID"
+            };
+
+            var processResponse = await client.PostAsJsonAsync("/api/import/process", new
+            {
+                FileName = maliciousFileName,
+                Mapping = mapping
+            });
+
+            Assert.Equal(HttpStatusCode.BadRequest, processResponse.StatusCode);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using MediatR;
 using PublishingTracker.Application.Common.Interfaces;
+using PublishingTracker.Domain.Exceptions;
 
 
 namespace PublishingTracker.Application.Users.Commands;
@@ -27,7 +28,14 @@ public class DemoteUserCommandHandler : IRequestHandler<DemoteUserCommand, Resul
         // The domain enforces the invariant that the last admin cannot be demoted.
         var totalAdminCount = (await _queries.ToListAsync(_context.Users.Where(u => u.Role == "Admin"), cancellationToken)).Count;
 
-        user.Demote(totalAdminCount);
+        try
+        {
+            user.Demote(totalAdminCount);
+        }
+        catch (InvalidDomainStateException ex)
+        {
+            return Result.Failure(ex.Message);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
         return Result.Success();
